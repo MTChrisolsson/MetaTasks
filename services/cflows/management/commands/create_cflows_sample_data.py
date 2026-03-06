@@ -124,7 +124,7 @@ class Command(BaseCommand):
                 name=team_name,
                 defaults={
                     'description': description,
-                    'bookable_members_count': capacity,
+                    'default_capacity': capacity,
                 }
             )
             if created:
@@ -168,6 +168,7 @@ class Command(BaseCommand):
             defaults={
                 'description': 'Complete vehicle processing from acquisition to sale',
                 'created_by': admin_profile,
+                'owner_team': teams['Sales Team'],
             }
         )
         if created:
