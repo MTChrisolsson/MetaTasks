@@ -302,11 +302,23 @@ class UserProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='mediap_profile')
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='members')
     
+    TIMEZONE_CHOICES = [
+        ('UTC', 'UTC'),
+        ('America/New_York', 'Eastern Time'),
+        ('America/Chicago', 'Central Time'),
+        ('America/Denver', 'Mountain Time'),
+        ('America/Los_Angeles', 'Pacific Time'),
+        ('Europe/London', 'London'),
+        ('Europe/Paris', 'Paris'),
+        ('Asia/Tokyo', 'Tokyo'),
+        ('Australia/Sydney', 'Sydney'),
+    ]
+
     # Profile information
     title = models.CharField(max_length=100, blank=True)
     department = models.CharField(max_length=100, blank=True)
     location = models.CharField(max_length=200, blank=True)
-    timezone = models.CharField(max_length=50, default='UTC')
+    timezone = models.CharField(max_length=50, default='UTC', choices=TIMEZONE_CHOICES)
     bio = models.TextField(blank=True)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
     

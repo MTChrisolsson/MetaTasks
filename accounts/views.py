@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.views.generic import CreateView, FormView, TemplateView
 from django.urls import reverse_lazy
 from django.http import HttpResponse
-from .forms import RegistrationForm, OrganizationCreationForm, InviteMemberForm
+from .forms import RegistrationForm, OrganizationCreationForm, InviteMemberForm, UserProfileSetupForm
 from .models import CustomUser
 from core.models import Organization, UserProfile
 
@@ -277,13 +277,29 @@ class AccountTypeView(TemplateView):
 
 
 @login_required
+@login_required
 def profile_view(request):
     """User profile view with organization information"""
-    # Get user's organization
+    print(f"DEBUG: Checking profile for user: {request.user.username}")
+    print(f"DEBUG: User has mediap_profile: {hasattr(request.user, 'mediap_profile')}")
+    
     try:
         profile = request.user.mediap_profile
-        user_orgs = [profile.organization]
-    except UserProfile.DoesNotExist:
+        print(f"DEBUG: Found profile: {profile}")
+        
+        # Create a membership-like object
+        class MembershipProxy:
+            def __init__(self, profile):
+                self.organization = profile.organization
+                self.role = 'Admin' if profile.is_organization_admin else 'Member'
+                self.joined_date = profile.created_at
+            
+            def get_role_display(self):
+                return self.role
+        
+        user_orgs = [MembershipProxy(profile)]
+    except Exception as e:
+        print(f"DEBUG: Error accessing profile: {e}")
         user_orgs = []
     
     context = {
@@ -331,3 +347,78 @@ def logout_view(request):
     logout(request)
     messages.info(request, 'You have been logged out successfully.')
     return redirect('homepage:index')
+
+
+class ProfileSetupView(FormView):
+    """View for setting up user profile and organization association"""
+    template_name = 'accounts/profile_setup.html'
+    form_class = UserProfileSetupForm
+    success_url = reverse_lazy('dashboard:dashboard')
+    
+    def dispatch(self, request, *args, **kwargs):
+        """Check if user already has a profile"""
+        if hasattr(request.user, 'mediap_profile'):
+            messages.info(request, 'Your profile is already set up.')
+            return redirect('dashboard:dashboard')
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+    
+    def form_valid(self, form):
+        # Get form data
+        choice = form.cleaned_data['organization_choice']
+        user = self.request.user
+        
+        # Handle organization creation/joining
+        if choice == 'create':
+            # Create new organization
+            org_name = form.cleaned_data['new_org_name']
+            org_type = form.cleaned_data['new_org_type']
+            
+            organization = Organization.objects.create(
+                name=org_name,
+                description=f"Organization created by {user.get_full_name() or user.username}",
+                organization_type=org_type,
+                is_active=True
+            )
+            
+            # User becomes admin of their own organization
+            is_admin = True
+            can_create_orgs = (org_type == 'business')
+            
+        elif choice == 'join':
+            # Join existing organization
+            organization = form.cleaned_data['existing_org']
+            is_admin = False  # Joining users are not admins by default
+            can_create_orgs = False
+        
+        # Create user profile
+        profile = UserProfile.objects.create(
+            user=user,
+            organization=organization,
+            title=form.cleaned_data.get('title', ''),
+            department=form.cleaned_data.get('department', ''),
+            location=form.cleaned_data.get('location', ''),
+            timezone=form.cleaned_data.get('timezone', 'UTC'),
+            bio=form.cleaned_data.get('bio', ''),
+            phone=form.cleaned_data.get('phone', ''),
+            is_organization_admin=is_admin,
+            has_staff_panel_access=is_admin,
+            can_create_organizations=can_create_orgs,
+            email_notifications=form.cleaned_data.get('email_notifications', True),
+        )
+        
+        messages.success(
+            self.request, 
+            f'Welcome to {organization.name}! Your profile has been set up successfully.'
+        )
+        
+        return super().form_valid(form)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Set Up Your Profile'
+        return context
