@@ -1,1 +1,1 @@
-web: gunicord mediap.wsgi:application
+web: gunicorn mediap.wsgi:application
