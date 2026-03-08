@@ -1,7 +1,7 @@
 from django import forms
 from django.utils import timezone
 from datetime import timedelta
-from .models import SchedulableResource, BookingRequest
+from .models import ResourceScheduleRule, SchedulableResource, BookingRequest
 from core.models import UserProfile
 
 
@@ -108,6 +108,15 @@ class ResourceForm(forms.ModelForm):
             'class': 'mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm'
         })
     )
+
+    auto_approve_bookings = forms.BooleanField(
+        label='Auto-approve all bookings for this resource',
+        required=False,
+        initial=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded'
+        })
+    )
     
     class Meta:
         model = SchedulableResource
@@ -146,7 +155,7 @@ class ResourceForm(forms.ModelForm):
     
     def save(self, commit=True):
         instance = super().save(commit=False)
-        
+    
         # Set availability rules from form fields
         availability_rules = instance.availability_rules or {}
         availability_rules.update({
@@ -155,8 +164,19 @@ class ResourceForm(forms.ModelForm):
             'end_hour': self.cleaned_data['end_hour']
         })
         instance.availability_rules = availability_rules
-        
+    
         if commit:
             instance.save()
         
+            # Create auto-approval rule if checkbox was checked
+            if self.cleaned_data.get('auto_approve_bookings'):
+                ResourceScheduleRule.objects.get_or_create(
+                    resource=instance,
+                    rule_type='auto_approval',  # Changed from 'auto_approve'
+                    defaults={
+                        'is_active': True,
+                        'rule_config': {'auto_confirm': True}
+                    }
+                )
+    
         return instance

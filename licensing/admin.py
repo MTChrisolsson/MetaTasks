@@ -137,7 +137,7 @@ class LicenseAdmin(admin.ModelAdmin):
                     f'<div style="width: {percentage}%; height: 100%; background: {color}; border-radius: 5px;"></div></div> '
                     f'{percentage:.1f}%</div>'
                 )
-        return format_html(''.join(html)) if html else 'No usage data'
+        return mark_safe(''.join(html)) if html else 'No usage data'
     usage_summary.short_description = 'Usage'
 
 

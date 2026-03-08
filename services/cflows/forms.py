@@ -1118,39 +1118,41 @@ class SchedulingBookingForm(forms.ModelForm):
     
     def _save_scheduling_booking(self, user_profile):
         """Save a Scheduling service BookingRequest"""
-        from services.scheduling.models import BookingRequest
+        from services.scheduling.services import SchedulingService
         from django.db import transaction
-        
+    
         with transaction.atomic():
-            booking = BookingRequest.objects.create(
-                organization=self.organization,
+            # Use SchedulingService to create booking (includes auto-approval logic)
+            scheduling_service = SchedulingService(self.organization)
+        
+            custom_data = {
+                'work_item_id': self.work_item.id if self.work_item else None,
+                'work_item_title': self.work_item.title if self.work_item else None,
+                'workflow_name': self.work_item.workflow.name if self.work_item and self.work_item.workflow else None,
+                'current_step': self.work_item.current_step.name if self.work_item and self.work_item.current_step else None,
+                'job_type_id': self.cleaned_data['job_type'].id if self.cleaned_data.get('job_type') else None,
+                'job_type_name': self.cleaned_data['job_type'].name if self.cleaned_data.get('job_type') else None,
+            }
+        
+            booking = scheduling_service.create_booking(
+                user_profile=user_profile,
+                resource=self.cleaned_data['resource'],
+                start_time=self.cleaned_data['start_time'],
+                end_time=self.cleaned_data['end_time'],
                 title=self.cleaned_data['title'],
                 description=self.cleaned_data.get('description', ''),
-                requested_start=self.cleaned_data['start_time'],
-                requested_end=self.cleaned_data['end_time'],
-                resource=self.cleaned_data['resource'],
-                required_capacity=self.cleaned_data.get('required_members', 1),
-                status='pending',
                 priority=self.work_item.priority if self.work_item else 'normal',
                 source_service='cflows',
                 source_object_type='WorkItem',
                 source_object_id=str(self.work_item.id) if self.work_item else '',
-                requested_by=user_profile,
-                custom_data={
-                    'work_item_id': self.work_item.id if self.work_item else None,
-                    'work_item_title': self.work_item.title if self.work_item else None,
-                    'workflow_name': self.work_item.workflow.name if self.work_item and self.work_item.workflow else None,
-                    'current_step': self.work_item.current_step.name if self.work_item and self.work_item.current_step else None,
-                    'job_type_id': self.cleaned_data['job_type'].id if self.cleaned_data.get('job_type') else None,
-                    'job_type_name': self.cleaned_data['job_type'].name if self.cleaned_data.get('job_type') else None,
-                }
+                custom_data=custom_data
             )
-        
+    
         return {
             'type': 'scheduling',
             'booking': booking,
             'id': booking.id,
-            'redirect_url': f'/services/scheduling/bookings/{booking.id}/'
+            'redirect_url': f'/services/cflows/work-items/{self.work_item.id}/' if self.work_item else '/services/scheduling/'
         }
 
 

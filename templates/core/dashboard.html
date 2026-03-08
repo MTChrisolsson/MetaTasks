@@ -14,14 +14,23 @@
                         <p class="mt-2 text-lg text-gray-600">Welcome back, {{ request.user.get_full_name|default:request.user.username }}</p>
                         <p class="text-sm text-gray-500">{{ organization.name }} {% if organization.organization_type == 'business' %}<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 ml-2">Business</span>{% else %}<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 ml-2">Personal</span>{% endif %}</p>
                     </div>
-                    {% if is_org_admin %}
+                    <!-- Grouped buttons container -->
                     <div class="flex space-x-3">
+                        {% if is_org_admin %}
                         <a href="/admin/core/organization/{{ organization.id }}/change/" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                             <i class="fas fa-cog mr-2"></i>
                             Admin Panel
                         </a>
+                        {% endif %}
+                        {% if profile.has_staff_panel_access or profile.is_organization_admin %}
+                        <a href="/services/staff-panel/" 
+                           class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                           title="Staff Panel">
+                            <i class="fas fa-cog mr-2"></i>
+                            <span class="hidden sm:inline">Staff Panel</span>
+                        </a>
+                        {% endif %}
                     </div>
-                    {% endif %}
                 </div>
             </div>
         </div>

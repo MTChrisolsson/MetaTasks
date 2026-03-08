@@ -209,6 +209,24 @@
                     </div>
                 </div>
             </div>
+            <!-- Auto-Approval Settings -->
+            <div class="px-6 py-4 border-t border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">
+                    <i class="fas fa-bolt text-green-600 mr-2"></i>
+                    Auto-Approval Settings
+                </h3>
+                <div class="space-y-4">
+                    <label class="flex items-center">
+                        {{ form.auto_approve_bookings }}
+                        <span class="ml-3 text-sm text-gray-700">
+                        Automatically approve all bookings on this resource
+                    </span>
+                    </label>
+                    <p class="text-sm text-gray-600">
+                    When enabled, all new bookings will be automatically confirmed without requiring manual approval.
+                    </p>
+                </div>
+            </div>
 
             <!-- Form Errors -->
             {% if form.non_field_errors %}

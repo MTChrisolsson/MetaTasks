@@ -61,7 +61,7 @@
             </p>
         </div>
         <div class="mt-4 flex md:mt-0 md:ml-4 space-x-2">
-            {% if booking.status == 'pending' and user.is_staff %}
+            {% if booking.status == 'pending' and user.mediap_profile.organization == booking.organization %}
                 <form method="post" action="{% url 'scheduling:booking_action' booking.id 'confirm' %}" class="inline">
                     {% csrf_token %}
                     <button type="submit" class="action-btn action-btn-primary">
