@@ -1,4 +1,3 @@
-version: '3.9'
 services:
   db:
     image: postgres:15
@@ -36,6 +35,7 @@ services:
     environment:
       - DEBUG=True
       - USE_SQLITE=False
+      - DB_ENGINE=django.db.backends.postgresql
       - DB_HOST=db
       - DATABASE_URL=postgresql://mediap:mediap@db:5432/mediap
       - REDIS_URL=redis://redis:6379/0
@@ -70,6 +70,7 @@ services:
     environment:
       - DEBUG=True
       - USE_SQLITE=False
+      - DB_ENGINE=django.db.backends.postgresql
       - DB_HOST=db
       - DATABASE_URL=postgresql://mediap:mediap@db:5432/mediap
       - REDIS_URL=redis://redis:6379/0
@@ -91,6 +92,7 @@ services:
     environment:
       - DEBUG=True
       - USE_SQLITE=False
+      - DB_ENGINE=django.db.backends.postgresql
       - DB_HOST=db
       - DATABASE_URL=postgresql://mediap:mediap@db:5432/mediap
       - REDIS_URL=redis://redis:6379/0

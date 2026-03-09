@@ -16,6 +16,8 @@ django-redis>=5.4.0
 
 # File handling
 Pillow>=10.0.0
+pandas>=2.2.0
+openpyxl>=3.1.0
 
 # Configuration
 python-decouple>=3.8

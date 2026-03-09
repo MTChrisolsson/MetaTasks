@@ -1,0 +1,67 @@
+{% extends 'analytics/analytics_base.html' %}
+
+{% block title %}Upload Analytics Files{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+    <div class="bg-white rounded-xl border border-gray-200 p-6 sm:p-8">
+        <div class="mb-6">
+            <h1 class="text-2xl font-semibold text-gray-900">Upload Files</h1>
+            <p class="text-sm text-gray-500 mt-1">Upload Inventory, Wayke, and CITK files to generate analytics reports.</p>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="id_inventory" class="block text-sm font-medium text-gray-700 mb-2">Inventory (required)</label>
+                    <input id="id_inventory" name="inventory" type="file" accept=".xlsx" required class="block w-full text-sm text-gray-700 border border-gray-300 rounded-lg p-2">
+                </div>
+                <div>
+                    <label for="id_wayke" class="block text-sm font-medium text-gray-700 mb-2">Wayke (required)</label>
+                    <input id="id_wayke" name="wayke" type="file" accept=".csv" required class="block w-full text-sm text-gray-700 border border-gray-300 rounded-lg p-2">
+                </div>
+                <div>
+                    <label for="id_citk" class="block text-sm font-medium text-gray-700 mb-2">CITK (required)</label>
+                    <input id="id_citk" name="citk" type="file" accept=".xlsx" required class="block w-full text-sm text-gray-700 border border-gray-300 rounded-lg p-2">
+                </div>
+                <div>
+                    <label for="id_notes" class="block text-sm font-medium text-gray-700 mb-2">Notes (optional)</label>
+                    <input id="id_notes" name="notes" type="file" accept=".jsonl,.csv" class="block w-full text-sm text-gray-700 border border-gray-300 rounded-lg p-2">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="id_inventory_sheet" class="block text-sm font-medium text-gray-700 mb-2">Inventory Sheet</label>
+                    {{ form.inventory_sheet }}
+                </div>
+                <div>
+                    <label for="id_citk_sheet" class="block text-sm font-medium text-gray-700 mb-2">CITK Sheet</label>
+                    {{ form.citk_sheet }}
+                </div>
+                <div>
+                    <label for="id_photo_min_urls" class="block text-sm font-medium text-gray-700 mb-2">Minimum Photo URLs</label>
+                    {{ form.photo_min_urls }}
+                </div>
+            </div>
+
+            {% if form.errors %}
+            <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                {{ form.errors }}
+            </div>
+            {% endif %}
+
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <a href="{% url 'analytics:index' %}" class="inline-flex items-center px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
+                    Cancel
+                </a>
+                <button type="submit" class="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">
+                    <i class="fas fa-play mr-2"></i>Process Files
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

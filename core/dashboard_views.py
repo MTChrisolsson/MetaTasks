@@ -193,6 +193,10 @@ def service_access_check(request, service_slug):
         # Redirect to the service
         if service_slug == 'cflows':
             return redirect('/services/cflows/')
+        elif service_slug == 'scheduling':
+            return redirect('/services/scheduling/')
+        elif service_slug == 'analytics':
+            return redirect('/services/analytics/')
         elif service_slug == 'job-planning':
             return redirect('/services/job-planning/')
         else:

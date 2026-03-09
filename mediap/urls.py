@@ -30,6 +30,7 @@ urlpatterns = [
     path('services/cflows/', include(('services.cflows.urls', 'cflows'), namespace='cflows')),
     path('services/scheduling/', include('services.scheduling.urls')),
     path('services/staff-panel/', include('services.staff_panel.urls')),
+    path('services/analytics/', include(('services.analytics.urls', 'analytics'), namespace='analytics')),
     path('licensing/', include('licensing.urls')),
 ]
 

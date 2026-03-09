@@ -1,0 +1,298 @@
+{% extends 'analytics/analytics_base.html' %}
+
+{% block title %}Analytics Dashboard{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <div class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-start">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-chart-bar text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
+                        <p class="text-sm text-gray-600 mt-1">
+                            Processed on {% now "M d, Y" %}
+                        </p>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <a href="{% url 'analytics:export_excel' job.id %}" 
+                       class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-all">
+                        <i class="fas fa-download"></i>
+                        Export Excel
+                    </a>
+                    <a href="{% url 'analytics:upload' %}" 
+                       class="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-900 rounded-lg font-medium hover:bg-gray-300 transition-all">
+                        <i class="fas fa-upload"></i>
+                        New Upload
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        <!-- KPIs Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total Inventory Card -->
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-6 text-white">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-blue-100 text-sm font-medium">Total Inventory (24h)</p>
+                            <p class="text-3xl font-bold mt-2">{{ kpis.inventory_24 }}</p>
+                        </div>
+                        <div class="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-box text-2xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Published Card -->
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                <div class="bg-gradient-to-r from-green-500 to-green-600 p-6 text-white">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-green-100 text-sm font-medium">Published</p>
+                            <p class="text-3xl font-bold mt-2">{{ kpis.published }}</p>
+                            <p class="text-green-100 text-xs mt-1">{{ kpis.published_pct }}% published</p>
+                        </div>
+                        <div class="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-share text-2xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Needs Photos Card -->
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                <div class="bg-gradient-to-r from-amber-500 to-amber-600 p-6 text-white">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-amber-100 text-sm font-medium">Needs Photos</p>
+                            <p class="text-3xl font-bold mt-2">{{ kpis.needs_photos }}</p>
+                        </div>
+                        <div class="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-camera text-2xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Missing CITK Card -->
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                <div class="bg-gradient-to-r from-red-500 to-red-600 p-6 text-white">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-red-100 text-sm font-medium">Missing CITK</p>
+                            <p class="text-3xl font-bold mt-2">{{ kpis.missing_citk }}</p>
+                        </div>
+                        <div class="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-exclamation text-2xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Bar Chart -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">
+                    <i class="fas fa-chart-bar text-indigo-600 mr-2"></i>
+                    Vehicles by Station
+                </h3>
+                <canvas id="stationBarChart"></canvas>
+            </div>
+
+            <!-- Pie Chart -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-6">
+                    <i class="fas fa-chart-pie text-indigo-600 mr-2"></i>
+                    Distribution
+                </h3>
+                <canvas id="stationPieChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Data Table Section -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            <!-- Tabs -->
+            <div class="border-b border-gray-200">
+                <div class="flex overflow-x-auto">
+                    <button data-tab="inventory" class="tab-button active px-6 py-4 font-medium text-sm whitespace-nowrap border-b-2 border-indigo-600 text-indigo-600">
+                        <i class="fas fa-list mr-2"></i>
+                        All Inventory
+                        <span class="ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-full">
+                            {{ vehicles_count }}
+                        </span>
+                    </button>
+                    <button data-tab="needs_photos" class="tab-button px-6 py-4 font-medium text-sm whitespace-nowrap border-b-2 border-transparent text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-camera mr-2"></i>
+                        Needs Photos
+                        <span class="ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-full">
+                            {{ needs_photos_count }}
+                        </span>
+                    </button>
+                    <button data-tab="not_published" class="tab-button px-6 py-4 font-medium text-sm whitespace-nowrap border-b-2 border-transparent text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-lock mr-2"></i>
+                        Not Published
+                        <span class="ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-full">
+                            {{ not_published_count }}
+                        </span>
+                    </button>
+                    <button data-tab="missing_citk" class="tab-button px-6 py-4 font-medium text-sm whitespace-nowrap border-b-2 border-transparent text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        Missing CITK
+                        <span class="ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-full">
+                            {{ missing_citk_count }}
+                        </span>
+                    </button>
+                    <button data-tab="sold" class="tab-button px-6 py-4 font-medium text-sm whitespace-nowrap border-b-2 border-transparent text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-check-circle mr-2"></i>
+                        Sold
+                        <span class="ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 rounded-full">
+                            {{ sold_count }}
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table Content -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="px-6 py-3 text-left font-semibold text-gray-900">Registration</th>
+                            <th class="px-6 py-3 text-left font-semibold text-gray-900">Model</th>
+                            <th class="px-6 py-3 text-left font-semibold text-gray-900">Station</th>
+                            <th class="px-6 py-3 text-left font-semibold text-gray-900">Days in Stock</th>
+                            <th class="px-6 py-3 text-left font-semibold text-gray-900">Published</th>
+                            <th class="px-6 py-3 text-left font-semibold text-gray-900">Photos</th>
+                            <th class="px-6 py-3 text-left font-semibold text-gray-900">Wayke Match</th>
+                            <th class="px-6 py-3 text-left font-semibold text-gray-900">CITK Match</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="divide-y divide-gray-200">
+                        {% for vehicle in vehicles %}
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-6 py-3 font-medium text-gray-900">{{ vehicle.registration }}</td>
+                                <td class="px-6 py-3 text-gray-700">{{ vehicle.model }}</td>
+                                <td class="px-6 py-3 text-gray-700">{{ vehicle.current_station }}</td>
+                                <td class="px-6 py-3 text-gray-700">{{ vehicle.days_in_stock|default:"-" }}</td>
+                                <td class="px-6 py-3">
+                                    <span class="px-2 py-1 rounded-full text-xs font-medium {% if vehicle.is_published %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {% if vehicle.is_published %}Yes{% else %}No{% endif %}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-3">
+                                    <span class="px-2 py-1 rounded-full text-xs font-medium {% if vehicle.is_photographed %}bg-green-100 text-green-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+                                        {% if vehicle.is_photographed %}Yes{% else %}No{% endif %}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-3">
+                                    <span class="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                        N/A
+                                    </span>
+                                </td>
+                                <td class="px-6 py-3">
+                                    <span class="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                        N/A
+                                    </span>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="8" class="px-6 py-8 text-center text-gray-500">
+                                    <i class="fas fa-inbox text-2xl text-gray-400 mb-2"></i>
+                                    <p>No data available</p>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Chart.js initialization
+    const stations = {{ stations_json|safe }};
+    
+    const barCtx = document.getElementById('stationBarChart').getContext('2d');
+    new Chart(barCtx, {
+        type: 'bar',
+        data: {
+            labels: stations.map(s => s.station),
+            datasets: [{
+                label: 'Vehicles',
+                data: stations.map(s => s.count),
+                backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                borderColor: 'rgba(99, 102, 241, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    const pieCtx = document.getElementById('stationPieChart').getContext('2d');
+    const colors = [
+        'rgba(99, 102, 241, 0.8)',
+        'rgba(16, 185, 129, 0.8)',
+        'rgba(245, 158, 11, 0.8)',
+        'rgba(239, 68, 68, 0.8)',
+        'rgba(139, 92, 246, 0.8)',
+    ];
+
+    new Chart(pieCtx, {
+        type: 'doughnut',
+        data: {
+            labels: stations.map(s => s.station),
+            datasets: [{
+                data: stations.map(s => s.count),
+                backgroundColor: colors.slice(0, stations.length)
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right'
+                }
+            }
+        }
+    });
+
+    // Tab switching
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.addEventListener('click', () => {
+            document.querySelectorAll('.tab-button').forEach(b => {
+                b.classList.remove('border-indigo-600', 'text-indigo-600');
+                b.classList.add('border-transparent', 'text-gray-600');
+            });
+            button.classList.remove('border-transparent', 'text-gray-600');
+            button.classList.add('border-indigo-600', 'text-indigo-600');
+        });
+    });
+</script>
+{% endblock %}

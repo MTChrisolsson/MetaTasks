@@ -1,0 +1,108 @@
+{% extends 'analytics/analytics_base.html' %}
+
+{% block title %}Analytics Dashboard{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <p class="text-sm text-gray-500">Total Jobs</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1">{{ stats.total_jobs }}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <p class="text-sm text-gray-500">Completed</p>
+            <p class="text-3xl font-bold text-emerald-700 mt-1">{{ stats.completed_jobs }}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <p class="text-sm text-gray-500">Failed</p>
+            <p class="text-3xl font-bold text-rose-700 mt-1">{{ stats.failed_jobs }}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <p class="text-sm text-gray-500">Latest Inventory</p>
+            <p class="text-3xl font-bold text-indigo-700 mt-1">
+                {% if stats.latest_kpis %}{{ stats.latest_kpis.inventory_24|default:0 }}{% else %}0{% endif %}
+            </p>
+        </div>
+    </section>
+
+    <section class="bg-white rounded-xl border border-gray-200 p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <div>
+                <h2 class="text-xl font-semibold text-gray-900">Recent Jobs</h2>
+                <p class="text-sm text-gray-500">Latest analytics processing activity in your organization.</p>
+            </div>
+            <div class="flex gap-2">
+                <a href="{% url 'analytics:upload' %}" class="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">
+                    <i class="fas fa-upload mr-2"></i>New Upload
+                </a>
+                <a href="{% url 'analytics:jobs_list' %}" class="inline-flex items-center px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
+                    <i class="fas fa-list mr-2"></i>View All
+                </a>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-200 text-left text-gray-600">
+                        <th class="py-3 pr-4">Uploaded</th>
+                        <th class="py-3 pr-4">Status</th>
+                        <th class="py-3 pr-4">Inventory</th>
+                        <th class="py-3 pr-4">Published %</th>
+                        <th class="py-3">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job in recent_jobs %}
+                    <tr class="border-b border-gray-100">
+                        <td class="py-3 pr-4">{{ job.uploaded_at|date:"Y-m-d H:i" }}</td>
+                        <td class="py-3 pr-4">
+                            <span class="status-{{ job.status }} inline-flex px-2 py-1 rounded-full text-xs font-medium">
+                                {{ job.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="py-3 pr-4">{{ job.kpis.inventory_24|default:'-' }}</td>
+                        <td class="py-3 pr-4">{{ job.kpis.published_pct|default:'-' }}</td>
+                        <td class="py-3">
+                            <a href="{% url 'analytics:job_detail' job.id %}" class="text-indigo-600 hover:text-indigo-800 font-medium">Open</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="py-8 text-center text-gray-500">
+                            No analytics jobs yet. Upload files to start processing.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    {% if latest_job and latest_job.station_stats %}
+    <section class="bg-white rounded-xl border border-gray-200 p-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Latest Station Distribution</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {% for station in latest_job.station_stats %}
+            <div class="rounded-lg border border-gray-200 p-4">
+                <div class="flex items-center justify-between">
+                    <p class="font-medium text-gray-900">
+                        {% if station.CurrentStation %}
+                            {{ station.CurrentStation }}
+                        {% elif station.station %}
+                            {{ station.station }}
+                        {% else %}
+                            Unknown
+                        {% endif %}
+                    </p>
+                    <p class="text-indigo-700 font-semibold">{{ station.count|default:0 }}</p>
+                </div>
+                <p class="text-sm text-gray-500 mt-1">{{ station.pct|default:0 }}% of inventory</p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+

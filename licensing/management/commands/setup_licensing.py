@@ -79,6 +79,43 @@ class Command(BaseCommand):
             }
             scheduling_service.save()
             self.stdout.write(f'✓ Updated Scheduling service')
+
+        # Create Analytics service
+        analytics_service, created = Service.objects.get_or_create(
+            slug='analytics',
+            defaults={
+                'name': 'Analytics',
+                'description': 'Vehicle inventory analytics and KPI processing',
+                'version': '1.0.0',
+                'is_active': True,
+                'icon': 'fas fa-chart-line',
+                'color': '#4f46e5',
+                'sort_order': 3,
+                'allows_personal_free': True,
+                'personal_free_limits': {
+                    'users': 1,
+                    'projects': 1,
+                    'workflows': 5,
+                    'storage_gb': 1,
+                },
+            },
+        )
+
+        if created:
+            self.stdout.write('✓ Created Analytics service')
+        else:
+            analytics_service.icon = 'fas fa-chart-line'
+            analytics_service.color = '#4f46e5'
+            analytics_service.sort_order = 3
+            analytics_service.is_active = True
+            analytics_service.personal_free_limits = {
+                'users': 1,
+                'projects': 1,
+                'workflows': 5,
+                'storage_gb': 1,
+            }
+            analytics_service.save()
+            self.stdout.write('✓ Updated Analytics service')
         
         # Create license types for CFlows
         license_types_data = [
@@ -231,6 +268,82 @@ class Command(BaseCommand):
                 self.stdout.write(f'✓ Created Scheduling license type: {lt_data["display_name"]}')
             else:
                 self.stdout.write(f'✓ Scheduling license type already exists: {lt_data["display_name"]}')
+
+        # Create license types for Analytics
+        analytics_license_types_data = [
+            {
+                'name': 'personal_free',
+                'display_name': 'Personal Free',
+                'price_monthly': Decimal('0.00'),
+                'price_yearly': Decimal('0.00'),
+                'max_users': 1,
+                'max_projects': 1,
+                'max_workflows': 10,
+                'max_storage_gb': 1,
+                'max_api_calls_per_day': 100,
+                'features': ['Basic KPI dashboards', 'Single-user uploads', 'Recent job history'],
+                'restrictions': ['No advanced exports', 'Limited history depth'],
+                'is_personal_only': True,
+                'requires_organization': False,
+            },
+            {
+                'name': 'basic',
+                'display_name': 'Basic Team',
+                'price_monthly': Decimal('19.00'),
+                'price_yearly': Decimal('190.00'),
+                'max_users': 10,
+                'max_projects': 10,
+                'max_workflows': 100,
+                'max_storage_gb': 10,
+                'max_api_calls_per_day': 1000,
+                'features': ['Team analytics access', 'Station KPI breakdown', 'Job history'],
+                'restrictions': ['Limited automation'],
+                'is_personal_only': False,
+                'requires_organization': True,
+            },
+            {
+                'name': 'professional',
+                'display_name': 'Professional',
+                'price_monthly': Decimal('59.00'),
+                'price_yearly': Decimal('590.00'),
+                'max_users': 50,
+                'max_projects': 50,
+                'max_workflows': 500,
+                'max_storage_gb': 100,
+                'max_api_calls_per_day': 10000,
+                'features': ['Advanced analytics', 'Large file support', 'Priority processing'],
+                'restrictions': [],
+                'is_personal_only': False,
+                'requires_organization': True,
+            },
+            {
+                'name': 'enterprise',
+                'display_name': 'Enterprise',
+                'price_monthly': Decimal('199.00'),
+                'price_yearly': Decimal('1990.00'),
+                'max_users': None,
+                'max_projects': None,
+                'max_workflows': None,
+                'max_storage_gb': None,
+                'max_api_calls_per_day': None,
+                'features': ['Unlimited analytics', 'Custom integrations', 'Dedicated support'],
+                'restrictions': [],
+                'is_personal_only': False,
+                'requires_organization': True,
+            },
+        ]
+
+        for lt_data in analytics_license_types_data:
+            license_type, created = LicenseType.objects.get_or_create(
+                service=analytics_service,
+                name=lt_data['name'],
+                defaults=lt_data,
+            )
+
+            if created:
+                self.stdout.write(f'✓ Created Analytics license type: {lt_data["display_name"]}')
+            else:
+                self.stdout.write(f'✓ Analytics license type already exists: {lt_data["display_name"]}')
         
         # Set up personal free licenses for personal organizations
         personal_orgs = Organization.objects.filter(organization_type='personal')
@@ -244,6 +357,12 @@ class Command(BaseCommand):
         # Scheduling personal free licenses  
         scheduling_personal_free_license_type = LicenseType.objects.get(
             service=scheduling_service,
+            name='personal_free'
+        )
+
+        # Analytics personal free licenses
+        analytics_personal_free_license_type = LicenseType.objects.get(
+            service=analytics_service,
             name='personal_free'
         )
         
@@ -281,6 +400,23 @@ class Command(BaseCommand):
             
             if created:
                 self.stdout.write(f'✓ Created Scheduling personal free license for: {org.name}')
+
+            # Create Analytics license
+            analytics_license, created = License.objects.get_or_create(
+                organization=org,
+                license_type=analytics_personal_free_license_type,
+                defaults={
+                    'account_type': 'personal',
+                    'is_personal_free': True,
+                    'status': 'active',
+                    'billing_cycle': 'lifetime',
+                    'start_date': timezone.now(),
+                    'current_users': org.members.count(),
+                }
+            )
+
+            if created:
+                self.stdout.write(f'✓ Created Analytics personal free license for: {org.name}')
         
         # Update existing Demo Car Dealership organization to be business type with basic license
         try:
@@ -338,6 +474,31 @@ class Command(BaseCommand):
             
             if created:
                 self.stdout.write(f'✓ Created Scheduling basic trial license for: {demo_org.name}')
+
+            # Analytics basic license
+            analytics_basic_license_type = LicenseType.objects.get(
+                service=analytics_service,
+                name='basic'
+            )
+
+            analytics_license, created = License.objects.get_or_create(
+                organization=demo_org,
+                license_type=analytics_basic_license_type,
+                defaults={
+                    'account_type': 'organization',
+                    'is_personal_free': False,
+                    'status': 'trial',
+                    'billing_cycle': 'monthly',
+                    'start_date': timezone.now(),
+                    'trial_end_date': timezone.now() + timezone.timedelta(days=30),
+                    'current_users': demo_org.members.count(),
+                    'current_projects': 0,
+                    'current_workflows': 0,
+                }
+            )
+
+            if created:
+                self.stdout.write(f'✓ Created Analytics basic trial license for: {demo_org.name}')
                 
         except Organization.DoesNotExist:
             self.stdout.write('⚠ Demo Car Dealership organization not found')
