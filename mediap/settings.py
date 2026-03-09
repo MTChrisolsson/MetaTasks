@@ -153,14 +153,17 @@ WSGI_APPLICATION = 'mediap.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': dj_database_url.config(
-        # Uncomment when in development: default='sqlite:///db.sqlite3',
-        conn_max_age=600,
-        ssl_require=False
-    )
+    'default': {
+        'ENGINE': config('DB_ENGINE', default='django.db.backends.sqlite3'),
+        'NAME': config('DB_NAME', default=str(BASE_DIR / 'db.sqlite3')),
+        'USER': config('DB_USER', default=''),
+        'PASSWORD': config('DB_PASSWORD', default=''),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='5432'),
+    }
 }
 
-# Fallback to SQLite for development if PostgreSQL is not available
+#Fallback to SQLite for development if PostgreSQL is not available
 if config('USE_SQLITE', default=False, cast=bool):
     DATABASES = {
         'default': {

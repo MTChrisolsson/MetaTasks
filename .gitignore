@@ -1,15 +1,15 @@
-# Environment variables - NEVER COMMIT THESE
+# Environment variables
 .env
 .env.local
 .env.*.local
 
-# Docker volumes (local development)
+# Docker volumes
 postgres_data/
 redis_data/
 static_volume/
 media_volume/
 
-# Python
+# Python & cache
 __pycache__/
 *.py[cod]
 *$py.class
@@ -23,7 +23,6 @@ ENV/
 .idea/
 *.swp
 *.swo
-*~
 
 # Logs
 *.log
@@ -33,16 +32,18 @@ logs/
 db.sqlite3
 *.sqlite3
 
-# Static files
+# Static & media
 staticfiles/
 /static/
-
-# Media uploads
 media/
-
-# SSL certificates
-/etc/letsencrypt/
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Celery
+celerybeat-schedule
+
+# Credentials
+cookies.txt
+temp_cookies.txt
