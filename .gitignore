@@ -47,3 +47,9 @@ celerybeat-schedule
 # Credentials
 cookies.txt
 temp_cookies.txt
+
+#Docker files
+docker-compose.prod.yml
+Dockerfile.prod
+Dockerfile
+nginx.conf
