@@ -16,7 +16,7 @@ from .models import (
 @login_required
 def template_list(request):
     """List all available workflow templates"""
-    templates = WorkflowTemplate.objects.filter(is_active=True).order_by('category', 'name')
+    templates = WorkflowTemplate.objects.filter(is_public=True).order_by('category', 'name')
     
     # Group by category
     templates_by_category = {}
@@ -34,7 +34,7 @@ def template_list(request):
 @login_required
 def template_detail(request, template_id):
     """Show template details and preview"""
-    template = get_object_or_404(WorkflowTemplate, id=template_id, is_active=True)
+    template = get_object_or_404(WorkflowTemplate, id=template_id, is_public=True)
     
     # Parse template data
     template_steps = []
@@ -55,7 +55,7 @@ def template_detail(request, template_id):
 @login_required
 def create_from_template(request, template_id):
     """Create a new workflow from a template"""
-    template = get_object_or_404(WorkflowTemplate, id=template_id, is_active=True)
+    template = get_object_or_404(WorkflowTemplate, id=template_id, is_public=True)
     
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
@@ -205,7 +205,7 @@ def save_as_template(request, workflow_id):
 @login_required
 def template_preview(request, template_id):
     """Preview template as JSON for API access"""
-    template = get_object_or_404(WorkflowTemplate, id=template_id, is_active=True)
+    template = get_object_or_404(WorkflowTemplate, id=template_id, is_public=True)
     
     # Check access permissions
     if not template.is_public and template.organization != request.user.userprofile.organization:

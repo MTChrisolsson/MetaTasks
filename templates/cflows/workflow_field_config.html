@@ -194,6 +194,50 @@
                 </div>
             </div>
 
+            <!-- Custom Fields Management -->
+            <div class="config-section">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">Custom Fields</h3>
+                        <p class="text-sm text-gray-600 mt-1">Create and manage custom fields specific to this workflow.</p>
+                    </div>
+                    <button type="button" onclick="addCustomField()" 
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium inline-flex items-center">
+                        <i class="fas fa-plus mr-2"></i>
+                        Add Custom Field
+                    </button>
+                </div>
+                
+                <div id="customFieldsList" class="space-y-3">
+                    <!-- Custom fields will be added here -->
+                </div>
+                
+                {% if custom_fields %}
+                <div class="mt-6">
+                    <h4 class="font-medium text-gray-900 mb-3">Existing Custom Fields</h4>
+                    <div class="space-y-2">
+                        {% for field in custom_fields %}
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <div class="flex-1">
+                                <div class="font-medium text-gray-900">{{ field.label }}</div>
+                                <div class="text-xs text-gray-600">{{ field.get_field_type_display }} • {{ field.name }}</div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                {% if field.is_required %}
+                                <span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Required</span>
+                                {% endif %}
+                                <button type="button" onclick="removeExistingCustomField({{ field.id }})"
+                                        class="text-red-600 hover:text-red-800 text-sm font-medium">
+                                    <i class="fas fa-trash mr-1"></i>Remove
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
             <!-- Form Errors -->
             {% if form.errors %}
             <div class="bg-white rounded-lg shadow-sm border border-red-200 mb-6">
@@ -228,6 +272,8 @@
 </div>
 
 <script>
+let customFieldCounter = 0;
+
 document.addEventListener('DOMContentLoaded', function() {
     // Add interactivity for required checkboxes
     const enabledCheckboxes = document.querySelectorAll('input[name$="_enabled"]');
@@ -254,5 +300,176 @@ document.addEventListener('DOMContentLoaded', function() {
         updateFieldState(); // Initial state
     });
 });
+
+// Custom Fields Management
+function addCustomField() {
+    customFieldCounter++;
+    const fieldsContainer = document.getElementById('customFieldsList');
+    const fieldDiv = document.createElement('div');
+    fieldDiv.className = 'border border-gray-200 rounded-lg p-4 bg-gray-50';
+    fieldDiv.id = `customField_${customFieldCounter}`;
+    
+    fieldDiv.innerHTML = `
+        <div class="flex items-center justify-between mb-4">
+            <h4 class="text-sm font-semibold text-gray-900">Custom Field ${customFieldCounter}</h4>
+            <button type="button" onclick="removeCustomField(${customFieldCounter})" 
+                    class="text-red-600 hover:text-red-800 text-sm font-medium">
+                <i class="fas fa-trash mr-1"></i>Remove
+            </button>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Field Name <span class="text-red-500">*</span>
+                </label>
+                <input type="text" name="custom_field_name_${customFieldCounter}" required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                       placeholder="field_name (use_underscores)" pattern="^[a-z_][a-z0-9_]*$" title="Use lowercase letters, numbers and underscores">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Display Label <span class="text-red-500">*</span>
+                </label>
+                <input type="text" name="custom_field_label_${customFieldCounter}" required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                       placeholder="Field Label">
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Field Type
+                </label>
+                <select name="custom_field_type_${customFieldCounter}" 
+                        onchange="handleFieldTypeChange(${customFieldCounter})"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="text">Text Input</option>
+                    <option value="textarea">Text Area</option>
+                    <option value="number">Number</option>
+                    <option value="decimal">Decimal</option>
+                    <option value="date">Date</option>
+                    <option value="datetime">Date & Time</option>
+                    <option value="checkbox">Checkbox</option>
+                    <option value="select">Dropdown Select</option>
+                    <option value="multiselect">Multiple Select</option>
+                    <option value="email">Email</option>
+                    <option value="url">URL</option>
+                    <option value="phone">Phone Number</option>
+                </select>
+            </div>
+            <div class="flex items-end">
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" name="custom_field_required_${customFieldCounter}" 
+                           class="w-4 h-4 rounded border-gray-300 text-indigo-600">
+                    <span class="text-sm text-gray-700">Required field</span>
+                </label>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Help Text</label>
+            <input type="text" name="custom_field_help_${customFieldCounter}"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                   placeholder="Optional help text shown to users">
+        </div>
+        
+        <div id="fieldOptions_${customFieldCounter}" class="mt-4 hidden">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Options</label>
+            <textarea name="custom_field_options_${customFieldCounter}" rows="3"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      placeholder="Enter one option per line&#10;Option 1&#10;Option 2&#10;Option 3"></textarea>
+        </div>
+    `;
+    
+    fieldsContainer.appendChild(fieldDiv);
+}
+
+function removeCustomField(fieldId) {
+    const fieldDiv = document.getElementById(`customField_${fieldId}`);
+    if (fieldDiv) {
+        fieldDiv.remove();
+    }
+}
+
+function removeExistingCustomField(fieldId) {
+    // Create a hidden input to mark field for removal
+    const form = document.querySelector('form');
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'remove_custom_field_ids';
+    input.value = fieldId;
+    form.appendChild(input);
+    
+    // Remove from display
+    event.target.closest('[class*="flex items-center"]').remove();
+}
+
+function handleFieldTypeChange(fieldId) {
+    const fieldType = document.querySelector(`select[name="custom_field_type_${fieldId}"]`).value;
+    const optionsDiv = document.getElementById(`fieldOptions_${fieldId}`);
+    
+    if (fieldType === 'select' || fieldType === 'multiselect') {
+        optionsDiv.classList.remove('hidden');
+    } else {
+        optionsDiv.classList.add('hidden');
+    }
+}
+
+// Enhance form submission to handle custom fields
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Collect custom fields data and add it to the form
+            const customFields = collectCustomFields();
+            if (customFields.length > 0) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'custom_fields_json';
+                input.value = JSON.stringify(customFields);
+                form.appendChild(input);
+            }
+        });
+    }
+});
+
+function collectCustomFields() {
+    const customFields = [];
+    const fieldDivs = document.querySelectorAll('#customFieldsList > div');
+    
+    fieldDivs.forEach(fieldDiv => {
+        const fieldId = fieldDiv.id.replace('customField_', '');
+        const fieldName = fieldDiv.querySelector(`input[name="custom_field_name_${fieldId}"]`)?.value;
+        const fieldLabel = fieldDiv.querySelector(`input[name="custom_field_label_${fieldId}"]`)?.value;
+        
+        if (fieldName && fieldLabel) {
+            const fieldType = fieldDiv.querySelector(`select[name="custom_field_type_${fieldId}"]`).value;
+            const isRequired = fieldDiv.querySelector(`input[name="custom_field_required_${fieldId}"]`).checked;
+            const helpText = fieldDiv.querySelector(`input[name="custom_field_help_${fieldId}"]`).value;
+            const optionsText = fieldDiv.querySelector(`textarea[name="custom_field_options_${fieldId}"]`)?.value;
+            
+            let options = [];
+            if (optionsText && (fieldType === 'select' || fieldType === 'multiselect')) {
+                options = optionsText
+                    .split('\n')
+                    .map(opt => opt.trim())
+                    .filter(opt => opt.length > 0);
+            }
+            
+            customFields.push({
+                name: fieldName.toLowerCase().replace(/\s+/g, '_'),
+                label: fieldLabel,
+                field_type: fieldType,
+                is_required: isRequired,
+                help_text: helpText,
+                options: options
+            });
+        }
+    });
+    
+    return customFields;
+}
 </script>
 {% endblock %}

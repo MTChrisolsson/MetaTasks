@@ -189,6 +189,45 @@ def create_workflow(request):
             if workflow.template:
                 apply_workflow_template(workflow)
             
+            # Handle custom fields if provided
+            custom_fields_json = request.POST.get('custom_fields_json')
+            if custom_fields_json:
+                try:
+                    import json
+                    custom_fields_data = json.loads(custom_fields_json)
+                    
+                    # Create custom fields for this workflow
+                    for field_data in custom_fields_data:
+                        field_name = field_data.get('name', '').strip().lower()
+                        field_label = field_data.get('label', '').strip()
+                        
+                        if field_name and field_label:
+                            # Check if field already exists
+                            existing_field = CustomField.objects.filter(
+                                organization=profile.organization,
+                                name=field_name
+                            ).first()
+                            
+                            if existing_field:
+                                # Associate existing field with this workflow
+                                existing_field.workflows.add(workflow)
+                            else:
+                                # Create new custom field
+                                custom_field = CustomField.objects.create(
+                                    organization=profile.organization,
+                                    name=field_name,
+                                    label=field_label,
+                                    field_type=field_data.get('field_type', 'text'),
+                                    is_required=field_data.get('is_required', False),
+                                    help_text=field_data.get('help_text', ''),
+                                    options=field_data.get('options', []),
+                                    is_active=True
+                                )
+                                # Associate with this workflow
+                                custom_field.workflows.add(workflow)
+                except (json.JSONDecodeError, ValueError):
+                    messages.warning(request, 'Could not parse custom fields data.')
+            
             messages.success(request, f'Workflow "{workflow.name}" created successfully!')
             return redirect('cflows:workflow_detail', workflow_id=workflow.id)
     else:
@@ -284,6 +323,56 @@ def workflow_field_config(request, workflow_id):
         if form.is_valid():
             config = form.save_config()
             messages.success(request, f"Field configuration saved successfully for {workflow.name}")
+            
+            # Handle custom fields if provided
+            custom_fields_json = request.POST.get('custom_fields_json')
+            if custom_fields_json:
+                try:
+                    import json
+                    custom_fields_data = json.loads(custom_fields_json)
+                    
+                    # Create custom fields for this workflow
+                    for field_data in custom_fields_data:
+                        field_name = field_data.get('name', '').strip().lower()
+                        field_label = field_data.get('label', '').strip()
+                        
+                        if field_name and field_label:
+                            # Check if field already exists
+                            existing_field = CustomField.objects.filter(
+                                organization=profile.organization,
+                                name=field_name
+                            ).first()
+                            
+                            if existing_field:
+                                # Associate existing field with this workflow
+                                existing_field.workflows.add(workflow)
+                            else:
+                                # Create new custom field
+                                custom_field = CustomField.objects.create(
+                                    organization=profile.organization,
+                                    name=field_name,
+                                    label=field_label,
+                                    field_type=field_data.get('field_type', 'text'),
+                                    is_required=field_data.get('is_required', False),
+                                    help_text=field_data.get('help_text', ''),
+                                    options=field_data.get('options', []),
+                                    is_active=True
+                                )
+                                # Associate with this workflow
+                                custom_field.workflows.add(workflow)
+                except (json.JSONDecodeError, ValueError):
+                    messages.warning(request, 'Could not parse custom fields data.')
+            
+            # Handle custom field removals
+            remove_field_ids = request.POST.getlist('remove_custom_field_ids')
+            if remove_field_ids:
+                for field_id in remove_field_ids:
+                    try:
+                        custom_field = CustomField.objects.get(id=int(field_id))
+                        custom_field.workflows.remove(workflow)
+                    except (CustomField.DoesNotExist, ValueError):
+                        pass
+            
             return redirect('cflows:workflow_detail', workflow_id=workflow_id)
     else:
         form = WorkflowFieldConfigForm(
@@ -294,12 +383,20 @@ def workflow_field_config(request, workflow_id):
     # Get current configuration for display
     current_config = workflow.get_active_fields()
     
+    # Get custom fields for this workflow
+    custom_fields = CustomField.objects.filter(
+        organization=profile.organization,
+        workflows=workflow,
+        is_active=True
+    ).order_by('section', 'order', 'label')
+    
     context = {
         'profile': profile,
         'organization': profile.organization,
         'workflow': workflow,
         'form': form,
         'current_config': current_config,
+        'custom_fields': custom_fields,
         'title': f'Configure Fields - {workflow.name}'
     }
     
