@@ -82,11 +82,11 @@ def _save_vehicle_records(job, rows):
                 days_in_stock=_to_int(row.get('DaysInStock', None), None),
                 is_published=_to_bool(row.get('Published', False)),
                 is_photographed=_to_bool(row.get('Photographed', False)),
-                photo_count=_to_int(row.get('PhotoCount', 0), 0),
+                photo_count=_to_int(row.get('PhotoURL_Count', row.get('PhotoCount', 0)), 0),
                 needs_photos=_to_bool(row.get('NeedsPhotos', False)),
                 missing_citk=_to_bool(row.get('CITKMatched', False)) is False,
                 is_sold=str(row.get('Status', '')).lower() == 'sold',
-                notes=str(row.get('note', '') or ''),
+                notes=str(row.get('Note', row.get('note', '')) or ''),
             )
         )
 
@@ -108,6 +108,133 @@ def _to_dataframe(rows):
     return pd.DataFrame(normalized_rows)
 
 
+DETAIL_EXPORT_HEADERS = [
+    'Reg',
+    'Status',
+    'Model',
+    'InboundSeller',
+    'DaysInStock',
+    'Published',
+    'Photographed',
+    'PhotoURL_Count',
+    'WaykeURL',
+    'CurrentStation',
+    'Note',
+    'WaykeMatched',
+    'CITKMatched',
+    'Uppdaterad',
+    'Skapad',
+    'Tillverkare',
+    'Modellar',
+    'Pris',
+]
+
+
+def _to_detail_export_dataframe(records):
+    rows = []
+    for record in records:
+        if isinstance(record, dict):
+            rows.append(
+                {
+                    'Reg': record.get('Reg', ''),
+                    'Status': record.get('Status', ''),
+                    'Model': record.get('Model', record.get('Modell', '')),
+                    'InboundSeller': record.get('InboundSeller', record.get('Inb. säljare', '')),
+                    'DaysInStock': record.get('DaysInStock', record.get('Lagerdagar', '')),
+                    'Published': record.get('Published', False),
+                    'Photographed': record.get('Photographed', False),
+                    'PhotoURL_Count': record.get('PhotoURL_Count', record.get('PhotoCount', 0)),
+                    'WaykeURL': record.get('WaykeURL', record.get('Wayke: URL', '')),
+                    'CurrentStation': record.get('CurrentStation', ''),
+                    'Note': record.get('Note', record.get('note', '')),
+                    'WaykeMatched': record.get('WaykeMatched', record.get('Published', False)),
+                    'CITKMatched': record.get('CITKMatched', False),
+                    'Uppdaterad': record.get('Uppdaterad', ''),
+                    'Skapad': record.get('Skapad', ''),
+                    'Tillverkare': record.get('Tillverkare', ''),
+                    'Modellar': record.get('Modellar', record.get('Modellår', '')),
+                    'Pris': record.get('Pris', ''),
+                }
+            )
+            continue
+
+        rows.append(
+            {
+                'Reg': record.registration,
+                'Status': record.status,
+                'Model': record.model,
+                'InboundSeller': '',
+                'DaysInStock': record.days_in_stock,
+                'Published': record.is_published,
+                'Photographed': record.is_photographed,
+                'PhotoURL_Count': record.photo_count,
+                'WaykeURL': '',
+                'CurrentStation': record.current_station,
+                'Note': record.notes,
+                'WaykeMatched': record.is_published,
+                'CITKMatched': not record.missing_citk,
+                'Uppdaterad': '',
+                'Skapad': '',
+                'Tillverkare': '',
+                'Modellar': '',
+                'Pris': '',
+            }
+        )
+
+    return pd.DataFrame(rows, columns=DETAIL_EXPORT_HEADERS)
+
+
+def _to_sold_export_dataframe(records):
+    rows = []
+    for record in records:
+        if isinstance(record, dict):
+            rows.append(
+                {
+                    'Reg': record.get('Reg', ''),
+                    'Status': record.get('Status', ''),
+                    'Model': record.get('Model', record.get('Modell', '')),
+                    'InboundSeller': record.get('InboundSeller', record.get('Inb. säljare', '')),
+                    'DaysInStock': record.get('DaysInStock', record.get('Lagerdagar', '')),
+                }
+            )
+            continue
+
+        rows.append(
+            {
+                'Reg': record.registration,
+                'Status': record.status,
+                'Model': record.model,
+                'InboundSeller': '',
+                'DaysInStock': record.days_in_stock,
+            }
+        )
+
+    return pd.DataFrame(rows, columns=['Reg', 'Status', 'Model', 'InboundSeller', 'DaysInStock'])
+
+
+def _to_station_dataframe(station_data):
+    rows = []
+    for station in station_data:
+        if hasattr(station, 'to_dict'):
+            station = station.to_dict()
+        elif not isinstance(station, dict):
+            station = vars(station)
+
+        rows.append(
+            {
+                'Station': station.get('Station')
+                or station.get('station')
+                or station.get('CurrentStation')
+                or station.get('current_station')
+                or '',
+                'Count': station.get('Count') or station.get('count') or 0,
+                'Percentage': station.get('Percentage') or station.get('pct') or 0,
+            }
+        )
+
+    return pd.DataFrame(rows, columns=['Station', 'Count', 'Percentage'])
+
+
 def _build_statistik_export_excel(job):
     result_kpis = job.kpis or {}
     station_data = job.station_stats or []
@@ -119,47 +246,75 @@ def _build_statistik_export_excel(job):
     missing_citk_records = records.filter(missing_citk=True)
     sold_records = records.filter(status__in=[34, 35, 36])
 
-    base_fields = [
-        'registration',
-        'status',
-        'model',
-        'current_station',
-        'days_in_stock',
-        'is_published',
-        'is_photographed',
-        'photo_count',
-        'missing_citk',
-        'notes',
-    ]
+    inventory_24_rows = list(inventory_24_records)
+    not_published_rows = list(not_published_records)
+    sold_rows = list(sold_records)
 
-    summary_df = pd.DataFrame([
-        {'KPI': 'Inventory_24', 'Value': result_kpis.get('inventory_24', 0)},
-        {'KPI': 'Published', 'Value': result_kpis.get('published', 0)},
-        {'KPI': 'Published_%', 'Value': result_kpis.get('published_pct', 0)},
-        {'KPI': 'Needs_Photos', 'Value': result_kpis.get('needs_photos', 0)},
-        {'KPI': 'Missing_in_CITK', 'Value': result_kpis.get('missing_citk', 0)},
-    ])
-    station_df = _to_dataframe(station_data)
-    inventory_df = pd.DataFrame(list(inventory_24_records.values(*base_fields)))
-    needs_photos_df = pd.DataFrame(list(needs_photos_records.values(*base_fields)))
-    not_published_df = pd.DataFrame(list(not_published_records.values(*base_fields)))
-    missing_citk_df = pd.DataFrame(list(missing_citk_records.values(*base_fields)))
-    sold_df = pd.DataFrame(list(sold_records.values(*base_fields)))
+    # Fallback: regenerate detail rows from uploaded files when persisted rows are missing.
+    if not inventory_24_rows and not not_published_rows and not sold_rows:
+        try:
+            from .services.statistik_processor import StatistikProcessor
+
+            processor = StatistikProcessor(
+                inventory_path=job.inventory_file.path,
+                wayke_path=job.wayke_file.path,
+                citk_path=job.citk_file.path,
+                notes_path=job.notes_file.path if job.notes_file else None,
+                inventory_sheet=job.inventory_sheet,
+                citk_sheet=job.citk_sheet,
+                photo_min_urls=job.photo_min_urls,
+            )
+            processor_result = processor.process()
+
+            inventory_24_rows = processor_result.get('inventory_24', []) or []
+            not_published_rows = processor_result.get('not_published', []) or []
+            sold_rows = processor_result.get('sold', []) or []
+
+            if not result_kpis:
+                result_kpis = processor_result.get('kpis', {}) or {}
+            if not station_data:
+                station_data = processor_result.get('by_station', []) or []
+        except Exception as exc:
+            logger.warning('Export fallback processing failed for job %s: %s', job.id, exc)
+
+    summary_df = pd.DataFrame(
+        [
+            {
+                'Inventory (Status 24)': result_kpis.get('inventory_24', 0),
+                'Published on Wayke': result_kpis.get('published', 0),
+                'Published %': result_kpis.get('published_pct', 0),
+                'Need Photos': result_kpis.get('needs_photos', 0),
+                'Missing in CITK': result_kpis.get('missing_citk', 0),
+            }
+        ]
+    )
+
+    station_df = _to_station_dataframe(station_data)
+    inventory_df = _to_detail_export_dataframe(inventory_24_rows)
+    not_published_df = _to_detail_export_dataframe(not_published_rows)
+
+    # Explicit empty sheets required by spec.
+    needs_photos_df = pd.DataFrame()
+    missing_citk_df = pd.DataFrame()
+    notes_df = pd.DataFrame()
+
+    sold_df = _to_sold_export_dataframe(sold_rows)
 
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        # Sheet 1: Summary (KPI + station distribution)
+        # Sheet 1: Summary (summary table + by-station table)
         summary_df.to_excel(writer, index=False, sheet_name='Summary', startrow=0)
         start_row = len(summary_df) + 3
         station_df.to_excel(writer, index=False, sheet_name='Summary', startrow=start_row)
 
-        # Sheet 2-7 requested detail sheets
+        # Sheets 2-8 as required
         inventory_df.to_excel(writer, index=False, sheet_name='Inventory_24_detail')
         needs_photos_df.to_excel(writer, index=False, sheet_name='Needs_Photos')
         not_published_df.to_excel(writer, index=False, sheet_name='Not_Published')
         station_df.to_excel(writer, index=False, sheet_name='By_Station')
         missing_citk_df.to_excel(writer, index=False, sheet_name='Missing_in_CITK')
-        sold_df.to_excel(writer, index=False, sheet_name='Sold')
+        sold_df.to_excel(writer, index=False, sheet_name='Sold_34_35_36')
+        notes_df.to_excel(writer, index=False, sheet_name='Notes')
 
     output.seek(0)
     return output.getvalue()

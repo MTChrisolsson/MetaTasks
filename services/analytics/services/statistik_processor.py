@@ -81,6 +81,22 @@ class StatistikProcessor:
         status_col = self._find_column(df, ['Status', 'status'])
         if status_col and status_col != 'Status':
             df = df.rename(columns={status_col: 'Status'})
+
+        model_col = self._find_column(df, ['Model', 'Modell'])
+        if model_col and model_col != 'Model':
+            df = df.rename(columns={model_col: 'Model'})
+
+        seller_col = self._find_column(df, ['InboundSeller', 'Inb. säljare', 'Inbsäljare'])
+        if seller_col and seller_col != 'InboundSeller':
+            df = df.rename(columns={seller_col: 'InboundSeller'})
+
+        days_col = self._find_column(df, ['DaysInStock', 'Lagerdagar'])
+        if days_col and days_col != 'DaysInStock':
+            df = df.rename(columns={days_col: 'DaysInStock'})
+
+        if 'DaysInStock' in df.columns:
+            df['DaysInStock'] = pd.to_numeric(df['DaysInStock'], errors='coerce')
+
         logger.info(f"Loaded {len(df)} inventory records")
         return df
 
@@ -129,6 +145,8 @@ class StatistikProcessor:
         if wayke_status_col:
             status_series = df[wayke_status_col].astype(str).str.lower()
             df['Published'] = status_series.isin(['published', 'publicerad', 'live', 'active'])
+            if wayke_status_col != 'Status: Wayke':
+                df = df.rename(columns={wayke_status_col: 'Status: Wayke'})
         elif 'Published' not in df.columns:
             df['Published'] = False
 
@@ -138,6 +156,12 @@ class StatistikProcessor:
             df['PhotoURL_Count'] = df[photo_url_col].apply(self._parse_photo_urls)
         elif 'PhotoURL_Count' not in df.columns:
             df['PhotoURL_Count'] = 0
+
+        wayke_url_col = self._find_column(df, ['Wayke: URL', 'WaykeURL', 'URL'])
+        if wayke_url_col and wayke_url_col != 'Wayke: URL':
+            df = df.rename(columns={wayke_url_col: 'Wayke: URL'})
+        if 'Wayke: URL' not in df.columns:
+            df['Wayke: URL'] = ''
 
         df['Photographed'] = df['PhotoURL_Count'] >= int(self.photo_min_urls)
         logger.info(f"Loaded {len(df)} Wayke records")
@@ -152,8 +176,8 @@ class StatistikProcessor:
             extra_candidates=['Regnr', 'Reg.nr', 'Registration', 'Id'],
         )
         station_col = self._find_column(df, ['OrderStations', 'CurrentStation', 'Station'])
-        if station_col and station_col != 'CurrentStation':
-            df = df.rename(columns={station_col: 'CurrentStation'})
+        if station_col and station_col != 'OrderStations':
+            df = df.rename(columns={station_col: 'OrderStations'})
         logger.info(f"Loaded {len(df)} CITK records")
         return df
     
@@ -252,6 +276,7 @@ class StatistikProcessor:
             return pd.DataFrame(columns=['reg', 'note'])
 
         normalized = notes_df.rename(columns={reg_col: 'reg', note_col: 'note'})[['reg', 'note']]
+        normalized['reg'] = normalized['reg'].astype(str).str.strip().str.upper()
         return normalized
     
     def _merge_data(self, inv, wayke, citk, notes) -> pd.DataFrame:
@@ -270,13 +295,23 @@ class StatistikProcessor:
         if 'Photographed' not in merged.columns:
             merged['Photographed'] = False
 
-        station_col = self._find_column(merged, ['CurrentStation', 'OrderStations', 'Station'])
-        if station_col and station_col != 'CurrentStation':
-            merged = merged.rename(columns={station_col: 'CurrentStation'})
-        if 'CurrentStation' not in merged.columns:
-            merged['CurrentStation'] = 'Missing in CITK'
+        station_col = self._find_column(merged, ['OrderStations', 'CurrentStation', 'Station'])
+        if station_col and station_col != 'OrderStations':
+            merged = merged.rename(columns={station_col: 'OrderStations'})
+        if 'OrderStations' not in merged.columns:
+            merged['OrderStations'] = pd.NA
+        merged['CurrentStation'] = merged['OrderStations'].fillna('Missing in CITK')
+        merged['CITKMatched'] = merged['OrderStations'].notna()
 
-        merged['CITKMatched'] = merged['CurrentStation'].notna() & (merged['CurrentStation'] != 'Missing in CITK')
+        if 'Status: Wayke' in merged.columns:
+            merged['WaykeMatched'] = merged['Status: Wayke'].notna()
+        else:
+            merged['WaykeMatched'] = False
+
+        merged['WaykeURL'] = merged.get('Wayke: URL', '').fillna('') if 'Wayke: URL' in merged.columns else ''
+
+        if 'Note' not in merged.columns:
+            merged['Note'] = ''
         
         # Add note information
         notes_df = pd.DataFrame(notes) if notes else pd.DataFrame()
@@ -284,6 +319,8 @@ class StatistikProcessor:
             notes_df = self._normalize_notes_df(notes_df)
             if not notes_df.empty:
                 merged = merged.merge(notes_df, left_on='Reg', right_on='reg', how='left')
+                if 'note' in merged.columns:
+                    merged['Note'] = merged['note'].fillna('')
         
         return merged
     
@@ -293,7 +330,12 @@ class StatistikProcessor:
         published = data['Published'].sum() if 'Published' in data else 0
         published_pct = round((published / total_inventory * 100), 1) if total_inventory > 0 else 0
         
-        needs_photos = len(data[data['Photographed'] == False]) if 'Photographed' in data else 0
+        if 'Published' in data and 'PhotoURL_Count' in data:
+            needs_photos = len(data[(data['Published'] == True) & (data['PhotoURL_Count'] == 0)])
+        elif 'Photographed' in data:
+            needs_photos = len(data[data['Photographed'] == False])
+        else:
+            needs_photos = 0
         missing_citk = len(data[data['CITKMatched'] == False]) if 'CITKMatched' in data else 0
         
         return {
@@ -322,9 +364,12 @@ class StatistikProcessor:
     
     def _get_needs_photos(self, data: pd.DataFrame) -> List[Dict]:
         """Get vehicles needing photos"""
-        if 'Photographed' not in data.columns:
+        if 'Published' in data.columns and 'PhotoURL_Count' in data.columns:
+            filtered = data[(data['Published'] == True) & (data['PhotoURL_Count'] == 0)]
+        elif 'Photographed' in data.columns:
+            filtered = data[data['Photographed'] == False]
+        else:
             return []
-        filtered = data[data['Photographed'] == False]
         return filtered.to_dict('records')
     
     def _get_not_published(self, data: pd.DataFrame) -> List[Dict]:
