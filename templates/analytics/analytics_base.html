@@ -103,6 +103,10 @@
                        class="px-4 py-3 text-sm font-medium text-white hover:bg-white hover:bg-opacity-20 transition-colors whitespace-nowrap {% if request.resolver_match.url_name == 'jobs_list' or request.resolver_match.url_name == 'job_detail' %}bg-white bg-opacity-20 border-b-2 border-white{% endif %}">
                         <i class="fas fa-list mr-2"></i>All Jobs
                     </a>
+                    <a href="{% url 'analytics:blocket_listings' %}" 
+                       class="px-4 py-3 text-sm font-medium text-white hover:bg-white hover:bg-opacity-20 transition-colors whitespace-nowrap {% if request.resolver_match.url_name == 'blocket_listings' %}bg-white bg-opacity-20 border-b-2 border-white{% endif %}">
+                        <i class="fas fa-car mr-2"></i>Blocket Listings
+                    </a>
                 </nav>
             </div>
         </div>

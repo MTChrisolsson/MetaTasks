@@ -13,6 +13,7 @@ class Integration(models.Model):
         ('jira', 'Jira'),
         ('zapier', 'Zapier'),
         ('webhook', 'Custom Webhook'),
+        ('blocket', 'Blocket'),
     ]
     
     STATUS_CHOICES = [

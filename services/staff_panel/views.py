@@ -1568,7 +1568,19 @@ def integrations(request):
             'webhook_url': f'/api/integrations/jira/{organization.id}/',
             'docs_url': 'https://developer.atlassian.com/server/jira/',
             'integration': configured_types.get('jira')
-        }
+        },
+        {
+            'name': 'Blocket',
+            'type': 'blocket',
+            'description': 'Show live published vehicle statistics from your Blocket.se dealer shop',
+            'icon': 'fas fa-car',
+            'category': 'Analytics',
+            'status': 'connected' if 'blocket' in configured_types and configured_types['blocket'].is_enabled else 'available',
+            'features': ['Published car count', 'Motorcycle & boat listings', 'Live sample ads'],
+            'setup_required': ['Blocket organisation ID (from shop URL)'],
+            'docs_url': 'https://www.blocket.se/',
+            'integration': configured_types.get('blocket')
+        },
     ]
     
     # Group integrations by category
@@ -1641,6 +1653,55 @@ def configure_integration(request, integration_name):
         action = request.POST.get('action')
         
         if action == 'save_config':
+            # Blocket integration stores only an org_id in the config JSONField
+            if integration_name.lower() == 'blocket':
+                raw_org_id = request.POST.get('org_id', '').strip()
+                if not raw_org_id.isdigit():
+                    messages.error(request, 'Blocket organisation ID must be a number.')
+                    return redirect('staff_panel:configure_integration', integration_name=integration_name)
+                config_data = {'org_id': int(raw_org_id)}
+                if integration:
+                    integration.config = config_data
+                    integration.status = 'active'
+                    integration.is_enabled = True
+                    integration.save()
+                    IntegrationLog.objects.create(
+                        integration=integration,
+                        level='info',
+                        action='configure',
+                        message='Blocket organisation ID updated',
+                        details=config_data,
+                    )
+                    messages.success(request, 'Blocket integration updated successfully.')
+                else:
+                    integration = Integration.objects.create(
+                        organization=organization,
+                        integration_type='blocket',
+                        name=f"{organization.name} Blocket",
+                        config=config_data,
+                        status='active',
+                        is_enabled=True,
+                        created_by=request.user,
+                    )
+                    IntegrationLog.objects.create(
+                        integration=integration,
+                        level='success',
+                        action='configure',
+                        message='Blocket integration configured',
+                        details=config_data,
+                    )
+                    messages.success(request, 'Blocket integration configured successfully.')
+                log_audit_action(
+                    user=request.user,
+                    action='update',
+                    content_type='Integration',
+                    object_id=str(integration.id),
+                    object_repr='Blocket integration',
+                    changes=config_data,
+                    request=request,
+                )
+                return redirect('staff_panel:configure_integration', integration_name=integration_name)
+
             config_data = {
                 'webhook_url': request.POST.get('webhook_url', ''),
                 'api_key': request.POST.get('api_key', ''),
@@ -1695,7 +1756,7 @@ def configure_integration(request, integration_name):
                 
             log_audit_action(
                 user=request.user,
-                action='integration_configure',
+                action='update',
                 content_type='Integration',
                 object_id=str(integration.id),
                 object_repr=f"{integration_name} integration",
@@ -1745,6 +1806,41 @@ def test_integration(request, integration_name):
             'response_time': '145ms',
             'status_code': 200
         }
+        
+        # For Blocket, perform a real API call to verify the org_id is valid
+        if integration_name.lower() == 'blocket':
+            org_id = integration.config.get('org_id')
+            if not org_id:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Blocket organisation ID is not configured',
+                    'error': 'Missing org_id in integration config',
+                })
+            try:
+                import sys
+                import os
+                sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+                from services.analytics.services.blocket_service import fetch_blocket_shop_stats
+                stats = fetch_blocket_shop_stats(int(org_id))
+                if stats.get('error'):
+                    test_result = {
+                        'success': False,
+                        'message': f'Blocket API error: {stats["error"]}',
+                        'status_code': 503,
+                    }
+                else:
+                    test_result = {
+                        'success': True,
+                        'message': f'Blocket connection successful — {stats["published_cars"]} cars published',
+                        'total_published': stats['total_published'],
+                        'store_url': stats['store_url'],
+                    }
+            except Exception as exc:
+                test_result = {
+                    'success': False,
+                    'message': f'Blocket test failed: {str(exc)}',
+                    'error': str(exc),
+                }
         
         IntegrationLog.objects.create(
             integration=integration,

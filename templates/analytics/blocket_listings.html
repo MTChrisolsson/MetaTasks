@@ -1,0 +1,300 @@
+{% extends 'analytics/analytics_base.html' %}
+
+{% block title %}Blocket Listings{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Blocket Listings</h1>
+            <p class="text-gray-600 mt-1">View and filter all your published vehicle listings on Blocket.se</p>
+        </div>
+        <a href="{% url 'analytics:index' %}" class="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    {% if listings_data.error %}
+    <!-- Error Message -->
+    <div class="rounded-lg bg-rose-50 border border-rose-200 px-6 py-4">
+        <div class="flex gap-3">
+            <i class="fas fa-exclamation-circle text-rose-600 text-xl flex-shrink-0 mt-0.5"></i>
+            <div>
+                <h3 class="font-semibold text-rose-900">Unable to Load Listings</h3>
+                <p class="text-sm text-rose-700 mt-1">{{ listings_data.error }}</p>
+            </div>
+        </div>
+    </div>
+    {% else %}
+
+    <!-- Filters Section -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Filters</h2>
+        <form method="get" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Brand/Make Filter -->
+                <div>
+                    <label for="make" class="block text-sm font-medium text-gray-700 mb-1">Brand</label>
+                    <select name="make" id="make" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        <option value="">All Brands</option>
+                        {% for make in listings_data.makes %}
+                        <option value="{{ make }}" {% if listings_data.filters.make == make %}selected{% endif %}>{{ make }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Min Price -->
+                <div>
+                    <label for="min_price" class="block text-sm font-medium text-gray-700 mb-1">Min Price (SEK)</label>
+                    <input type="number" name="min_price" id="min_price" 
+                           value="{{ listings_data.filters.min_price }}"
+                           placeholder="e.g. 50000"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                </div>
+
+                <!-- Max Price -->
+                <div>
+                    <label for="max_price" class="block text-sm font-medium text-gray-700 mb-1">Max Price (SEK)</label>
+                    <input type="number" name="max_price" id="max_price"
+                           value="{{ listings_data.filters.max_price }}"
+                           placeholder="e.g. 300000"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex items-end gap-2">
+                    <button type="submit" class="w-full px-4 py-2 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 transition">
+                        <i class="fas fa-search mr-2"></i>Filter
+                    </button>
+                    <a href="{% url 'analytics:blocket_listings' %}" class="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition">
+                        <i class="fas fa-redo mr-2"></i>Reset
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results Summary -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+            <p class="text-sm text-gray-600 font-medium">Total Listings</p>
+            <p class="text-2xl font-bold text-gray-900 mt-2">{{ listings_data.total_count }}</p>
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+            <p class="text-sm text-gray-600 font-medium">After Filtering</p>
+            <p class="text-2xl font-bold text-orange-700 mt-2">{{ listings_data.filtered_count }}</p>
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+            <p class="text-sm text-gray-600 font-medium">Unique Brands</p>
+            <p class="text-2xl font-bold text-blue-700 mt-2">{{ listings_data.makes|length }}</p>
+        </div>
+    </div>
+
+    <!-- Price Statistics -->
+    {% if listings_data.price_stats %}
+    <div class="bg-white rounded-xl border border-gray-200 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Price Range Analysis</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="rounded-lg bg-gray-50 border border-gray-200 p-4">
+                <p class="text-xs font-medium text-gray-600 uppercase tracking-wide">Minimum Price</p>
+                <p class="text-2xl font-bold text-gray-900 mt-2">
+                    {% if listings_data.price_stats.min %}
+                        {{ listings_data.price_stats.min|floatformat:0 }} SEK
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </p>
+            </div>
+            <div class="rounded-lg bg-gray-50 border border-gray-200 p-4">
+                <p class="text-xs font-medium text-gray-600 uppercase tracking-wide">Median Price</p>
+                <p class="text-2xl font-bold text-gray-900 mt-2">
+                    {% if listings_data.price_stats.median %}
+                        {{ listings_data.price_stats.median|floatformat:0 }} SEK
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </p>
+            </div>
+            <div class="rounded-lg bg-gray-50 border border-gray-200 p-4">
+                <p class="text-xs font-medium text-gray-600 uppercase tracking-wide">Average Price</p>
+                <p class="text-2xl font-bold text-gray-900 mt-2">
+                    {% if listings_data.price_stats.avg %}
+                        {{ listings_data.price_stats.avg|floatformat:0 }} SEK
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </p>
+            </div>
+            <div class="rounded-lg bg-gray-50 border border-gray-200 p-4">
+                <p class="text-xs font-medium text-gray-600 uppercase tracking-wide">Maximum Price</p>
+                <p class="text-2xl font-bold text-gray-900 mt-2">
+                    {% if listings_data.price_stats.max %}
+                        {{ listings_data.price_stats.max|floatformat:0 }} SEK
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p class="text-sm text-blue-900">
+                <i class="fas fa-info-circle mr-2"></i>
+                Prices are compared to similar vehicles by year and mileage. 
+                <strong>Low</strong> = 10%+ below median, <strong>Fair</strong> = within 10% of median, <strong>High</strong> = 10%+ above median.
+            </p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Listings Table -->
+    {% if listings_data.page.object_list %}
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr class="text-left text-sm font-semibold text-gray-700">
+                        <th class="px-6 py-3">Photo</th>
+                        <th class="px-6 py-3">Vehicle</th>
+                        <th class="px-6 py-3">Reg. #</th>
+                        <th class="px-6 py-3">Year</th>
+                        <th class="px-6 py-3">Type</th>
+                        <th class="px-6 py-3">Mileage</th>
+                        <th class="px-6 py-3">Price</th>
+                        <th class="px-6 py-3 text-center">Price Status</th>
+                        <th class="px-6 py-3">Link</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for listing in listings_data.page.object_list %}
+                    <tr class="hover:bg-gray-50 transition">
+                        <!-- Photo -->
+                        <td class="px-6 py-4">
+                            {% if listing.photo_url %}
+                                <a href="{{ listing.url }}" target="_blank" rel="noopener noreferrer" class="block">
+                                    <img src="{{ listing.photo_url }}" alt="{{ listing.heading }}"
+                                         class="h-16 w-16 object-cover rounded-lg border border-gray-200 hover:shadow-md transition cursor-pointer"
+                                         onerror="this.style.display='none'">
+                                </a>
+                            {% else %}
+                                <div class="h-16 w-16 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
+                                    <i class="fas fa-image text-gray-300"></i>
+                                </div>
+                            {% endif %}
+                        </td>
+                        <!-- Vehicle -->
+                        <td class="px-6 py-4">
+                            <div class="font-medium text-gray-900">{{ listing.heading|default:"-" }}</div>
+                            {% if listing.model_specification %}
+                                <div class="text-xs text-gray-500 mt-0.5">{{ listing.model_specification }}</div>
+                            {% elif listing.model %}
+                                <div class="text-xs text-gray-500 mt-0.5">{{ listing.model }}</div>
+                            {% endif %}
+                        </td>
+                        <!-- Registration Number -->
+                        <td class="px-6 py-4">
+                            {% if listing.registration_number %}
+                                <span class="inline-block bg-blue-50 border border-blue-200 rounded px-3 py-1 text-sm font-mono text-blue-900">
+                                    {{ listing.registration_number|upper }}
+                                </span>
+                            {% else %}
+                                <span class="text-gray-400">—</span>
+                            {% endif %}
+                        </td>
+                        <!-- Year -->
+                        <td class="px-6 py-4 text-gray-600">
+                            {% if listing.year %}{{ listing.year }}{% else %}-{% endif %}
+                        </td>
+                        <!-- Type -->
+                        <td class="px-6 py-4 text-gray-600">
+                            {% if listing.body_type %}
+                                <span class="text-xs bg-gray-100 px-2 py-1 rounded">{{ listing.body_type }}</span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <!-- Mileage -->
+                        <td class="px-6 py-4 text-gray-600">
+                            {% if listing.mileage %}{{ listing.mileage|floatformat:0 }} km{% else %}-{% endif %}
+                        </td>
+                        <!-- Price -->
+                        <td class="px-6 py-4">
+                            {% if listing.price %}
+                                <div class="font-semibold text-gray-900">{{ listing.price|floatformat:0 }} SEK</div>
+                            {% else %}-{% endif %}
+                        </td>
+                        <!-- Price Status Badge -->
+                        <td class="px-6 py-4 text-center">
+                            {% if listing.price_rank == 'low' %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                    <i class="fas fa-arrow-down mr-1.5"></i>Low
+                                </span>
+                            {% elif listing.price_rank == 'high' %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800">
+                                    <i class="fas fa-arrow-up mr-1.5"></i>High
+                                </span>
+                            {% elif listing.price_rank == 'competitive' %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                                    <i class="fas fa-equals mr-1.5"></i>Fair
+                                </span>
+                            {% else %}
+                                <span class="text-xs text-gray-500">—</span>
+                            {% endif %}
+                        </td>
+                        <!-- Link -->
+                        <td class="px-6 py-4 text-center">
+                            {% if listing.url %}
+                            <a href="{{ listing.url }}" target="_blank" rel="noopener noreferrer"
+                               class="text-orange-600 hover:text-orange-800 font-medium">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                            {% else %}-{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if listings_data.page.has_other_pages %}
+        <div class="bg-gray-50 border-t border-gray-200 px-6 py-4 flex items-center justify-between">
+            <div class="text-sm text-gray-600">
+                Page {{ listings_data.page.number }} of {{ listings_data.page.paginator.num_pages }}
+            </div>
+            <div class="flex gap-2">
+                {% if listings_data.page.has_previous %}
+                <a href="?{% if listings_data.filters.make %}make={{ listings_data.filters.make }}&{% endif %}{% if listings_data.filters.min_price %}min_price={{ listings_data.filters.min_price }}&{% endif %}{% if listings_data.filters.max_price %}max_price={{ listings_data.filters.max_price }}&{% endif %}page=1"
+                   class="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-white">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+                <a href="?{% if listings_data.filters.make %}make={{ listings_data.filters.make }}&{% endif %}{% if listings_data.filters.min_price %}min_price={{ listings_data.filters.min_price }}&{% endif %}{% if listings_data.filters.max_price %}max_price={{ listings_data.filters.max_price }}&{% endif %}page={{ listings_data.page.previous_page_number }}"
+                   class="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-white">
+                    Previous
+                </a>
+                {% endif %}
+
+                {% if listings_data.page.has_next %}
+                <a href="?{% if listings_data.filters.make %}make={{ listings_data.filters.make }}&{% endif %}{% if listings_data.filters.min_price %}min_price={{ listings_data.filters.min_price }}&{% endif %}{% if listings_data.filters.max_price %}max_price={{ listings_data.filters.max_price }}&{% endif %}page={{ listings_data.page.next_page_number }}"
+                   class="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-white">
+                    Next
+                </a>
+                <a href="?{% if listings_data.filters.make %}make={{ listings_data.filters.make }}&{% endif %}{% if listings_data.filters.min_price %}min_price={{ listings_data.filters.min_price }}&{% endif %}{% if listings_data.filters.max_price %}max_price={{ listings_data.filters.max_price }}&{% endif %}page={{ listings_data.page.paginator.num_pages }}"
+                   class="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-white">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <!-- No Results -->
+    <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+        <i class="fas fa-search text-4xl text-gray-300 mb-4"></i>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">No listings found</h3>
+        <p class="text-gray-600">Try adjusting your filters to find more results.</p>
+    </div>
+    {% endif %}
+
+    {% endif %}
+</div>
+{% endblock %}

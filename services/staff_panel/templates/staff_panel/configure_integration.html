@@ -2,7 +2,7 @@
 
 {% block title %}Configure {{ integration_name|title }} Integration{% endblock %}
 
-{% block content %}
+{% block staff_panel_content %}
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
@@ -32,6 +32,20 @@
                             <form method="post">
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="save_config">
+
+                                {% if integration_name == 'blocket' %}
+                                {# Blocket only needs the numeric organisation ID #}
+                                <div class="mb-3">
+                                    <label for="org_id" class="form-label">Blocket Organisation ID</label>
+                                    <input type="number" class="form-control" id="org_id" name="org_id"
+                                           value="{{ integration.config.org_id|default:'' }}"
+                                           placeholder="e.g. 12345678" min="1" required>
+                                    <div class="form-text">
+                                        The numeric ID from your Blocket shop URL:
+                                        <code>blocket.se/mobility/search/car?orgId=<strong>XXXXXXXX</strong></code>
+                                    </div>
+                                </div>
+                                {% else %}
                                 
                                 <div class="mb-3">
                                     <label for="webhook_url" class="form-label">Webhook URL</label>
@@ -76,6 +90,7 @@
                                         </label>
                                     </div>
                                 </div>
+                                {% endif %}
 
                                 <div class="d-flex gap-2">
                                     <button type="submit" class="btn btn-primary">
@@ -201,4 +216,4 @@ function testIntegration() {
         });
 }
 </script>
-{% endblock %}
+{% endblock staff_panel_content %}

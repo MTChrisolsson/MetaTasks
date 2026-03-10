@@ -9,254 +9,165 @@
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900">
-                    <i class="fas fa-plug mr-2"></i>Integrations - Comming Soon
+                    <i class="fas fa-plug mr-2"></i>Integrations
                 </h1>
                 <p class="mt-1 text-sm text-gray-500">
                     Manage third-party integrations and API connections
                 </p>
             </div>
-            <div class="flex space-x-3">
-                <button type="button" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                    <i class="fas fa-sync mr-2"></i>
-                    Sync All
-                </button>
-                <button type="button" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
-                    <i class="fas fa-plus mr-2"></i>
-                    Add Integration
-                </button>
-            </div>
         </div>
     </div>
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="stat-card bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-plug text-white"></i>
-                        </div>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Active Integrations</dt>
-                            <dd class="text-lg font-medium text-gray-900">{{ active_integrations|default:6 }}</dd>
-                        </dl>
-                    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5 flex items-center">
+                <div class="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-plug text-white"></i>
+                </div>
+                <div class="ml-5">
+                    <p class="text-sm font-medium text-gray-500">Available</p>
+                    <p class="text-lg font-semibold text-gray-900">{{ total_available }}</p>
                 </div>
             </div>
         </div>
-
-        <div class="stat-card bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-check-circle text-white"></i>
-                        </div>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Connected</dt>
-                            <dd class="text-lg font-medium text-gray-900">{{ connected_integrations|default:4 }}</dd>
-                        </dl>
-                    </div>
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5 flex items-center">
+                <div class="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-check-circle text-white"></i>
+                </div>
+                <div class="ml-5">
+                    <p class="text-sm font-medium text-gray-500">Connected</p>
+                    <p class="text-lg font-semibold text-gray-900">{{ total_connected }}</p>
                 </div>
             </div>
         </div>
-
-        <div class="stat-card bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-exclamation-triangle text-white"></i>
-                        </div>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Pending</dt>
-                            <dd class="text-lg font-medium text-gray-900">{{ pending_integrations|default:2 }}</dd>
-                        </dl>
-                    </div>
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5 flex items-center">
+                <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-chart-pie text-white"></i>
                 </div>
-            </div>
-        </div>
-
-        <div class="stat-card bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-times-circle text-white"></i>
-                        </div>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Failed</dt>
-                            <dd class="text-lg font-medium text-gray-900">{{ failed_integrations|default:0 }}</dd>
-                        </dl>
-                    </div>
+                <div class="ml-5">
+                    <p class="text-sm font-medium text-gray-500">Connection rate</p>
+                    <p class="text-lg font-semibold text-gray-900">{{ connection_rate }}%</p>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Integration Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Slack Integration -->
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-6">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-                        <i class="fab fa-slack text-white text-xl"></i>
+    {% for category, items in integration_categories.items %}
+    <div>
+        <h2 class="text-lg font-semibold text-gray-700 mb-3">{{ category }}</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for item in items %}
+            <div class="bg-white overflow-hidden shadow rounded-lg flex flex-col">
+                <div class="p-6 flex-1">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0
+                            {% if item.type == 'slack' %}bg-purple-600
+                            {% elif item.type == 'teams' %}bg-blue-600
+                            {% elif item.type == 'google' %}bg-yellow-500
+                            {% elif item.type == 'github' %}bg-gray-800
+                            {% elif item.type == 'jira' %}bg-blue-700
+                            {% elif item.type == 'zapier' %}bg-orange-500
+                            {% elif item.type == 'blocket' %}bg-orange-500
+                            {% else %}bg-gray-600{% endif %}">
+                            <i class="{{ item.icon }} text-white text-xl"></i>
+                        </div>
+                        <div class="ml-4 flex-1 min-w-0">
+                            <h3 class="text-base font-semibold text-gray-900 truncate">{{ item.name }}</h3>
+                            <p class="text-sm text-gray-500 truncate">{{ item.description }}</p>
+                        </div>
+                        <div class="ml-3 flex-shrink-0">
+                            {% if item.status == 'connected' %}
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <i class="fas fa-check mr-1"></i>Connected
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                Available
+                            </span>
+                            {% endif %}
+                        </div>
                     </div>
-                    <div class="ml-4 flex-1">
-                        <h3 class="text-lg font-medium text-gray-900">Slack</h3>
-                        <p class="text-sm text-gray-500">Team communication</p>
-                    </div>
-                    <div class="ml-4">
-                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Connected</span>
-                    </div>
+
+                    {% if item.features %}
+                    <ul class="mt-4 space-y-1">
+                        {% for feature in item.features %}
+                        <li class="flex items-center text-sm text-gray-600">
+                            <i class="fas fa-check-circle text-green-400 mr-2 flex-shrink-0 text-xs"></i>{{ feature }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
                 </div>
-                <div class="mt-4 flex space-x-2">
-                    <button type="button" class="flex-1 inline-flex justify-center items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                        <i class="fas fa-cog mr-1"></i>Configure
-                    </button>
-                    <button type="button" class="flex-1 inline-flex justify-center items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+
+                <div class="px-6 pb-5 flex gap-2">
+                    <a href="{% url 'staff_panel:configure_integration' item.type %}"
+                       class="flex-1 inline-flex justify-center items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                        <i class="fas fa-cog mr-1"></i>
+                        {% if item.status == 'connected' %}Edit{% else %}Configure{% endif %}
+                    </a>
+                    {% if item.status == 'connected' %}
+                    <button type="button"
+                            onclick="testIntegration('{{ item.type }}')"
+                            class="flex-1 inline-flex justify-center items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
                         <i class="fas fa-vial mr-1"></i>Test
                     </button>
+                    {% endif %}
                 </div>
             </div>
-        </div>
-
-        <!-- GitHub Integration -->
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-6">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 bg-gray-800 rounded-lg flex items-center justify-center">
-                        <i class="fab fa-github text-white text-xl"></i>
-                    </div>
-                    <div class="ml-4 flex-1">
-                        <h3 class="text-lg font-medium text-gray-900">GitHub</h3>
-                        <p class="text-sm text-gray-500">Code repository</p>
-                    </div>
-                    <div class="ml-4">
-                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Connected</span>
-                    </div>
-                </div>
-                <div class="mt-4 flex space-x-2">
-                    <button type="button" class="flex-1 inline-flex justify-center items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                        <i class="fas fa-cog mr-1"></i>Configure
-                    </button>
-                    <button type="button" class="flex-1 inline-flex justify-center items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
-                        <i class="fas fa-vial mr-1"></i>Test
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Jira Integration -->
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-6">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-                        <i class="fab fa-jira text-white text-xl"></i>
-                    </div>
-                    <div class="ml-4 flex-1">
-                        <h3 class="text-lg font-medium text-gray-900">Jira</h3>
-                        <p class="text-sm text-gray-500">Issue tracking</p>
-                    </div>
-                    <div class="ml-4">
-                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Pending</span>
-                    </div>
-                </div>
-                <div class="mt-4 flex space-x-2">
-                    <button type="button" class="flex-1 inline-flex justify-center items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                        <i class="fas fa-cog mr-1"></i>Configure
-                    </button>
-                    <button type="button" class="flex-1 inline-flex justify-center items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
-                        <i class="fas fa-plug mr-1"></i>Connect
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Google Workspace Integration -->
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-6">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center">
-                        <i class="fab fa-google text-white text-xl"></i>
-                    </div>
-                    <div class="ml-4 flex-1">
-                        <h3 class="text-lg font-medium text-gray-900">Google Workspace</h3>
-                        <p class="text-sm text-gray-500">Email & Calendar</p>
-                    </div>
-                    <div class="ml-4">
-                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Connected</span>
-                    </div>
-                </div>
-                <div class="mt-4 flex space-x-2">
-                    <button type="button" class="flex-1 inline-flex justify-center items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                        <i class="fas fa-cog mr-1"></i>Configure
-                    </button>
-                    <button type="button" class="flex-1 inline-flex justify-center items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
-                        <i class="fas fa-vial mr-1"></i>Test
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Microsoft Teams Integration -->
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-6">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                        <i class="fab fa-microsoft text-white text-xl"></i>
-                    </div>
-                    <div class="ml-4 flex-1">
-                        <h3 class="text-lg font-medium text-gray-900">Microsoft Teams</h3>
-                        <p class="text-sm text-gray-500">Collaboration</p>
-                    </div>
-                    <div class="ml-4">
-                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Not Connected</span>
-                    </div>
-                </div>
-                <div class="mt-4 flex space-x-2">
-                    <button type="button" class="flex-1 inline-flex justify-center items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
-                        <i class="fas fa-plug mr-1"></i>Connect
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Trello Integration -->
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-6">
-                <div class="flex items-center">
-                    <div class="w-12 h-12 bg-blue-400 rounded-lg flex items-center justify-center">
-                        <i class="fab fa-trello text-white text-xl"></i>
-                    </div>
-                    <div class="ml-4 flex-1">
-                        <h3 class="text-lg font-medium text-gray-900">Trello</h3>
-                        <p class="text-sm text-gray-500">Project boards</p>
-                    </div>
-                    <div class="ml-4">
-                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Pending</span>
-                    </div>
-                </div>
-                <div class="mt-4 flex space-x-2">
-                    <button type="button" class="flex-1 inline-flex justify-center items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                        <i class="fas fa-cog mr-1"></i>Configure
-                    </button>
-                    <button type="button" class="flex-1 inline-flex justify-center items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
-                        <i class="fas fa-plug mr-1"></i>Connect
-                    </button>
-                </div>
-            </div>
+            {% endfor %}
         </div>
     </div>
+    {% empty %}
+    <p class="text-gray-500">No integrations available.</p>
+    {% endfor %}
+
+    <!-- Recent Activity -->
+    {% if recent_activities %}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-base font-semibold text-gray-900">Recent Activity</h2>
+        </div>
+        <ul class="divide-y divide-gray-100">
+            {% for activity in recent_activities %}
+            <li class="px-6 py-3 flex items-center justify-between text-sm">
+                <div class="flex items-center gap-3">
+                    <span class="inline-flex px-2 py-0.5 rounded text-xs font-medium
+                        {% if activity.level == 'success' %}bg-green-100 text-green-700
+                        {% elif activity.level == 'error' %}bg-red-100 text-red-700
+                        {% elif activity.level == 'warning' %}bg-yellow-100 text-yellow-700
+                        {% else %}bg-blue-100 text-blue-700{% endif %}">
+                        {{ activity.level }}
+                    </span>
+                    <span class="text-gray-700">{{ activity.integration }}: {{ activity.action }}</span>
+                </div>
+                <span class="text-gray-400 text-xs">{{ activity.timestamp|date:"Y-m-d H:i" }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
 </div>
+
+<script>
+function testIntegration(integrationType) {
+    fetch("{% url 'staff_panel:test_integration' 'PLACEHOLDER' %}".replace('PLACEHOLDER', integrationType), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(r => r.json())
+    .then(data => {
+        alert(data.message || (data.success ? 'Test successful' : 'Test failed'));
+    })
+    .catch(() => alert('Test request failed.'));
+}
+</script>
+{% csrf_token %}
 {% endblock %}
+

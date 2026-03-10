@@ -9,6 +9,7 @@ router.register(r'jobs', views.AnalyticsViewSet, basename='analytics-jobs')
 
 urlpatterns = [
     path('', views.index, name='index'),
+    path('blocket-listings/', views.blocket_listings, name='blocket_listings'),
     path('upload/', views.upload, name='upload'),
     path('jobs/', views.jobs_list, name='jobs_list'),
     path('jobs/<int:job_id>/', views.job_detail, name='job_detail'),

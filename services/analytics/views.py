@@ -383,6 +383,23 @@ def index(request):
         'latest_kpis': latest_completed.kpis if latest_completed else None,
     }
 
+    # Blocket integration stats (silently skipped if not configured or unavailable)
+    blocket_stats = None
+    try:
+        from services.staff_panel.models import Integration as StaffIntegration
+        blocket_integration = StaffIntegration.objects.filter(
+            organization=profile.organization,
+            integration_type='blocket',
+            is_enabled=True,
+        ).first()
+        if blocket_integration:
+            org_id = blocket_integration.config.get('org_id')
+            if org_id:
+                from .services.blocket_service import fetch_blocket_shop_stats
+                blocket_stats = fetch_blocket_shop_stats(int(org_id))
+    except Exception:
+        pass
+
     return render(
         request,
         'analytics/dashboard.html',
@@ -391,6 +408,84 @@ def index(request):
             'recent_jobs': recent_jobs,
             'latest_job': latest_completed,
             'stats': stats,
+            'blocket_stats': blocket_stats,
+        },
+    )
+
+
+@analytics_access_required
+def blocket_listings(request):
+    """Display all Blocket listings with filtering options"""
+    profile = request.analytics_profile
+    
+    # Get Blocket integration
+    blocket_integration = None
+    listings_data = None
+    org_id = None
+    
+    try:
+        from services.staff_panel.models import Integration as StaffIntegration
+        blocket_integration = StaffIntegration.objects.filter(
+            organization=profile.organization,
+            integration_type='blocket',
+            is_enabled=True,
+        ).first()
+        
+        if blocket_integration:
+            org_id = blocket_integration.config.get('org_id')
+            if org_id:
+                # Get filter parameters
+                make_filter = request.GET.get('make', '').strip()
+                min_price = request.GET.get('min_price', '').strip()
+                max_price = request.GET.get('max_price', '').strip()
+                
+                # Convert price strings to ints
+                min_price_int = int(min_price) if min_price and min_price.isdigit() else None
+                max_price_int = int(max_price) if max_price and max_price.isdigit() else None
+                
+                from .services.blocket_service import fetch_blocket_listings
+                listings_data = fetch_blocket_listings(
+                    int(org_id),
+                    make_filter=make_filter if make_filter else None,
+                    min_price=min_price_int,
+                    max_price=max_price_int,
+                )
+                
+                # Pagination
+                paginator = Paginator(listings_data['listings'], 20)
+                page_number = request.GET.get('page', 1)
+                try:
+                    page = paginator.get_page(page_number)
+                except:
+                    page = paginator.get_page(1)
+                
+                listings_data['page'] = page
+                listings_data['filters'] = {
+                    'make': make_filter,
+                    'min_price': min_price if min_price else '',
+                    'max_price': max_price if max_price else '',
+                }
+    except Exception:
+        pass
+    
+    if not listings_data:
+        listings_data = {
+            'listings': [],
+            'total_count': 0,
+            'filtered_count': 0,
+            'makes': [],
+            'error': 'Blocket integration not configured' if not blocket_integration else 'Could not fetch listings',
+            'page': None,
+            'filters': {},
+        }
+    
+    return render(
+        request,
+        'analytics/blocket_listings.html',
+        {
+            'profile': profile,
+            'listings_data': listings_data,
+            'org_id': org_id,
         },
     )
 
