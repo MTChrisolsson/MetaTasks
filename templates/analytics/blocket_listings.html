@@ -162,6 +162,7 @@
                         <th class="px-6 py-3">Mileage</th>
                         <th class="px-6 py-3">Price</th>
                         <th class="px-6 py-3 text-center">Price Status</th>
+                        <th class="px-6 py-3 text-center">AI Valuation</th>
                         <th class="px-6 py-3">Link</th>
                     </tr>
                 </thead>
@@ -239,6 +240,31 @@
                                 <span class="text-xs text-gray-500">—</span>
                             {% endif %}
                         </td>
+                        <!-- AI Valuation -->
+                        <td class="px-6 py-4 text-center">
+                            {% if listing.matched_vehicle_id %}
+                                <button
+                                    type="button"
+                                    class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition"
+                                    data-vehicle-id="{{ listing.matched_vehicle_id }}"
+                                    data-make="{{ listing.make|default:''|escape }}"
+                                    data-model="{{ listing.model|default:''|escape }}"
+                                    data-year="{{ listing.year|default:'' }}"
+                                    data-mileage="{{ listing.mileage|default:'' }}"
+                                    data-transmission="{{ listing.transmission|default:''|escape }}"
+                                    data-fuel-type="{{ listing.fuel_type|default:''|escape }}"
+                                    data-published-price="{{ listing.price|default:'' }}"
+                                    data-valuation-target="valuation-{{ forloop.counter }}"
+                                    onclick="valuateListing(this)">
+                                    <i class="fas fa-brain mr-1.5"></i>Run AI
+                                </button>
+                            {% else %}
+                                <span class="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                                    No vehicle match
+                                </span>
+                            {% endif %}
+                            <div id="valuation-{{ forloop.counter }}" class="mt-2 text-left"></div>
+                        </td>
                         <!-- Link -->
                         <td class="px-6 py-4 text-center">
                             {% if listing.url %}
@@ -297,4 +323,272 @@
 
     {% endif %}
 </div>
+
+<div id="valuation-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50" onclick="closeValuationModal()"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="w-full max-w-xl rounded-xl bg-white border border-gray-200 shadow-2xl">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-900">Complete Vehicle Data</h3>
+                <button type="button" class="text-gray-500 hover:text-gray-800" onclick="closeValuationModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="valuation-modal-form" class="p-6 space-y-4" onsubmit="submitValuationModal(event)">
+                <p id="valuation-modal-message" class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2"></p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Make</label>
+                        <input id="modal-make" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Model</label>
+                        <input id="modal-model" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Year</label>
+                        <input id="modal-year" type="number" min="1900" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Mileage (km)</label>
+                        <input id="modal-mileage" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Transmission</label>
+                        <input id="modal-transmission" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Fuel Type</label>
+                        <input id="modal-fuel-type" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Condition</label>
+                        <input id="modal-condition" type="text" placeholder="e.g. Excellent, Good, Needs repair" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Published Price (SEK)</label>
+                        <input id="modal-published-price" type="number" min="0" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeValuationModal()" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button id="valuation-modal-submit" type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                        Retry Valuation
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const valuationRequestState = {
+    button: null,
+    target: null,
+    body: null,
+    missingFields: [],
+};
+
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return '';
+}
+
+async function valuateListing(button) {
+    const vehicleId = button.getAttribute('data-vehicle-id');
+    const targetId = button.getAttribute('data-valuation-target');
+    const target = document.getElementById(targetId);
+    if (!vehicleId || !target) {
+        return;
+    }
+
+    const previousText = button.innerHTML;
+    button.disabled = true;
+    button.classList.add('opacity-60', 'cursor-not-allowed');
+    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i>Analyzing';
+    target.innerHTML = '<p class="text-xs text-gray-500">Requesting AI valuation...</p>';
+
+    const body = { vehicle_id: Number(vehicleId) };
+    const make = button.getAttribute('data-make') || '';
+    const model = button.getAttribute('data-model') || '';
+    const year = button.getAttribute('data-year') || '';
+    const mileage = button.getAttribute('data-mileage') || '';
+    const transmission = button.getAttribute('data-transmission') || '';
+    const fuelType = button.getAttribute('data-fuel-type') || '';
+    const publishedPrice = button.getAttribute('data-published-price') || '';
+
+    if (make.trim()) body.make = make.trim();
+    if (model.trim()) body.model = model.trim();
+    if (year !== '') body.year = Number(year);
+    if (mileage !== '') body.mileage = Number(mileage);
+    if (transmission.trim()) body.transmission = transmission.trim();
+    if (fuelType.trim()) body.fuel_type = fuelType.trim();
+    if (publishedPrice !== '') body.published_price = Number(publishedPrice);
+
+    const responsePayload = await runValuationRequest(body);
+    handleValuationResponse(responsePayload, target, body, button);
+
+    button.disabled = false;
+    button.classList.remove('opacity-60', 'cursor-not-allowed');
+    button.innerHTML = previousText;
+}
+
+async function runValuationRequest(body) {
+    try {
+        const response = await fetch('{% url "analytics:api_valuations" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify(body),
+        });
+        const payload = await response.json();
+
+        return {
+            ok: response.ok,
+            payload: payload,
+        };
+    } catch (error) {
+        return {
+            ok: false,
+            payload: { error: 'Network error while requesting valuation.' },
+        };
+    }
+}
+
+function handleValuationResponse(responsePayload, target, body, button) {
+    if (!responsePayload.ok) {
+        const payload = responsePayload.payload || {};
+        const hasMissingFields = payload.missing_fields && Array.isArray(payload.missing_fields) && payload.missing_fields.length;
+        if (hasMissingFields) {
+            openValuationModal(button, target, body, payload.missing_fields);
+            return;
+        }
+
+        const errorMessage = payload.error || 'Unable to run valuation.';
+        target.innerHTML = `<p class="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1">${errorMessage}</p>`;
+        return;
+    }
+
+    const payload = responsePayload.payload;
+    renderValuationResult(target, payload);
+}
+
+function renderValuationResult(target, payload) {
+    const safeNumber = (value) => Number(value || 0).toLocaleString();
+
+    const fairnessLabel = {
+        below_market: 'Below market',
+        fair: 'Fair price',
+        above_market: 'Above market',
+    };
+
+    target.innerHTML = `
+        <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-2 space-y-1">
+            <p class="text-xs text-indigo-900"><strong>Estimated:</strong> ${safeNumber(payload.estimated_market_value)} SEK</p>
+            <p class="text-xs text-indigo-900"><strong>Assessment:</strong> ${fairnessLabel[payload.fairness_assessment] || payload.fairness_assessment}</p>
+            <p class="text-xs text-indigo-900"><strong>Suggested:</strong> ${safeNumber(payload.suggested_price)} SEK</p>
+            <p class="text-xs text-indigo-800">${payload.ai_explanation}</p>
+        </div>
+    `;
+}
+
+function openValuationModal(button, target, body, missingFields) {
+    valuationRequestState.button = button;
+    valuationRequestState.target = target;
+    valuationRequestState.body = { ...body };
+    valuationRequestState.missingFields = missingFields;
+
+    document.getElementById('modal-make').value = body.make || '';
+    document.getElementById('modal-model').value = body.model || '';
+    document.getElementById('modal-year').value = body.year || '';
+    document.getElementById('modal-mileage').value = body.mileage || '';
+    document.getElementById('modal-transmission').value = body.transmission || '';
+    document.getElementById('modal-fuel-type').value = body.fuel_type || '';
+    document.getElementById('modal-condition').value = body.condition || '';
+    document.getElementById('modal-published-price').value = body.published_price || '';
+
+    const prettyFields = missingFields.map((field) => field.replace(/_/g, ' ')).join(', ');
+    document.getElementById('valuation-modal-message').textContent = `The AI needs more data. Please fill: ${prettyFields}.`;
+
+    for (const field of ['make', 'model', 'year', 'published_price']) {
+        const inputMap = {
+            make: 'modal-make',
+            model: 'modal-model',
+            year: 'modal-year',
+            published_price: 'modal-published-price',
+        };
+        const input = document.getElementById(inputMap[field]);
+        if (!input) continue;
+        if (missingFields.includes(field)) {
+            input.classList.add('border-rose-400', 'bg-rose-50');
+        } else {
+            input.classList.remove('border-rose-400', 'bg-rose-50');
+        }
+    }
+
+    document.getElementById('valuation-modal').classList.remove('hidden');
+}
+
+function closeValuationModal() {
+    document.getElementById('valuation-modal').classList.add('hidden');
+}
+
+async function submitValuationModal(event) {
+    event.preventDefault();
+    if (!valuationRequestState.body || !valuationRequestState.target) {
+        closeValuationModal();
+        return;
+    }
+
+    const submitButton = document.getElementById('valuation-modal-submit');
+    const previousText = submitButton.innerHTML;
+    submitButton.disabled = true;
+    submitButton.innerHTML = 'Retrying...';
+
+    const updatedBody = { ...valuationRequestState.body };
+    const make = document.getElementById('modal-make').value.trim();
+    const model = document.getElementById('modal-model').value.trim();
+    const year = document.getElementById('modal-year').value.trim();
+    const mileage = document.getElementById('modal-mileage').value.trim();
+    const transmission = document.getElementById('modal-transmission').value.trim();
+    const fuelType = document.getElementById('modal-fuel-type').value.trim();
+    const condition = document.getElementById('modal-condition').value.trim();
+    const publishedPrice = document.getElementById('modal-published-price').value.trim();
+
+    if (make) updatedBody.make = make;
+    if (model) updatedBody.model = model;
+    if (year) updatedBody.year = Number(year);
+    if (mileage) updatedBody.mileage = Number(mileage);
+    if (transmission) updatedBody.transmission = transmission;
+    if (fuelType) updatedBody.fuel_type = fuelType;
+    if (condition) updatedBody.condition = condition;
+    if (publishedPrice) updatedBody.published_price = Number(publishedPrice);
+
+    const responsePayload = await runValuationRequest(updatedBody);
+    if (responsePayload.ok) {
+        closeValuationModal();
+    }
+
+    handleValuationResponse(
+        responsePayload,
+        valuationRequestState.target,
+        updatedBody,
+        valuationRequestState.button,
+    );
+
+    submitButton.disabled = false;
+    submitButton.innerHTML = previousText;
+}
+</script>
 {% endblock %}

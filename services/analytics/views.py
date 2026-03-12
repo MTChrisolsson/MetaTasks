@@ -1,5 +1,6 @@
 import logging
 from io import BytesIO
+from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -14,14 +15,21 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from core.models import UserProfile
 from core.views import require_organization_access
 from licensing.models import License, Service
 
 from .forms import StatistikUploadForm
-from .models import StatistikJob, VehicleRecord
-from .serializers import StatistikJobSerializer
+from .models import StatistikJob, VehicleRecord, VehicleValuation
+from .serializers import (
+    StatistikJobSerializer,
+    VehicleValuationBatchResponseSerializer,
+    VehicleValuationRequestSerializer,
+    VehicleValuationSerializer,
+)
+from .services.groq_valuation_service import GroqValuationError, GroqVehicleValuationService
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +59,22 @@ def _get_valid_org_license(organization, service):
     return None
 
 
+def _ensure_analytics_access_for_user(user):
+    profile = _get_user_profile(user)
+    if not profile or not profile.organization:
+        raise PermissionDenied('User profile or organization is missing.')
+
+    service = _get_analytics_service()
+    if not service:
+        raise PermissionDenied('Analytics service is not configured.')
+
+    license_obj = _get_valid_org_license(profile.organization, service)
+    if not license_obj:
+        raise PermissionDenied('A valid analytics license is required.')
+
+    return profile
+
+
 def _to_bool(value):
     if isinstance(value, bool):
         return value
@@ -68,6 +92,59 @@ def _to_int(value, fallback=0):
         return fallback
 
 
+def _to_decimal(value):
+    try:
+        if value is None or value == '':
+            return None
+        return Decimal(str(value)).quantize(Decimal('0.01'))
+    except (InvalidOperation, ValueError, TypeError):
+        return None
+
+
+def _build_vehicle_payload(vehicle, overrides=None):
+    overrides = overrides or {}
+
+    payload = {
+        'make': (overrides.get('make') or vehicle.make or '').strip(),
+        'model': (overrides.get('model') or vehicle.model or '').strip(),
+        'year': overrides.get('year') if overrides.get('year') is not None else vehicle.year,
+        'mileage': overrides.get('mileage') if overrides.get('mileage') is not None else vehicle.mileage,
+        'condition': (overrides.get('condition') or vehicle.condition or '').strip(),
+        'transmission': (overrides.get('transmission') or vehicle.transmission or '').strip(),
+        'fuel_type': (overrides.get('fuel_type') or vehicle.fuel_type or '').strip(),
+        'published_price': _to_decimal(overrides.get('published_price')) or vehicle.published_price,
+    }
+
+    missing = [
+        key
+        for key in ['make', 'model', 'year', 'published_price']
+        if payload.get(key) in (None, '')
+    ]
+    return payload, missing
+
+
+def _create_vehicle_valuation(job, vehicle, vehicle_payload, valuation_result):
+    return VehicleValuation.objects.create(
+        job=job,
+        vehicle=vehicle,
+        registration=vehicle.registration,
+        make=vehicle_payload['make'],
+        model=vehicle_payload['model'],
+        year=vehicle_payload['year'],
+        mileage=vehicle_payload.get('mileage'),
+        condition=vehicle_payload.get('condition', ''),
+        transmission=vehicle_payload.get('transmission', ''),
+        fuel_type=vehicle_payload.get('fuel_type', ''),
+        published_price=vehicle_payload['published_price'],
+        estimated_market_value=valuation_result['estimated_market_value'],
+        fairness_assessment=valuation_result['fairness_assessment'],
+        suggested_price=valuation_result['suggested_price'],
+        ai_explanation=valuation_result['ai_explanation'],
+        raw_response=valuation_result.get('raw_response'),
+        model_name=valuation_result.get('model_name', 'llama-3.1-8b-instant'),
+    )
+
+
 def _save_vehicle_records(job, rows):
     """Persist processed rows to VehicleRecord with tolerant parsing."""
     vehicle_records = []
@@ -76,7 +153,14 @@ def _save_vehicle_records(job, rows):
             VehicleRecord(
                 job=job,
                 registration=str(row.get('Reg', '') or ''),
+                make=str(row.get('Tillverkare', row.get('Make', '')) or ''),
                 model=str(row.get('Model', '') or ''),
+                year=_to_int(row.get('Modellar', row.get('Modellår', row.get('Year', None))), None),
+                mileage=_to_int(row.get('Mileage', row.get('Miltal', None)), None),
+                condition=str(row.get('Condition', '') or ''),
+                transmission=str(row.get('Transmission', '') or ''),
+                fuel_type=str(row.get('FuelType', row.get('Fuel', '')) or ''),
+                published_price=_to_int(row.get('Pris', row.get('Price', None)), None),
                 status=_to_int(row.get('Status', 0), 0),
                 current_station=str(row.get('CurrentStation', '') or ''),
                 days_in_stock=_to_int(row.get('DaysInStock', None), None),
@@ -465,6 +549,25 @@ def blocket_listings(request):
                     'min_price': min_price if min_price else '',
                     'max_price': max_price if max_price else '',
                 }
+
+                # Match current page Blocket listings to persisted VehicleRecord rows.
+                for listing in listings_data['page'].object_list:
+                    listing['matched_vehicle_id'] = None
+                    regno = str(listing.get('registration_number') or '').strip()
+                    if not regno:
+                        continue
+
+                    matched_vehicle = (
+                        VehicleRecord.objects.filter(
+                            job__organization=profile.organization,
+                            registration__iexact=regno,
+                        )
+                        .select_related('job')
+                        .order_by('-job__uploaded_at', '-id')
+                        .first()
+                    )
+                    if matched_vehicle:
+                        listing['matched_vehicle_id'] = matched_vehicle.id
     except Exception:
         pass
     
@@ -631,25 +734,119 @@ def export_excel(request, job_id):
     return response
 
 
+class VehicleValuationAPIView(APIView):
+    """Valuate one vehicle or all vehicles in a job using Groq AI."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            return self._handle_post(request)
+        except Exception as exc:
+            logger.exception('Unexpected error in VehicleValuationAPIView.post: %s', exc)
+            return Response(
+                {'error': f'Internal server error: {str(exc)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def _handle_post(self, request):
+        profile = _ensure_analytics_access_for_user(request.user)
+
+        request_serializer = VehicleValuationRequestSerializer(data=request.data)
+        request_serializer.is_valid(raise_exception=True)
+        data = request_serializer.validated_data
+
+        try:
+            valuation_service = GroqVehicleValuationService()
+        except GroqValuationError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        if data.get('job_id') and not data.get('vehicle_id'):
+            return self._handle_batch(profile, data, valuation_service)
+        return self._handle_single(profile, data, valuation_service)
+
+    def _handle_single(self, profile, data, valuation_service):
+        vehicle_id = data.get('vehicle_id')
+        if not vehicle_id:
+            return Response(
+                {'error': 'vehicle_id is required for single valuation requests.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            vehicle = VehicleRecord.objects.select_related('job').get(
+                id=vehicle_id,
+                job__organization=profile.organization,
+            )
+        except VehicleRecord.DoesNotExist:
+            return Response({'error': 'Vehicle record not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        payload, missing = _build_vehicle_payload(vehicle, overrides=data)
+        if missing:
+            return Response(
+                {
+                    'error': 'Vehicle data is incomplete for valuation.',
+                    'missing_fields': missing,
+                    'vehicle_id': vehicle.id,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            valuation_result = valuation_service.evaluate_vehicle(payload)
+            valuation = _create_vehicle_valuation(vehicle.job, vehicle, payload, valuation_result)
+        except GroqValuationError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+
+        return Response(VehicleValuationSerializer(valuation).data, status=status.HTTP_201_CREATED)
+
+    def _handle_batch(self, profile, data, valuation_service):
+        job_id = data.get('job_id')
+        try:
+            job = StatistikJob.objects.get(id=job_id, organization=profile.organization)
+        except StatistikJob.DoesNotExist:
+            return Response({'error': 'Job not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        vehicles = list(job.vehicle_records.all().order_by('id'))
+        if not vehicles:
+            return Response(
+                {'error': 'No vehicles available in this job.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        created = []
+        skipped = 0
+
+        for vehicle in vehicles:
+            payload, missing = _build_vehicle_payload(vehicle)
+            if missing:
+                skipped += 1
+                continue
+
+            try:
+                valuation_result = valuation_service.evaluate_vehicle(payload)
+                valuation = _create_vehicle_valuation(job, vehicle, payload, valuation_result)
+                created.append(valuation)
+            except GroqValuationError:
+                skipped += 1
+
+        response_data = {
+            'job_id': job.id,
+            'total_vehicles': len(vehicles),
+            'valued_vehicles': len(created),
+            'skipped_vehicles': skipped,
+            'valuations': VehicleValuationSerializer(created, many=True).data,
+        }
+        return Response(VehicleValuationBatchResponseSerializer(response_data).data, status=status.HTTP_200_OK)
+
+
 class AnalyticsViewSet(viewsets.ModelViewSet):
     """Analytics and Statistik endpoints"""
     serializer_class = StatistikJobSerializer
     permission_classes = [IsAuthenticated]
 
     def _ensure_access(self):
-        profile = _get_user_profile(self.request.user)
-        if not profile or not profile.organization:
-            raise PermissionDenied('User profile or organization is missing.')
-
-        service = _get_analytics_service()
-        if not service:
-            raise PermissionDenied('Analytics service is not configured.')
-
-        license_obj = _get_valid_org_license(profile.organization, service)
-        if not license_obj:
-            raise PermissionDenied('A valid analytics license is required.')
-
-        return profile
+        return _ensure_analytics_access_for_user(self.request.user)
     
     def get_queryset(self):
         """Filter by organization"""

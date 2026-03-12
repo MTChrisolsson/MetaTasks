@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import StatistikJob, VehicleRecord, AnalyticsReport
+from .models import StatistikJob, VehicleRecord, AnalyticsReport, VehicleValuation
 
 
 @admin.register(StatistikJob)
@@ -43,3 +43,21 @@ class AnalyticsReportAdmin(admin.ModelAdmin):
     list_filter = ('report_type', 'generated_at', 'organization')
     search_fields = ('title', 'organization__name')
     readonly_fields = ('generated_at',)
+
+
+@admin.register(VehicleValuation)
+class VehicleValuationAdmin(admin.ModelAdmin):
+    list_display = (
+        'registration',
+        'make',
+        'model',
+        'year',
+        'published_price',
+        'estimated_market_value',
+        'fairness_assessment',
+        'suggested_price',
+        'created_at',
+    )
+    list_filter = ('fairness_assessment', 'year', 'job', 'created_at')
+    search_fields = ('registration', 'make', 'model', 'vehicle__registration')
+    readonly_fields = ('created_at', 'raw_response')

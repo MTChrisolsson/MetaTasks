@@ -45,7 +45,14 @@ class VehicleRecord(models.Model):
     job = models.ForeignKey(StatistikJob, on_delete=models.CASCADE, related_name='vehicle_records')
     
     registration = models.CharField(max_length=50)
+    make = models.CharField(max_length=120, blank=True)
     model = models.CharField(max_length=200)
+    year = models.IntegerField(null=True, blank=True)
+    mileage = models.IntegerField(null=True, blank=True)
+    condition = models.CharField(max_length=120, blank=True)
+    transmission = models.CharField(max_length=60, blank=True)
+    fuel_type = models.CharField(max_length=60, blank=True)
+    published_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     status = models.IntegerField()
     current_station = models.CharField(max_length=100)
     days_in_stock = models.IntegerField(null=True, blank=True)
@@ -87,3 +94,52 @@ class AnalyticsReport(models.Model):
     
     class Meta:
         ordering = ['-generated_at']
+
+
+class VehicleValuation(models.Model):
+    """AI-based fair market valuation for a vehicle."""
+
+    FAIRNESS_CHOICES = [
+        ('below_market', 'Below Market'),
+        ('fair', 'Fair'),
+        ('above_market', 'Above Market'),
+    ]
+
+    job = models.ForeignKey(StatistikJob, on_delete=models.CASCADE, related_name='valuations')
+    vehicle = models.ForeignKey(
+        VehicleRecord,
+        on_delete=models.CASCADE,
+        related_name='valuations',
+        null=True,
+        blank=True,
+    )
+
+    registration = models.CharField(max_length=50, blank=True)
+    make = models.CharField(max_length=120)
+    model = models.CharField(max_length=200)
+    year = models.IntegerField()
+    mileage = models.IntegerField(null=True, blank=True)
+    condition = models.CharField(max_length=120, blank=True)
+    transmission = models.CharField(max_length=60, blank=True)
+    fuel_type = models.CharField(max_length=60, blank=True)
+    published_price = models.DecimalField(max_digits=12, decimal_places=2)
+
+    estimated_market_value = models.DecimalField(max_digits=12, decimal_places=2)
+    fairness_assessment = models.CharField(max_length=20, choices=FAIRNESS_CHOICES)
+    suggested_price = models.DecimalField(max_digits=12, decimal_places=2)
+    ai_explanation = models.TextField()
+
+    raw_response = models.JSONField(null=True, blank=True)
+    model_name = models.CharField(max_length=120, default='llama-3.1-8b-instant')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['job', 'created_at']),
+            models.Index(fields=['vehicle', 'created_at']),
+            models.Index(fields=['fairness_assessment']),
+        ]
+
+    def __str__(self):
+        return f"{self.registration or self.model} ({self.fairness_assessment})"

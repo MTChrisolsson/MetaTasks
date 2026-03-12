@@ -14,5 +14,6 @@ urlpatterns = [
     path('jobs/', views.jobs_list, name='jobs_list'),
     path('jobs/<int:job_id>/', views.job_detail, name='job_detail'),
     path('jobs/<int:job_id>/export/excel/', views.export_excel, name='export_excel'),
+    path('api/valuations/', views.VehicleValuationAPIView.as_view(), name='api_valuations'),
     path('api/', include(router.urls)),
 ]
