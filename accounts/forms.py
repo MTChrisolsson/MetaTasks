@@ -48,9 +48,19 @@ class RegistrationForm(UserCreationForm):
         label="What's the size of your team?"
     )
 
+    job_title = forms.CharField(
+        max_length=100,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6',
+            'placeholder': 'Your job title'
+        })
+    )
+
+
     class Meta(UserCreationForm.Meta):
         model = CustomUser
-        fields = ('username', 'first_name', 'last_name', 'email', 'password1', 'password2', 'referral_source', 'team_size')
+        fields = ('username', 'first_name', 'last_name', 'email', 'phone_number', 'job_title', 'password1', 'password2', 'referral_source', 'team_size')
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -68,6 +78,7 @@ class RegistrationForm(UserCreationForm):
             'placeholder': 'Confirm your password'
         })
 
+
     def save(self, commit=True):
         user = super().save(commit=False)
         user.email = self.cleaned_data['email']
@@ -75,6 +86,8 @@ class RegistrationForm(UserCreationForm):
         user.last_name = self.cleaned_data['last_name']
         user.referral_source = self.cleaned_data['referral_source']
         user.team_size = self.cleaned_data['team_size']
+        user.phone_number = self.cleaned_data['phone_number']
+        user.job_title = self.cleaned_data['job_title']
         if commit:
             user.save()
         return user

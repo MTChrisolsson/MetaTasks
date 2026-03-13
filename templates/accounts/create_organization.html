@@ -83,15 +83,15 @@
                     <p class="mt-1 text-sm text-gray-500">Optional - helps us understand your needs</p>
                 </div>
 
-                <!-- Company Type -->
+                <!-- Organization Type -->
                 <div>
-                    <label for="{{ form.company_type.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                        {{ form.company_type.label }}
+                    <label for="{{ form.organization_type.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        {{ form.organization_type.label }}
                     </label>
                     <div class="mt-1">
-                        {{ form.company_type }}
-                        {% if form.company_type.errors %}
-                            <p class="mt-1 text-sm text-red-600">{{ form.company_type.errors.0 }}</p>
+                        {{ form.organization_type }}
+                        {% if form.organization_type.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.organization_type.errors.0 }}</p>
                         {% endif %}
                     </div>
                     <p class="mt-1 text-sm text-gray-500">Optional - helps us tailor your experience</p>
