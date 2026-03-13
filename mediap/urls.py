@@ -27,11 +27,18 @@ urlpatterns = [
     path('', include('homepage.urls')),
     path('accounts/', include('accounts.urls')),
     path('core/', include('core.urls')),
+    # Services URLs
+    # CFlows Service
     path('services/cflows/', include(('services.cflows.urls', 'cflows'), namespace='cflows')),
+    # Scheduling service
     path('services/scheduling/', include('services.scheduling.urls')),
+    # Staff panel for service management
     path('services/staff-panel/', include('services.staff_panel.urls')),
+    # Analytics service
     path('services/analytics/', include(('services.analytics.urls', 'analytics'), namespace='analytics')),
     path('licensing/', include('licensing.urls')),
+    # Services dashboard
+    path('services/dashboard/', include(('services.dashboard.urls', 'service_dashboard'), namespace='service_dashboard')),
 ]
 
 # Serve media files in development

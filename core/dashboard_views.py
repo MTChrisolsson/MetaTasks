@@ -199,6 +199,8 @@ def service_access_check(request, service_slug):
             return redirect('/services/analytics/')
         elif service_slug == 'job-planning':
             return redirect('/services/job-planning/')
+        elif service_slug == 'dashboard':
+            return redirect('/services/dashboard/')
         else:
             return render(request, 'core/service_coming_soon.html', {'service': service})
             

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Service Dashboard - MetaTask{% endblock %}</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    {% block extra_head %}{% endblock %}
+
+    <style>
+        :root {
+            --sd-primary: #0f766e;
+            --sd-secondary: #0e7490;
+            --sd-accent: #f59e0b;
+        }
+
+        .sd-gradient {
+            background: linear-gradient(135deg, var(--sd-primary) 0%, var(--sd-secondary) 100%);
+        }
+
+        .sidebar-transition {
+            transition: transform 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-slate-50" x-data="{ sidebarOpen: false }">
+    <header class="sd-gradient sticky top-0 z-40 shadow-lg">
+        <div class="flex h-16 items-center justify-between px-4">
+            <div class="flex items-center gap-3">
+                <button @click="sidebarOpen = !sidebarOpen" class="rounded-lg p-2 text-white hover:bg-white/10 lg:hidden">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <a href="{% url 'service_dashboard:index' %}" class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
+                        <i class="fas fa-comments text-white"></i>
+                    </div>
+                    <div>
+                        <p class="text-lg font-bold text-white">Service Dashboard</p>
+                        <p class="text-xs text-cyan-100">Internal Communication</p>
+                    </div>
+                </a>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <a href="/services/cflows/" class="hidden rounded-lg px-3 py-2 text-sm font-medium text-cyan-50 hover:bg-white/10 md:inline-flex">
+                    <i class="fas fa-project-diagram mr-2"></i>
+                    CFlows
+                </a>
+                <a href="/dashboard/" class="rounded-lg px-3 py-2 text-sm font-medium text-cyan-50 hover:bg-white/10">
+                    <i class="fas fa-home mr-2"></i>
+                    Main Dashboard
+                </a>
+                <a href="/accounts/logout/" class="rounded-lg bg-white/15 px-3 py-2 text-sm font-semibold text-white hover:bg-white/25">
+                    <i class="fas fa-sign-out-alt mr-2"></i>
+                    Logout
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div x-show="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 z-30 bg-black/50 lg:hidden"></div>
+
+    <aside class="fixed left-0 top-16 z-40 h-[calc(100vh-4rem)] w-64 border-r border-slate-200 bg-white sidebar-transition"
+           :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
+        <div class="flex h-full flex-col">
+            <nav class="flex-1 space-y-1 overflow-y-auto px-4 py-5">
+                <a href="{% url 'service_dashboard:index' %}" class="{% if request.resolver_match.url_name == 'index' or request.resolver_match.url_name == 'overview' %}bg-teal-50 text-teal-700 border-r-2 border-teal-600{% else %}text-slate-700 hover:bg-teal-50 hover:text-teal-700{% endif %} flex items-center rounded-lg px-3 py-2 text-sm font-medium">
+                    <i class="fas fa-gauge-high mr-3 text-teal-500"></i>
+                    Overview
+                </a>
+                <a href="{% url 'service_dashboard:messages' %}" class="{% if request.resolver_match.url_name == 'messages' or request.resolver_match.url_name == 'thread' %}bg-teal-50 text-teal-700 border-r-2 border-teal-600{% else %}text-slate-700 hover:bg-teal-50 hover:text-teal-700{% endif %} flex items-center rounded-lg px-3 py-2 text-sm font-medium">
+                    <i class="fas fa-comments mr-3 text-cyan-500"></i>
+                    Messages
+                </a>
+                <a href="{% url 'service_dashboard:notifications' %}" class="{% if request.resolver_match.url_name == 'notifications' %}bg-teal-50 text-teal-700 border-r-2 border-teal-600{% else %}text-slate-700 hover:bg-teal-50 hover:text-teal-700{% endif %} flex items-center rounded-lg px-3 py-2 text-sm font-medium">
+                    <i class="fas fa-bell mr-3 text-amber-500"></i>
+                    Notifications
+                </a>
+                <a href="{% url 'service_dashboard:calendar' %}" class="{% if request.resolver_match.url_name == 'calendar' %}bg-teal-50 text-teal-700 border-r-2 border-teal-600{% else %}text-slate-700 hover:bg-teal-50 hover:text-teal-700{% endif %} flex items-center rounded-lg px-3 py-2 text-sm font-medium">
+                    <i class="fas fa-calendar-days mr-3 text-indigo-500"></i>
+                    Calendar
+                </a>
+                <a href="{% url 'service_dashboard:settings' %}" class="{% if request.resolver_match.url_name == 'settings' %}bg-teal-50 text-teal-700 border-r-2 border-teal-600{% else %}text-slate-700 hover:bg-teal-50 hover:text-teal-700{% endif %} flex items-center rounded-lg px-3 py-2 text-sm font-medium">
+                    <i class="fas fa-sliders mr-3 text-purple-500"></i>
+                    Settings
+                </a>
+            </nav>
+
+            <div class="border-t border-slate-200 p-4">
+                <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Connected Services</p>
+                <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <a href="/services/cflows/" class="rounded-md bg-slate-100 px-2 py-1.5 text-slate-700 hover:bg-slate-200">CFlows</a>
+                    <a href="/services/scheduling/" class="rounded-md bg-slate-100 px-2 py-1.5 text-slate-700 hover:bg-slate-200">Scheduling</a>
+                    <a href="/services/analytics/" class="rounded-md bg-slate-100 px-2 py-1.5 text-slate-700 hover:bg-slate-200">Analytics</a>
+                    <a href="/services/staff-panel/" class="rounded-md bg-slate-100 px-2 py-1.5 text-slate-700 hover:bg-slate-200">Staff Panel</a>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <div class="lg:ml-64">
+        <main class="min-h-[calc(100vh-10rem)] px-4 py-6 sm:px-6 lg:px-8">
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="border-t border-slate-200 bg-white/80 px-4 py-4 text-sm text-slate-600 backdrop-blur sm:px-6 lg:px-8">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p>Service Dashboard for organization messaging and collaboration.</p>
+                <p class="text-xs text-slate-400">MetaTask Service Suite</p>
+            </div>
+        </footer>
+    </div>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

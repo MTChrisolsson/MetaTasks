@@ -111,10 +111,10 @@ INSTALLED_APPS = [
     
     # Services
     'services.staff_panel',
-    # Services
     'services.cflows',
     'services.scheduling',
     'services.analytics',
+    'services.dashboard',
 ]
 
 MIDDLEWARE = [

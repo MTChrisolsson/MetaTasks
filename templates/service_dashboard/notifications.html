@@ -1,0 +1,63 @@
+{% extends "service_dashboard/service_dashboard_base.html" %}
+
+{% block title %}Notifications - Service Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+	<section class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+		<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+			<div>
+				<h1 class="text-2xl font-bold text-gray-900">Notifications</h1>
+				<p class="mt-1 text-sm text-gray-600">A clean view of system and team updates.</p>
+			</div>
+			<div class="flex gap-2">
+				<a href="{% url 'core:notification_center' %}" class="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+					<i class="fas fa-external-link-alt mr-2"></i>
+					Open Global Center
+				</a>
+				<a href="{% url 'service_dashboard:overview' %}" class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+					Back
+				</a>
+			</div>
+		</div>
+	</section>
+
+	<section class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+		<div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm lg:col-span-2">
+			<h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Latest Activity</h2>
+			<div class="mt-4 space-y-3">
+				<div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+					<p class="text-sm font-semibold text-emerald-900">Messaging service enabled</p>
+					<p class="mt-1 text-sm text-emerald-700">Users can now start direct chats within the organization.</p>
+				</div>
+				<div class="rounded-xl border border-blue-200 bg-blue-50 p-4">
+					<p class="text-sm font-semibold text-blue-900">UI refresh applied</p>
+					<p class="mt-1 text-sm text-blue-700">Service dashboard templates were updated for consistency.</p>
+				</div>
+				<div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+					<p class="text-sm font-semibold text-amber-900">Recommended next step</p>
+					<p class="mt-1 text-sm text-amber-700">Connect live notifications to this page with server-side context.</p>
+				</div>
+			</div>
+		</div>
+
+		<div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+			<h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Notification Preferences</h2>
+			<div class="mt-4 space-y-3 text-sm text-gray-700">
+				<label class="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
+					<span>Email alerts</span>
+					<span class="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">On</span>
+				</label>
+				<label class="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
+					<span>Desktop alerts</span>
+					<span class="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">On</span>
+				</label>
+				<label class="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
+					<span>Digest summary</span>
+					<span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700">Daily</span>
+				</label>
+			</div>
+		</div>
+	</section>
+</div>
+{% endblock %}
