@@ -88,10 +88,35 @@ class RegistrationForm(UserCreationForm):
         user.team_size = self.cleaned_data['team_size']
         user.phone_number = self.cleaned_data['phone_number']
         user.job_title = self.cleaned_data['job_title']
+
+        user.display_username = getattr(self, '_raw_username', user.username)  # Store original username for display
+        user.username = (user.username or '').lower()  # Normalize username to lowercase for storage
         if commit:
             user.save()
         return user
 
+    def clean_username(self):
+        raw_username = (self.cleaned_data.get('username') or '').strip()
+        if not raw_username:
+            raise forms.ValidationError('Username is required.')
+
+        self._raw_username = raw_username
+        normalized_username = raw_username.lower()
+
+        if CustomUser.objects.filter(username__iexact=raw_username).exists():
+            raise forms.ValidationError('A user with that username already exists.')
+
+        return normalized_username
+
+class PersonalRegistrationForm(RegistrationForm):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            # Hide referral_source and team_size for personal registration
+            self.fields['referral_source'].widget = forms.HiddenInput()
+            self.fields['team_size'].widget = forms.HiddenInput()
+            self.fields['referral_source'].required = False
+            self.fields['team_size'].required = False
+            self.fields['job_title'].required = False
 
 class OrganizationCreationForm(forms.ModelForm):
     class Meta:

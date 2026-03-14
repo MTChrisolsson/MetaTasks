@@ -1065,7 +1065,7 @@ class WorkItemComment(models.Model):
         try:
             from .mention_utils import render_mentions
             # Build lookup dicts for render function
-            users = {u.user.username: u for u in self.mentioned_users.all()}
+            users = {u.user.username.lower(): u for u in self.mentioned_users.all()}
             teams = {t.name: t for t in self.mentioned_teams.all()}
             return render_mentions(self.content, users, teams)
         except Exception:

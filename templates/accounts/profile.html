@@ -8,7 +8,7 @@
     <div class="bg-white shadow rounded-lg mb-6">
         <div class="px-6 py-4 border-b border-gray-200">
             <h1 class="text-2xl font-bold text-gray-900">
-                Welcome, {{ user.first_name|default:user.username }}!
+                Welcome, {{ user.first_name|default:user.display_username }}!
             </h1>
             <p class="text-gray-600">{{ user.job_title|default:"User" }} - {{ user.email }}</p>
         </div>
@@ -50,7 +50,7 @@
                     <div class="space-y-2">
                         <div class="flex justify-between">
                             <span class="text-gray-600">Username:</span>
-                            <span class="font-medium">{{ user.username }}</span>
+                            <span class="font-medium">{{ user.display_username }}</span>
                         </div>
                         <div class="flex justify-between">
                             <span class="text-gray-600">Date Joined:</span>

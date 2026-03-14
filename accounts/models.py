@@ -40,6 +40,10 @@ class CustomUser(AbstractUser):
         validators=[RegexValidator(regex=r'^\+?1?\d{9,15}$', 
                                  message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")]
     )
+
+    # Additional fields for user management
+    display_username = models.CharField(max_length=150, blank=True)
+
     
     # Registration info
     referral_source = models.CharField(max_length=20, choices=REFERRAL_SOURCES, blank=True)
@@ -59,6 +63,18 @@ class CustomUser(AbstractUser):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        raw_username = (self.username or "").strip()
+        if raw_username:
+            if not self.display_username:
+                self.display_username = raw_username
+            self.username = raw_username.lower()
+        elif self.display_username:
+            # Fallback if username is empty but display value exists
+            self.username = self.display_username.strip().lower()
+
+        super().save(*args, **kwargs)
     
     def __str__(self):
         return f"{self.username} ({self.email})"

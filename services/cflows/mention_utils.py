@@ -26,7 +26,7 @@ def parse_mentions(text: str):
     """
     if not text:
         return {"usernames": set(), "team_names": set()}
-    usernames = {m.group('username') for m in USER_PATTERN.finditer(text)}
+    usernames = {m.group('username').lower() for m in USER_PATTERN.finditer(text)}
     team_names = {m.group('teamname').strip() for m in TEAM_PATTERN.finditer(text)}
     return {"usernames": usernames, "team_names": team_names}
 
@@ -43,7 +43,7 @@ def render_mentions(text: str, users_by_username: Dict[str, object], teams_by_na
     def replace_user(m):
         prefix = m.group('prefix')
         username = m.group('username')
-        prof = users_by_username.get(username)
+        prof = users_by_username.get(username.lower())
         label = f"@{escape(username)}"
         if prof:
             # Link to a generic user page if exists; fallback to span

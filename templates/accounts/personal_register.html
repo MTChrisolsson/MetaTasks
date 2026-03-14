@@ -42,6 +42,19 @@
             <form method="post" class="space-y-6">
                 {% csrf_token %}
                 
+                {% if form.non_field_errors %}
+                    <div class="rounded-md bg-red-50 border border-red-200 text-red-800 px-4 py-3">
+                        {% for error in form.non_field_errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                {% if form.errors %}
+                    <div class="text-sm text-red-700">
+                        Please correct the highlighted fields and try again.
+                    </div>
+                {% endif %}
+
                 <!-- Account Type (hidden) -->
                 <input type="hidden" name="account_type" value="personal">
                 

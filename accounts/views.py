@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.views.generic import CreateView, FormView, TemplateView
 from django.urls import reverse_lazy
 from django.http import HttpResponse
-from .forms import RegistrationForm, OrganizationCreationForm, InviteMemberForm, UserProfileSetupForm
+from .forms import RegistrationForm, OrganizationCreationForm, InviteMemberForm, UserProfileSetupForm, PersonalRegistrationForm
 from .models import CustomUser
 from core.models import Organization, UserProfile
 
@@ -22,7 +22,7 @@ class AccountTypeSelectionView(TemplateView):
 
 class PersonalRegistrationView(CreateView):
     """Personal account registration - single step for individuals"""
-    form_class = RegistrationForm
+    form_class = PersonalRegistrationForm
     template_name = 'accounts/personal_register.html'
     success_url = reverse_lazy('homepage:index')
 
@@ -67,7 +67,7 @@ class BusinessRegistrationView(CreateView):
         if request.user.is_authenticated:
             # Check if user already has an organization
             try:
-                profile = request.user.mediap_profile
+                profile = request.user.userprofile
                 if profile.organization.organization_type == 'business':
                     messages.info(request, f'You already belong to the business organization: {profile.organization.name}')
                     return redirect('dashboard:dashboard')
@@ -75,7 +75,7 @@ class BusinessRegistrationView(CreateView):
                     # Allow personal users to upgrade to business
                     messages.info(request, 'Upgrade your personal workspace to a business organization.')
                     return redirect('accounts:upgrade_to_business')
-            except:
+            except UserProfile.DoesNotExist:
                 # User has no profile, allow them to create organization
                 pass
             
@@ -125,7 +125,7 @@ class OrganizationCreationView(CreateView):
         
         # Check if user already has an organization profile
         try:
-            existing_profile = self.request.user.mediap_profile
+            existing_profile = self.request.user.userprofile
             if existing_profile.organization.organization_type == 'business':
                 messages.error(
                     self.request, 
@@ -322,7 +322,7 @@ class LoginView(TemplateView):
     template_name = 'accounts/login.html'
     
     def post(self, request):
-        username = request.POST.get('username')
+        username = (request.POST.get('username') or '').strip().lower()
         password = request.POST.get('password')
         
         if username and password:
