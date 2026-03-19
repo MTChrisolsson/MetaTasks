@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.db import transaction
 from django.views.generic import CreateView, FormView, TemplateView
 from django.urls import reverse_lazy
 from django.http import HttpResponse
@@ -27,29 +28,32 @@ class PersonalRegistrationView(CreateView):
     success_url = reverse_lazy('homepage:index')
 
     def form_valid(self, form):
-        user = form.save()
-        login(self.request, user, backend='django.contrib.auth.backends.ModelBackend')
-        
-        # Create a personal workspace for the user
-        org_name = f"{user.first_name} {user.last_name}'s Workspace" if user.first_name and user.last_name else f"{user.username}'s Workspace"
-        organization = Organization.objects.create(
-            name=org_name,
-            description=f"Personal workspace for {user.get_full_name() or user.username}",
-            organization_type='personal',
-            is_active=True
-        )
-        
-        # Create user profile
-        UserProfile.objects.create(
-            user=user,
-            organization=organization,
-            is_organization_admin=True,
-            has_staff_panel_access=True,
-            can_create_organizations=False  # Personal users can't create more orgs
-        )
-        
-        messages.success(self.request, f'Welcome {user.first_name or user.username}! Your personal workspace has been created.')
-        return super().form_valid(form)
+        with transaction.atomic():
+            self.object = form.save()
+
+            org_name = (
+                f"{self.object.first_name} {self.object.last_name}'s Workspace"
+                if self.object.first_name and self.object.last_name
+                else f"{self.object.username}'s Workspace"
+            )
+            organization = Organization.objects.create(
+                name=org_name,
+                description=f"Personal workspace for {self.object.get_full_name() or self.object.username}",
+                organization_type='personal',
+                is_active=True
+            )
+
+            UserProfile.objects.create(
+                user=self.object,
+                organization=organization,
+                is_organization_admin=True,
+                has_staff_panel_access=True,
+                can_create_organizations=False
+            )
+
+        login(self.request, self.object, backend='django.contrib.auth.backends.ModelBackend')
+        messages.success(self.request, f'Welcome {self.object.first_name or self.object.username}! Your personal workspace has been created.')
+        return redirect(self.get_success_url())
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -86,14 +90,14 @@ class BusinessRegistrationView(CreateView):
         return super().dispatch(request, *args, **kwargs)
     
     def form_valid(self, form):
-        user = form.save()
-        login(self.request, user, backend='django.contrib.auth.backends.ModelBackend')
+        self.object = form.save()
+        login(self.request, self.object, backend='django.contrib.auth.backends.ModelBackend')
         
         # Store account type in session for next steps
         self.request.session['account_type'] = 'business'
         self.request.session['registration_step'] = 'organization'
         
-        messages.success(self.request, f'Welcome {user.first_name or user.username}! Now let\'s set up your organization.')
+        messages.success(self.request, f'Welcome {self.object.first_name or self.object.username}! Now let\'s set up your organization.')
         
         # Custom redirect instead of using success_url
         return redirect('accounts:create_organization')
@@ -277,16 +281,11 @@ class AccountTypeView(TemplateView):
 
 
 @login_required
-@login_required
 def profile_view(request):
     """User profile view with organization information"""
-    print(f"DEBUG: Checking profile for user: {request.user.username}")
-    print(f"DEBUG: User has mediap_profile: {hasattr(request.user, 'mediap_profile')}")
-    
     try:
         profile = request.user.mediap_profile
-        print(f"DEBUG: Found profile: {profile}")
-        
+
         # Create a membership-like object
         class MembershipProxy:
             def __init__(self, profile):
@@ -298,8 +297,7 @@ def profile_view(request):
                 return self.role
         
         user_orgs = [MembershipProxy(profile)]
-    except Exception as e:
-        print(f"DEBUG: Error accessing profile: {e}")
+    except UserProfile.DoesNotExist:
         user_orgs = []
     
     context = {
@@ -329,8 +327,7 @@ class LoginView(TemplateView):
             user = authenticate(request, username=username, password=password)
             if user is not None:
                 login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-                messages.success(request, f'Welcome back, {user.first_name or user.username}!')
-                
+
                 # Redirect to next URL if provided, otherwise to profile
                 next_url = request.GET.get('next', '/')
                 return redirect(next_url)
@@ -345,7 +342,6 @@ class LoginView(TemplateView):
 def logout_view(request):
     """Custom logout view"""
     logout(request)
-    messages.info(request, 'You have been logged out successfully.')
     return redirect('homepage:index')
 
 

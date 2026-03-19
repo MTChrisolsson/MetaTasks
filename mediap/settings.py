@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from celery.schedules import crontab
 from decouple import config
 import os
 import re
@@ -254,6 +255,12 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_BEAT_SCHEDULE = {
+    'dashboard-enforce-message-retention': {
+        'task': 'services.dashboard.tasks.enforce_message_retention',
+        'schedule': crontab(hour=3, minute=0),
+    },
+}
 
 # Cache configuration with Redis
 if config('USE_LOCAL_CACHE', default=False, cast=bool):

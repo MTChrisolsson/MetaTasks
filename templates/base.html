@@ -88,16 +88,7 @@
         </div>
     </nav>
 
-    <!-- Messages -->
-    {% if messages %}
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-            {% for message in messages %}
-                <div class="bg-{{ message.tags }}-100 border border-{{ message.tags }}-400 text-{{ message.tags }}-700 px-4 py-3 rounded mb-4">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
+    {% block global_messages %}{% endblock %}
 
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
@@ -230,7 +221,7 @@
                     </div>
 
                     <!-- Role Management (Organization Admin Only) -->
-                    {% if user.profile.is_organization_admin or user.profile.can_manage_roles %}
+                    {% if user.mediap_profile.is_organization_admin or user.profile.can_manage_roles %}
                     <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-lg border border-purple-200 hover:shadow-md transition-shadow duration-200">
                         <div class="flex items-center mb-3">
                             <i class="fas fa-user-shield text-purple-600 text-2xl mr-3"></i>
@@ -248,7 +239,7 @@
                     {% endif %}
 
                     <!-- Staff Panel (Staff Access Only) -->
-                    {% if user.profile.has_staff_panel_access or user.profile.is_organization_admin %}
+                    {% if user.mediap_profile.has_staff_panel_access or user.mediap_profile.is_organization_admin %}
                     <div class="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-lg border border-red-200 hover:shadow-md transition-shadow duration-200">
                         <div class="flex items-center mb-3">
                             <i class="fas fa-users-cog text-red-600 text-2xl mr-3"></i>

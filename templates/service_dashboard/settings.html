@@ -17,56 +17,78 @@
 		</div>
 	</section>
 
-	<section class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-		<div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-			<h2 class="text-base font-semibold text-gray-900">Messaging Preferences</h2>
-			<div class="mt-4 space-y-3 text-sm text-gray-700">
-				<label class="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
-					<span>Show read receipts</span>
-					<input type="checkbox" checked class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-				</label>
-				<label class="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
-					<span>Desktop message notifications</span>
-					<input type="checkbox" checked class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-				</label>
-				<label class="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
-					<span>Auto-mark thread as read</span>
-					<input type="checkbox" checked class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-				</label>
-			</div>
-		</div>
+	<form method="post" class="space-y-6">
+		{% csrf_token %}
 
-		<div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-			<h2 class="text-base font-semibold text-gray-900">Retention & Privacy</h2>
-			<div class="mt-4 space-y-4 text-sm text-gray-700">
-				<div>
-					<label class="mb-1 block font-medium text-gray-700">Message retention period</label>
-					<select class="block w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200">
-						<option>30 days</option>
-						<option selected>90 days</option>
-						<option>180 days</option>
-						<option>1 year</option>
-					</select>
-				</div>
-				<div>
-					<label class="mb-1 block font-medium text-gray-700">Default conversation visibility</label>
-					<select class="block w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200">
-						<option selected>Participants only</option>
-						<option>Organization-wide (group only)</option>
-					</select>
+		{% if saved %}
+			<div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+				Settings updated successfully.
+			</div>
+		{% endif %}
+
+		<section class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+			<div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+				<h2 class="text-base font-semibold text-gray-900">Messaging Preferences</h2>
+				<div class="mt-4 space-y-3 text-sm text-gray-700">
+					<label class="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
+						<span>Show read receipts</span>
+						<input type="checkbox" name="show_read_receipts" {% if preferences.show_read_receipts %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+					</label>
+					<label class="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
+						<span>Desktop message notifications</span>
+						<input type="checkbox" name="desktop_notifications" {% if preferences.desktop_notifications %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+					</label>
+					<label class="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
+						<span>Auto-mark thread as read</span>
+						<input type="checkbox" name="auto_mark_threads_read" {% if preferences.auto_mark_threads_read %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+					</label>
+					<label class="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
+						<span>Email alerts</span>
+						<input type="checkbox" name="email_alerts" {% if preferences.email_alerts %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+					</label>
 				</div>
 			</div>
-		</div>
-	</section>
 
-	<section class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-		<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-			<p class="text-sm text-gray-600">These controls are currently UI placeholders. Wire them to a persisted settings model to make them functional.</p>
-			<button type="button" class="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
-				<i class="fas fa-save mr-2"></i>
-				Save Settings
-			</button>
-		</div>
-	</section>
+			<div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+				<h2 class="text-base font-semibold text-gray-900">Retention & Privacy</h2>
+				<div class="mt-4 space-y-4 text-sm text-gray-700">
+					<div>
+						<label class="mb-1 block font-medium text-gray-700">Message retention period</label>
+						<select name="message_retention_days" class="block w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200">
+							{% for days in retention_choices %}
+								<option value="{{ days }}" {% if preferences.message_retention_days == days %}selected{% endif %}>{{ days }} days</option>
+							{% endfor %}
+						</select>
+					</div>
+					<div>
+						<label class="mb-1 block font-medium text-gray-700">Default conversation visibility</label>
+						<select name="default_visibility" class="block w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200">
+							{% for value, label in visibility_choices %}
+								<option value="{{ value }}" {% if preferences.default_visibility == value %}selected{% endif %}>{{ label }}</option>
+							{% endfor %}
+						</select>
+					</div>
+					<div>
+						<label class="mb-1 block font-medium text-gray-700">Digest frequency</label>
+						<select name="digest_frequency" class="block w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200">
+							{% for value, label in digest_choices %}
+								<option value="{{ value }}" {% if preferences.digest_frequency == value %}selected{% endif %}>{{ label }}</option>
+							{% endfor %}
+						</select>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+			<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+				<p class="text-sm text-gray-600">These settings are saved to your service dashboard profile and apply immediately.</p>
+				<button type="submit" class="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
+					<i class="fas fa-save mr-2"></i>
+					Save Settings
+				</button>
+			</div>
+		</section>
+	</form>
 </div>
 {% endblock %}

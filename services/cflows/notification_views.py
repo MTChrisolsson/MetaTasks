@@ -16,7 +16,7 @@ def real_time_notifications(request):
     """WebSocket-style long polling for real-time notifications"""
     try:
         user_profile = request.user.mediap_profile
-    except:
+    except UserProfile.DoesNotExist:
         user_profile = None
         
     if not user_profile:

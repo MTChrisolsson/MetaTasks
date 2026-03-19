@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib import messages
 from django.core.paginator import Paginator
+from django.db.models import Count, Q
 from datetime import datetime, timedelta, date, time
 from core.views import require_organization_access
 from core.models import UserProfile
@@ -39,7 +40,6 @@ def index(request):
     # Get today's and comparison dates
     today = timezone.now().date()
     yesterday = today - timedelta(days=1)
-    week_ago = today - timedelta(days=7)
     next_week = today + timedelta(days=7)
     
     # Today's bookings with detailed statuses
@@ -55,19 +55,23 @@ def index(request):
     ).count()
     
     # Get active resources with utilization info
-    resources = SchedulableResource.objects.filter(
+    resources = list(SchedulableResource.objects.filter(
         organization=profile.organization,
         is_active=True
-    ).select_related('linked_team')
+    ).select_related('linked_team').annotate(
+        today_booking_count=Count(
+            'bookingrequest',
+            filter=Q(
+                bookingrequest__requested_start__date=today,
+                bookingrequest__status__in=['confirmed', 'in_progress', 'completed']
+            )
+        )
+    ))
     
     # Calculate resource utilization for today
     resource_utilization = []
     for resource in resources:
-        today_usage = BookingRequest.objects.filter(
-            resource=resource,
-            requested_start__date=today,
-            status__in=['confirmed', 'in_progress', 'completed']
-        ).count()
+        today_usage = resource.today_booking_count
         
         total_capacity = resource.max_concurrent_bookings
         utilization_percent = (today_usage / total_capacity * 100) if total_capacity > 0 else 0
@@ -88,10 +92,11 @@ def index(request):
     ).select_related('resource', 'requested_by').order_by('requested_start')[:10]
     
     # Get pending requests with urgency
-    pending_requests = BookingRequest.objects.filter(
+    pending_requests_qs = BookingRequest.objects.filter(
         organization=profile.organization,
         status='pending'
-    ).select_related('resource', 'requested_by').order_by('created_at')[:5]
+    ).select_related('resource', 'requested_by').order_by('created_at')
+    pending_requests = pending_requests_qs[:5]
     
     # Recent activity (last 7 days)
     recent_activity = BookingRequest.objects.filter(
@@ -105,10 +110,15 @@ def index(request):
     ).order_by('requested_start')
     
     # Calculate trends
-    total_bookings_today = today_bookings.count()
-    active_bookings = today_bookings.filter(status='in_progress').count()
-    completed_today = today_bookings.filter(status='completed').count()
-    pending_count = pending_requests.count()
+    today_booking_stats = today_bookings.aggregate(
+        total=Count('id'),
+        active=Count('id', filter=Q(status='in_progress')),
+        completed=Count('id', filter=Q(status='completed')),
+    )
+    total_bookings_today = today_booking_stats['total']
+    active_bookings = today_booking_stats['active']
+    completed_today = today_booking_stats['completed']
+    pending_count = pending_requests_qs.count()
     
     # Calculate percentage changes
     booking_trend = ((total_bookings_today - yesterday_bookings) / yesterday_bookings * 100) if yesterday_bookings > 0 else 0
@@ -147,7 +157,7 @@ def index(request):
             'active_bookings': active_bookings,
             'completed_bookings': completed_today,
             'pending_requests_count': pending_count,
-            'total_resources': resources.count(),
+            'total_resources': len(resources),
             'overdue_count': overdue_bookings.count(),
             'booking_trend': round(booking_trend, 1),
             'resource_utilization_avg': round(

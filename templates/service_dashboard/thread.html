@@ -3,163 +3,486 @@
 {% block title %}Conversation - Service Dashboard{% endblock %}
 
 {% block content %}
-<div class="space-y-6" x-data="{ sending: false }">
+<div class="space-y-6" x-data="{ sending: false, renaming: false }">
   <section class="rounded-2xl border border-cyan-100 bg-white p-5 shadow-sm">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <a href="{% url 'service_dashboard:messages' %}" class="inline-flex items-center text-sm font-medium text-teal-600 hover:text-teal-800">
-          <i class="fas fa-arrow-left mr-2"></i>
-          Back to Messages
-        </a>
-        <h1 class="mt-2 text-2xl font-bold text-gray-900">
-          {% if conversation.title %}
-            {{ conversation.title }}
-          {% else %}
-            Conversation #{{ conversation.id }}
-          {% endif %}
-        </h1>
-        <p class="mt-1 text-sm text-gray-500">Live updates every 5 seconds</p>
-      </div>
-      <span class="inline-flex items-center rounded-full bg-teal-100 px-3 py-1 text-xs font-semibold text-teal-700">
-        <span class="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-teal-500"></span>
-        Active
-      </span>
-    </div>
-  </section>
+          {% extends "service_dashboard/service_dashboard_base.html" %}
 
-  <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div id="messages" class="max-h-[55vh] space-y-4 overflow-y-auto bg-gradient-to-b from-slate-50 to-white p-5 sm:p-6">
-      {% for msg in messages %}
-        {% if msg.sender.user_id == user.id %}
-        <article data-id="{{ msg.id }}" class="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-teal-600 p-4 text-white shadow-sm sm:max-w-[70%]">
-          <div class="flex items-center justify-between gap-4">
-            <p class="text-sm font-semibold text-teal-100">You</p>
-            <time class="text-xs text-teal-100/80">{{ msg.created_at|date:"M j, Y H:i" }}</time>
+          {% block title %}{{ conversation_display_title }} — Messages{% endblock %}
+
+          {% block main_class %}h-[calc(100vh-4rem)] p-0 overflow-hidden{% endblock %}
+
+          {% block content %}
+          <div class="flex h-full overflow-hidden" x-data="{ renaming: false }">
+
+            {# ── Left sidebar: conversation list (hidden on mobile) ── #}
+            <div class="hidden h-full w-72 shrink-0 flex-col border-r border-slate-200 bg-slate-50 lg:flex">
+
+              {# Sidebar header #}
+              <div class="shrink-0 border-b border-slate-200 bg-white px-4 pb-3 pt-4">
+                <div class="mb-3 flex items-center gap-2">
+                  <a href="{% url 'service_dashboard:overview' %}" title="Dashboard"
+                     class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+                    <i class="fas fa-chevron-left text-xs"></i>
+                  </a>
+                  <span class="text-sm font-bold uppercase tracking-wider text-slate-700">Messages</span>
+                </div>
+                <div class="relative">
+                  <i class="fas fa-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400"></i>
+                  <input id="conv-search" type="text" placeholder="Search…"
+                         class="w-full rounded-lg border-0 bg-slate-100 py-2 pl-9 pr-3 text-xs text-slate-700 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-300">
+                </div>
+              </div>
+
+              {# Conversation list #}
+              <div id="conv-list" class="flex-1 overflow-y-auto px-2 py-2">
+                {% for m in memberships %}
+                <a href="{% url 'service_dashboard:thread' m.conversation.id %}"
+                   data-conv-title="{{ m.conversation.display_title|lower }}"
+                   class="conv-row mb-0.5 flex items-center gap-2.5 rounded-lg px-2.5 py-2.5 transition-colors
+                          {% if m.conversation.id == conversation.id %}bg-teal-100{% else %}hover:bg-slate-200{% endif %}">
+                  <div class="conv-avatar h-9 w-9 shrink-0 rounded-full flex items-center justify-center text-sm font-bold text-white"
+                       data-name="{{ m.conversation.display_title }}">
+                    {{ m.conversation.display_title|first|upper }}
+                  </div>
+                  <div class="min-w-0 flex-1 overflow-hidden">
+                    <div class="flex items-center justify-between gap-1">
+                      <span class="truncate text-sm {% if m.is_unread and m.conversation.id != conversation.id %}font-bold text-slate-900{% else %}font-medium text-slate-700{% endif %}">
+                        {{ m.conversation.display_title }}
+                      </span>
+                      <time class="ml-1 shrink-0 text-xs text-slate-400">{{ m.conversation.last_message_at|date:"H:i" }}</time>
+                    </div>
+                    <p class="mt-0.5 truncate text-xs text-slate-400">
+                      {% if m.preview_body %}{{ m.preview_body|truncatechars:35 }}{% else %}<span class="italic">No messages yet</span>{% endif %}
+                    </p>
+                  </div>
+                  {% if m.is_unread and m.conversation.id != conversation.id %}
+                  <div class="ml-1 h-2 w-2 shrink-0 rounded-full bg-teal-500"></div>
+                  {% endif %}
+                </a>
+                {% empty %}
+                <div class="px-3 py-8 text-center">
+                  <i class="fas fa-comment-dots text-2xl text-slate-300"></i>
+                  <p class="mt-2 text-xs text-slate-400">No other conversations.</p>
+                </div>
+                {% endfor %}
+              </div>
+
+              {# New DM #}
+              <div class="shrink-0 border-t border-slate-200 bg-white px-4 py-3">
+                <button onclick="document.getElementById('new-dm-modal').style.display='flex'"
+                        class="flex w-full items-center justify-center gap-2 rounded-lg bg-teal-600 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-700 transition-colors">
+                  <i class="fas fa-plus text-xs"></i>
+                  New Direct Message
+                </button>
+              </div>
+            </div>
+
+            {# ── Right: chat area ── #}
+            <div class="flex flex-1 flex-col overflow-hidden bg-white">
+
+              {# Chat header #}
+              <div class="flex shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 py-3">
+                {# Mobile back button #}
+                <a href="{% url 'service_dashboard:messages' %}"
+                   class="rounded-lg p-2 text-slate-400 hover:bg-slate-100 lg:hidden">
+                  <i class="fas fa-arrow-left text-sm"></i>
+                </a>
+                {# Avatar #}
+                <div class="chat-hdr-avatar h-9 w-9 shrink-0 rounded-full flex items-center justify-center text-sm font-bold text-white"
+                     data-name="{{ conversation_display_title }}">
+                  {{ conversation_display_title|first|upper }}
+                </div>
+                {# Title + meta #}
+                <div class="min-w-0 flex-1">
+                  <h1 id="chat-title" class="truncate text-base font-bold leading-tight text-slate-900">{{ conversation_display_title }}</h1>
+                  <p class="text-xs leading-tight text-slate-400">
+                    {% if conversation.conversation_type == "direct" %}Direct message{% else %}Group &middot; {{ participants_count }} members{% endif %}
+                    &nbsp;&middot;&nbsp;<span class="text-teal-500">Live</span>
+                  </p>
+                </div>
+                {# Rename toggle #}
+                <button @click="renaming = !renaming" title="Rename conversation"
+                        class="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                        :class="renaming && 'bg-amber-50 text-amber-600'">
+                  <i class="fas fa-pen text-sm"></i>
+                </button>
+              </div>
+
+              {# Rename panel #}
+              <div x-show="renaming" x-cloak
+                   class="shrink-0 border-b border-amber-200 bg-amber-50 px-4 py-3">
+                <form id="rename-form" method="post" action="{% url 'service_dashboard:rename_conversation' conversation.id %}"
+                      class="flex flex-col gap-2 sm:flex-row sm:items-end">
+                  {% csrf_token %}
+                  <div class="flex-1">
+                    <label class="mb-1 block text-xs font-semibold text-amber-800">Conversation name</label>
+                    <input id="rename-title" name="title" type="text" maxlength="255" value="{{ conversation.title }}"
+                           placeholder="Leave blank to reset to participant names"
+                           class="w-full rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200">
+                  </div>
+                  <div class="flex gap-2">
+                    <button type="submit" class="rounded-lg bg-teal-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-teal-700">Save</button>
+                    <button type="button" @click="renaming = false"
+                            class="rounded-lg border border-slate-300 bg-white px-4 py-1.5 text-sm text-slate-700 hover:bg-slate-50">Cancel</button>
+                  </div>
+                </form>
+                <p id="rename-error" class="mt-1 hidden text-xs text-rose-600"></p>
+              </div>
+
+              {# Messages area #}
+              <div id="messages" class="flex-1 overflow-y-auto scroll-smooth px-4 py-4">
+                {% for msg in messages %}
+                <article data-id="{{ msg.id }}"
+                         data-sender="{{ msg.sender_id }}"
+                         data-time="{{ msg.created_at|date:'c' }}"
+                         class="msg-item {% if msg.sender.user_id == user.id %}msg-mine{% else %}msg-theirs{% endif %} mb-1">
+                  {% if msg.sender.user_id == user.id %}
+                  {# My messages: right-aligned #}
+                  <div class="flex items-end justify-end gap-2">
+                    <div class="flex flex-col items-end">
+                      <div class="msg-meta mb-1 flex items-baseline gap-2">
+                        <time class="text-xs text-slate-400">{{ msg.created_at|date:"H:i" }}</time>
+                      </div>
+                      <div class="max-w-xs rounded-2xl rounded-br-sm bg-teal-600 px-4 py-2.5 sm:max-w-sm lg:max-w-md">
+                        <p class="whitespace-pre-wrap text-sm leading-relaxed text-white">{{ msg.body }}</p>
+                      </div>
+                    </div>
+                    <div class="msg-avatar h-8 w-8 shrink-0 rounded-full flex items-center justify-center text-xs font-bold text-white mb-px"
+                         data-name="{{ user.get_full_name|default:user.username }}">
+                      {{ user.get_full_name|slice:":1"|upper|default:"M" }}
+                    </div>
+                  </div>
+                  {% else %}
+                  {# Others' messages: left-aligned #}
+                  <div class="flex items-end gap-2">
+                    <div class="msg-avatar h-8 w-8 shrink-0 rounded-full flex items-center justify-center text-xs font-bold text-white mb-px"
+                         data-name="{{ msg.sender.user.get_full_name|default:msg.sender.user.username }}">
+                      {{ msg.sender.user.get_full_name|slice:":1"|upper|default:"?" }}
+                    </div>
+                    <div class="flex flex-col">
+                      <div class="msg-meta mb-1 flex items-baseline gap-2">
+                        <span class="text-xs font-semibold text-slate-700">{{ msg.sender.user.get_full_name|default:msg.sender.user.username }}</span>
+                        <time class="text-xs text-slate-400">{{ msg.created_at|date:"H:i" }}</time>
+                      </div>
+                      <div class="max-w-xs rounded-2xl rounded-bl-sm bg-slate-100 px-4 py-2.5 sm:max-w-sm lg:max-w-md">
+                        <p class="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">{{ msg.body }}</p>
+                      </div>
+                    </div>
+                  </div>
+                  {% endif %}
+                </article>
+                {% empty %}
+                <div class="flex h-full flex-col items-center justify-center py-16 text-center">
+                  <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+                    <i class="fas fa-comment-dots text-2xl text-slate-400"></i>
+                  </div>
+                  <p class="text-sm font-medium text-slate-600">No messages yet</p>
+                  <p class="mt-1 text-xs text-slate-400">Be the first to say something!</p>
+                </div>
+                {% endfor %}
+              </div>
+
+              {# Input bar #}
+              <div class="shrink-0 border-t border-slate-200 bg-white px-4 py-3">
+                <form id="send-form" method="post" action="{% url 'service_dashboard:send_message' conversation.id %}">
+                  {% csrf_token %}
+                  <div class="flex items-end gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2.5
+                              focus-within:border-teal-400 focus-within:ring-2 focus-within:ring-teal-100 transition-all">
+                    <textarea id="body" name="body" required maxlength="4000" rows="1"
+                              placeholder="Message {{ conversation_display_title }}…"
+                              class="flex-1 resize-none border-0 bg-transparent py-0.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none"
+                              style="min-height:1.375rem; max-height:8rem; overflow-y:auto; line-height:1.375rem;"></textarea>
+                    <button type="submit" id="send-btn" title="Send (Enter)"
+                            class="flex h-8 w-8 shrink-0 items-center justify-center self-end rounded-lg bg-teal-600 text-white transition-colors hover:bg-teal-700">
+                      <i class="fas fa-paper-plane text-xs"></i>
+                    </button>
+                  </div>
+                  <p id="send-error" class="mt-1.5 hidden text-xs text-rose-600"></p>
+                </form>
+                <p class="mt-1.5 text-xs text-slate-400"><kbd class="rounded border border-slate-200 bg-slate-100 px-1 py-0.5 font-mono text-xs">Enter</kbd> to send &nbsp;·&nbsp; <kbd class="rounded border border-slate-200 bg-slate-100 px-1 py-0.5 font-mono text-xs">Shift+Enter</kbd> for new line</p>
+              </div>
+            </div>
+
           </div>
-          <p class="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{{ msg.body }}</p>
-        </article>
-        {% else %}
-        <article data-id="{{ msg.id }}" class="max-w-[85%] rounded-2xl rounded-bl-md border border-slate-200 bg-white p-4 shadow-sm sm:max-w-[70%]">
-          <div class="flex items-center justify-between gap-4">
-            <p class="text-sm font-semibold text-slate-900">{{ msg.sender.user.get_full_name|default:msg.sender.user.username }}</p>
-            <time class="text-xs text-slate-500">{{ msg.created_at|date:"M j, Y H:i" }}</time>
+
+          {# ── New DM modal ── #}
+          <div id="new-dm-modal" class="fixed inset-0 z-50 items-center justify-center bg-black/50 p-4" style="display:none">
+            <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+              <div class="mb-5 flex items-center justify-between">
+                <h2 class="text-base font-bold text-slate-900">New Direct Message</h2>
+                <button id="close-dm-modal" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+              <form id="new-dm-form" method="post" action="{% url 'service_dashboard:start_direct' %}" class="space-y-4">
+                {% csrf_token %}
+                <div>
+                  <label for="new-dm-target" class="mb-1.5 block text-sm font-medium text-slate-700">Send message to</label>
+                  <select id="new-dm-target" name="target_profile_id" required
+                          class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200">
+                    <option value="">Choose a team member…</option>
+                    {% for member in members %}
+                    <option value="{{ member.id }}">{{ member.user.get_full_name|default:member.user.username }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <p id="new-dm-error" class="hidden rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"></p>
+                <button type="submit"
+                        class="flex w-full items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700">
+                  <i class="fas fa-paper-plane"></i> Start Conversation
+                </button>
+              </form>
+            </div>
           </div>
-          <p class="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{{ msg.body }}</p>
-        </article>
-        {% endif %}
-      {% empty %}
-        <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
-          <i class="fas fa-comment-slash text-3xl text-gray-300"></i>
-          <p class="mt-3 text-sm text-gray-600">No messages yet. Say hello to get started.</p>
-        </div>
-      {% endfor %}
-    </div>
 
-    <div class="border-t border-gray-200 p-4 sm:p-5">
-      <form id="send-form" method="post" action="{% url 'service_dashboard:send_message' conversation.id %}" class="space-y-3">
-        {% csrf_token %}
-        <label for="body" class="sr-only">Write a message</label>
-        <textarea id="body" name="body" required rows="3" maxlength="4000" class="block w-full resize-y rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200" placeholder="Write your message..."></textarea>
-        <div class="flex items-center justify-between gap-3">
-          <p id="send-error" class="hidden text-sm text-red-600"></p>
-          <button type="submit" class="inline-flex items-center rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700" :disabled="sending">
-            <i class="fas fa-paper-plane mr-2"></i>
-            Send Message
-          </button>
-        </div>
-      </form>
-    </div>
-  </section>
+          <script>
+          // ── Constants ─────────────────────────────────────────────────────────────────
+          const MY_ID    = {{ user.mediap_profile.id }};
+          const POLL_URL = "{% url 'service_dashboard:poll_messages' conversation.id %}";
+          const SEND_URL = "{% url 'service_dashboard:send_message' conversation.id %}";
+          const MARK_URL = "{% url 'service_dashboard:mark_read' conversation.id %}";
+          const CSRF     = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
-  <form id="mark-read-form" class="hidden" method="post" action="{% url 'service_dashboard:mark_read' conversation.id %}">{% csrf_token %}</form>
-</div>
+          // ── Avatar colours ────────────────────────────────────────────────────────────
+          const _PAL = ['#0d9488','#0891b2','#4f46e5','#7c3aed','#db2777','#d97706','#059669','#2563eb'];
+          function avatarBg(name) {
+            let h = 0;
+            for (const c of (name || '?')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+            return _PAL[h % _PAL.length];
+          }
+          document.querySelectorAll('.conv-avatar, .msg-avatar, .chat-hdr-avatar').forEach(el => {
+            el.style.backgroundColor = avatarBg(el.dataset.name || el.textContent.trim());
+          });
 
-<script>
-const messagesEl = document.getElementById("messages");
-const sendForm = document.getElementById("send-form");
-const markReadForm = document.getElementById("mark-read-form");
-const sendError = document.getElementById("send-error");
+          // ── Date separators ───────────────────────────────────────────────────────────
+          function insertDateSeps() {
+            const items = document.querySelectorAll('.msg-item[data-time]');
+            const now  = new Date();
+            const yday = new Date(now); yday.setDate(now.getDate() - 1);
+            let lastDate = null;
+            items.forEach(item => {
+              const d = new Date(item.dataset.time);
+              const ds = d.toDateString();
+              if (ds === lastDate) return;
+              lastDate = ds;
+              const label = ds === now.toDateString()  ? 'Today'
+                          : ds === yday.toDateString() ? 'Yesterday'
+                          : d.toLocaleDateString(undefined, { weekday:'long', month:'short', day:'numeric' });
+              const sep = document.createElement('div');
+              sep.className = 'my-4 flex items-center gap-3';
+              sep.innerHTML = `<div class="h-px flex-1 bg-slate-200"></div><span class="shrink-0 rounded-full bg-slate-100 px-3 py-0.5 text-xs font-medium text-slate-500">${label}</span><div class="h-px flex-1 bg-slate-200"></div>`;
+              item.parentElement.insertBefore(sep, item);
+            });
+          }
 
-function scrollToBottom() {
-  messagesEl.scrollTop = messagesEl.scrollHeight;
-}
+          // ── Message grouping ──────────────────────────────────────────────────────────
+          const GROUP_MS = 5 * 60 * 1000; // 5-min window = same group
+          function applyGrouping(container) {
+            const items = Array.from((container || document).querySelectorAll('.msg-item'));
+            let prevSender = null, prevTime = null;
+            items.forEach(item => {
+              const sender = item.dataset.sender;
+              const t = new Date(item.dataset.time);
+              const cont = prevSender === sender && prevTime && (t - prevTime) < GROUP_MS;
+              if (cont) {
+                item.querySelectorAll('.msg-avatar').forEach(a => a.style.visibility = 'hidden');
+                item.querySelectorAll('.msg-meta').forEach(m => m.style.display = 'none');
+                item.style.marginBottom = '0.125rem';
+              }
+              prevSender = sender;
+              prevTime   = t;
+            });
+          }
 
-function lastId() {
-  const nodes = messagesEl.querySelectorAll("[data-id]");
-  if (!nodes.length) {
-    return "";
-  }
-  return nodes[nodes.length - 1].getAttribute("data-id");
-}
+          // ── Scroll helpers ────────────────────────────────────────────────────────────
+          const msgEl = document.getElementById('messages');
+          function scrollToBottom() { msgEl.scrollTop = msgEl.scrollHeight; }
+          function lastId() {
+            const ns = msgEl.querySelectorAll('.msg-item[data-id]');
+            return ns.length ? ns[ns.length-1].dataset.id : '';
+          }
 
-function messageCard(message) {
-  const article = document.createElement("article");
-  const isMe = Number(message.sender_id) === Number({{ user.mediap_profile.id }});
-  article.setAttribute("data-id", message.id);
-  article.className = isMe
-    ? "ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-teal-600 p-4 text-white shadow-sm sm:max-w-[70%]"
-    : "max-w-[85%] rounded-2xl rounded-bl-md border border-slate-200 bg-white p-4 shadow-sm sm:max-w-[70%]";
-  article.innerHTML = `
-    <div class="flex items-center justify-between gap-4">
-      <p class="text-sm font-semibold ${isMe ? 'text-teal-100' : 'text-slate-900'}">${isMe ? 'You' : message.sender_name}</p>
-      <time class="text-xs ${isMe ? 'text-teal-100/80' : 'text-slate-500'}">${new Date(message.created_at).toLocaleString()}</time>
-    </div>
-    <p class="mt-2 whitespace-pre-wrap text-sm leading-relaxed ${isMe ? 'text-white' : 'text-slate-700'}"></p>
-  `;
-  article.querySelector("p.mt-2").textContent = message.body;
-  return article;
-}
+          // ── Mark read ─────────────────────────────────────────────────────────────────
+          async function markRead() {
+            await fetch(MARK_URL, {
+              method: 'POST',
+              headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: 'csrfmiddlewaretoken=' + encodeURIComponent(CSRF),
+            });
+          }
 
-function appendMessage(message) {
-  messagesEl.appendChild(messageCard(message));
-}
+          // ── Build a message card (for AJAX-appended messages) ─────────────────────────
+          const MY_NAME = "{{ user.get_full_name|default:user.username|escapejs }}";
+          const MY_INIT = (MY_NAME || 'M')[0].toUpperCase();
+          function messageCard(msg) {
+            const isMe = Number(msg.sender_id) === MY_ID;
+            const art  = document.createElement('article');
+            art.dataset.id     = msg.id;
+            art.dataset.sender = msg.sender_id;
+            art.dataset.time   = msg.created_at;
+            art.className = `msg-item ${isMe ? 'msg-mine' : 'msg-theirs'} mb-1`;
 
-async function markRead() {
-  await fetch(markReadForm.action, {
-    method: "POST",
-    body: new FormData(markReadForm),
-  });
-}
+            const t = new Date(msg.created_at).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+            const init  = (msg.sender_name || '?')[0].toUpperCase();
+            const color = avatarBg(isMe ? MY_NAME : msg.sender_name);
 
-sendForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  sendError.classList.add("hidden");
+            if (isMe) {
+              art.innerHTML = `
+                <div class="flex items-end justify-end gap-2">
+                  <div class="flex flex-col items-end">
+                    <div class="msg-meta mb-1 flex items-baseline gap-2">
+                      <time class="text-xs text-slate-400">${t}</time>
+                    </div>
+                    <div class="max-w-xs rounded-2xl rounded-br-sm bg-teal-600 px-4 py-2.5 sm:max-w-sm lg:max-w-md">
+                      <p class="whitespace-pre-wrap text-sm leading-relaxed text-white msg-body"></p>
+                    </div>
+                  </div>
+                  <div class="msg-avatar h-8 w-8 shrink-0 rounded-full flex items-center justify-center text-xs font-bold text-white mb-px"
+                       style="background-color:${color}">${MY_INIT}</div>
+                </div>`;
+            } else {
+              art.innerHTML = `
+                <div class="flex items-end gap-2">
+                  <div class="msg-avatar h-8 w-8 shrink-0 rounded-full flex items-center justify-center text-xs font-bold text-white mb-px"
+                       style="background-color:${color}">${init}</div>
+                  <div class="flex flex-col">
+                    <div class="msg-meta mb-1 flex items-baseline gap-2">
+                      <span class="text-xs font-semibold text-slate-700 msg-sname"></span>
+                      <time class="text-xs text-slate-400">${t}</time>
+                    </div>
+                    <div class="max-w-xs rounded-2xl rounded-bl-sm bg-slate-100 px-4 py-2.5 sm:max-w-sm lg:max-w-md">
+                      <p class="whitespace-pre-wrap text-sm leading-relaxed text-slate-800 msg-body"></p>
+                    </div>
+                  </div>
+                </div>`;
+              art.querySelector('.msg-sname').textContent = msg.sender_name;
+            }
+            art.querySelector('.msg-body').textContent = msg.body;
+            return art;
+          }
 
-  const response = await fetch(sendForm.action, {
-    method: "POST",
-    body: new FormData(sendForm),
-    headers: { "X-Requested-With": "XMLHttpRequest" }
-  });
+          function appendMessage(msg) {
+            const card = messageCard(msg);
+            // Check grouping with last item
+            const prev = msgEl.querySelector('.msg-item:last-of-type');
+            if (prev && prev.dataset.sender === String(msg.sender_id)) {
+              const gap = new Date(msg.created_at) - new Date(prev.dataset.time);
+              if (gap < GROUP_MS) {
+                card.querySelectorAll('.msg-avatar').forEach(a => a.style.visibility = 'hidden');
+                card.querySelectorAll('.msg-meta').forEach(m => m.style.display = 'none');
+                card.style.marginBottom = '0.125rem';
+              }
+            }
+            msgEl.appendChild(card);
+          }
 
-  const data = await response.json();
-  if (!data.ok) {
-    sendError.textContent = data.error || "Unable to send message.";
-    sendError.classList.remove("hidden");
-    return;
-  }
+          // ── Send form ─────────────────────────────────────────────────────────────────
+          const sendForm  = document.getElementById('send-form');
+          const bodyEl    = document.getElementById('body');
+          const sendError = document.getElementById('send-error');
 
-  appendMessage(data.message);
-  sendForm.reset();
-  scrollToBottom();
-  await markRead();
-});
+          bodyEl.addEventListener('input', function () {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 128) + 'px';
+          });
+          bodyEl.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendForm.requestSubmit(); }
+          });
 
-async function poll() {
-  const response = await fetch(`{% url 'service_dashboard:poll_messages' conversation.id %}?after_id=${lastId()}`, {
-    headers: { "X-Requested-With": "XMLHttpRequest" }
-  });
-  const data = await response.json();
+          sendForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            sendError.classList.add('hidden');
+            if (!bodyEl.value.trim()) return;
+            const res  = await fetch(SEND_URL, {
+              method: 'POST', body: new FormData(sendForm),
+              headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const data = await res.json();
+            if (!data.ok) {
+              sendError.textContent = data.error || 'Unable to send.';
+              sendError.classList.remove('hidden');
+              return;
+            }
+            appendMessage(data.message);
+            sendForm.reset();
+            bodyEl.style.height = '1.375rem';
+            scrollToBottom();
+            await markRead();
+          });
 
-  if (!data.ok || !data.messages.length) {
-    return;
-  }
+          // ── Rename form ───────────────────────────────────────────────────────────────
+          const renameForm  = document.getElementById('rename-form');
+          const renameError = document.getElementById('rename-error');
+          if (renameForm) {
+            renameForm.addEventListener('submit', async function (e) {
+              e.preventDefault();
+              renameError.classList.add('hidden');
+              const res  = await fetch(renameForm.action, {
+                method: 'POST', body: new FormData(renameForm),
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+              });
+              const data = await res.json();
+              if (!data.ok) {
+                renameError.textContent = data.error || 'Unable to rename.';
+                renameError.classList.remove('hidden');
+                return;
+              }
+              window.location.reload();
+            });
+          }
 
-  data.messages.forEach(appendMessage);
-  scrollToBottom();
-  await markRead();
-}
+          // ── Sidebar search ────────────────────────────────────────────────────────────
+          const convSearch = document.getElementById('conv-search');
+          if (convSearch) {
+            convSearch.addEventListener('input', function () {
+              const q = this.value.trim().toLowerCase();
+              document.querySelectorAll('.conv-row').forEach(row => {
+                row.style.display = q && !(row.dataset.convTitle || '').includes(q) ? 'none' : '';
+              });
+            });
+          }
 
-scrollToBottom();
-setInterval(poll, 5000);
-</script>
-{% endblock %}
+          // ── New DM modal ──────────────────────────────────────────────────────────────
+          const dmModal = document.getElementById('new-dm-modal');
+          document.getElementById('close-dm-modal').addEventListener('click', () => dmModal.style.display = 'none');
+          dmModal.addEventListener('click', e => { if (e.target === dmModal) dmModal.style.display = 'none'; });
+          const newDmForm = document.getElementById('new-dm-form');
+          if (newDmForm) {
+            newDmForm.addEventListener('submit', async function (e) {
+              e.preventDefault();
+              const errEl = document.getElementById('new-dm-error');
+              errEl.classList.add('hidden');
+              const res  = await fetch(this.action, {
+                method: 'POST', body: new FormData(this),
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+              });
+              const data = await res.json();
+              if (data.ok) window.location.href = `/services/dashboard/messages/${data.conversation_id}/`;
+              else { errEl.textContent = data.error || 'Could not start conversation.'; errEl.classList.remove('hidden'); }
+            });
+          }
+
+          // ── Poll for new messages ─────────────────────────────────────────────────────
+          async function poll() {
+            try {
+              const res  = await fetch(`${POLL_URL}?after_id=${lastId()}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+              });
+              const data = await res.json();
+              if (!data.ok || !data.messages.length) return;
+              data.messages.forEach(appendMessage);
+              scrollToBottom();
+              await markRead();
+            } catch (_) { /* ignore transient network errors */ }
+          }
+
+          // ── Initialise ────────────────────────────────────────────────────────────────
+          insertDateSeps();
+          applyGrouping();
+          scrollToBottom();
+          setInterval(poll, 5000);
+          </script>
+          {% endblock %}

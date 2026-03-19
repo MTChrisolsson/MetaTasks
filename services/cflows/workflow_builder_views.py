@@ -6,7 +6,7 @@ from django.views.decorators.http import require_POST, require_http_methods
 from django.db import transaction, models
 from django.urls import reverse
 from core.views import require_organization_access
-from core.models import Team
+from core.models import Team, UserProfile
 from .models import (
     Workflow, WorkflowStep, WorkflowTransition, WorkflowTemplate, CustomField
 )
@@ -20,7 +20,7 @@ def get_user_profile(request):
         return None
     try:
         return request.user.mediap_profile
-    except:
+    except UserProfile.DoesNotExist:
         return None
 
 

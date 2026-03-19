@@ -1466,10 +1466,13 @@ def team_detail(request, team_id):
     
     # Get team statistics
     from .models import TeamBooking
+    team_booking_stats = TeamBooking.objects.filter(team=team).aggregate(
+        total_bookings=Count('id'),
+        active_bookings=Count('id', filter=Q(is_completed=False)),
+        completed_bookings=Count('id', filter=Q(is_completed=True)),
+    )
     stats = {
-        'total_bookings': TeamBooking.objects.filter(team=team).count(),
-        'active_bookings': TeamBooking.objects.filter(team=team, is_completed=False).count(),
-        'completed_bookings': TeamBooking.objects.filter(team=team, is_completed=True).count(),
+        **team_booking_stats,
         'member_count': team_members.count(),
     }
     

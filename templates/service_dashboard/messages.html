@@ -1,140 +1,163 @@
 {% extends "service_dashboard/service_dashboard_base.html" %}
 
-{% block title %}Messages - Service Dashboard{% endblock %}
+{% block title %}Messages — Service Dashboard{% endblock %}
+
+{% block main_class %}h-[calc(100vh-4rem)] p-0 overflow-hidden{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <section class="relative overflow-hidden rounded-2xl border border-cyan-200 bg-gradient-to-r from-cyan-600 to-teal-700 p-6 text-white shadow-lg">
-        <div class="absolute -right-14 -top-14 h-36 w-36 rounded-full bg-white/10"></div>
-        <div class="absolute -bottom-20 left-1/3 h-48 w-48 rounded-full bg-teal-200/10"></div>
-        <div class="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+<div class="flex h-full overflow-hidden">
+
+    {# ── Left: conversation list (full-width on mobile, sidebar on lg+) ── #}
+    <div class="flex h-full w-full flex-col border-r border-slate-200 bg-slate-50 lg:w-72 lg:shrink-0">
+
+        {# Header #}
+        <div class="shrink-0 border-b border-slate-200 bg-white px-4 pb-3 pt-4">
+            <div class="mb-3 flex items-center justify-between">
+                <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700">Messages</h2>
+                {% if memberships %}
+                <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">{{ memberships|length }}</span>
+                {% endif %}
+            </div>
+            <div class="relative">
+                <i class="fas fa-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400"></i>
+                <input id="conv-search" type="text" placeholder="Search conversations…"
+                             class="w-full rounded-lg border-0 bg-slate-100 py-2 pl-9 pr-3 text-xs text-slate-700 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-300">
+            </div>
+        </div>
+
+        {# Conversation list #}
+        <div id="conv-list" class="flex-1 overflow-y-auto px-2 py-2">
+            {% for m in memberships %}
+            <a href="{% url 'service_dashboard:thread' m.conversation.id %}"
+                 data-conv-title="{{ m.conversation.display_title|lower }}"
+                 class="conv-row mb-0.5 flex items-center gap-2.5 rounded-lg px-2.5 py-2.5 transition-colors hover:bg-slate-200">
+                <div class="conv-avatar h-10 w-10 shrink-0 rounded-full flex items-center justify-center text-sm font-bold text-white"
+                         data-name="{{ m.conversation.display_title }}">
+                    {{ m.conversation.display_title|first|upper }}
+                </div>
+                <div class="min-w-0 flex-1 overflow-hidden">
+                    <div class="flex items-center justify-between gap-1">
+                        <span class="truncate text-sm {% if m.is_unread %}font-bold text-slate-900{% else %}font-medium text-slate-700{% endif %}">
+                            {{ m.conversation.display_title }}
+                        </span>
+                        <time class="ml-1 shrink-0 text-xs {% if m.is_unread %}font-semibold text-teal-600{% else %}text-slate-400{% endif %}">
+                            {{ m.conversation.last_message_at|date:"H:i" }}
+                        </time>
+                    </div>
+                    <p class="mt-0.5 truncate text-xs {% if m.is_unread %}text-slate-600{% else %}text-slate-400{% endif %}">
+                        {% if m.preview_body %}{{ m.preview_body|truncatechars:50 }}{% else %}<span class="italic">No messages yet</span>{% endif %}
+                    </p>
+                </div>
+                {% if m.is_unread %}
+                <div class="ml-1 h-2 w-2 shrink-0 rounded-full bg-teal-500"></div>
+                {% endif %}
+            </a>
+            {% empty %}
+            <div class="px-3 py-10 text-center">
+                <i class="fas fa-comment-dots text-3xl text-slate-200"></i>
+                <p class="mt-3 text-xs text-slate-400">No conversations yet.</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        {# New DM button #}
+        <div class="shrink-0 border-t border-slate-200 bg-white px-4 py-3">
+            <button onclick="document.getElementById('new-dm-modal').style.display='flex'"
+                            class="flex w-full items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-teal-700">
+                <i class="fas fa-plus text-xs"></i>
+                New Direct Message
+            </button>
+        </div>
+    </div>
+
+    {# ── Right: welcome panel (desktop only) ── #}
+    <div class="hidden flex-1 flex-col items-center justify-center bg-white lg:flex">
+        <div class="max-w-sm px-6 text-center">
+            <div class="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-teal-50">
+                <i class="fas fa-comments text-3xl text-teal-500"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-slate-900">Your Messages</h1>
+            <p class="mt-2 text-sm text-slate-500">Pick a conversation from the left, or start a new direct message with a colleague.</p>
+            <button onclick="document.getElementById('new-dm-modal').style.display='flex'"
+                            class="mt-6 inline-flex items-center gap-2 rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-700">
+                <i class="fas fa-pen-to-square"></i>
+                New Direct Message
+            </button>
+        </div>
+    </div>
+
+</div>
+
+{# ── New DM modal ── #}
+<div id="new-dm-modal" class="fixed inset-0 z-50 items-center justify-center bg-black/50 p-4" style="display:none"
+         onclick="if(event.target===this)this.style.display='none'">
+    <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+        <div class="mb-5 flex items-center justify-between">
+            <h2 class="text-base font-bold text-slate-900">New Direct Message</h2>
+            <button onclick="document.getElementById('new-dm-modal').style.display='none'"
+                            class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="start-direct-form" method="post" action="{% url 'service_dashboard:start_direct' %}" class="space-y-4">
+            {% csrf_token %}
             <div>
-                <h1 class="text-3xl font-bold tracking-tight">Messages</h1>
-                <p class="mt-2 text-sm text-cyan-100">Fast internal communication with organization-only visibility.</p>
+                <label for="target_profile_id" class="mb-1.5 block text-sm font-medium text-slate-700">Send message to</label>
+                <select id="target_profile_id" name="target_profile_id" required
+                                class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200">
+                    <option value="">Choose a team member…</option>
+                    {% for member in members %}
+                    <option value="{{ member.id }}">{{ member.user.get_full_name|default:member.user.username }}</option>
+                    {% endfor %}
+                </select>
             </div>
-            <div class="flex items-center gap-2">
-                <span class="rounded-lg bg-white/15 px-3 py-2 text-xs font-semibold">
-                    {{ memberships|length }} active thread{{ memberships|length|pluralize }}
-                </span>
-                <a href="{% url 'service_dashboard:overview' %}" class="inline-flex items-center rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20">
-                    <i class="fas fa-arrow-left mr-2"></i>
-                    Dashboard
-                </a>
-            </div>
-        </div>
-    </section>
-
-    <section class="grid grid-cols-1 gap-6 xl:grid-cols-12">
-        <aside class="space-y-4 xl:col-span-4">
-            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div class="flex items-center justify-between">
-                    <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">New Direct Chat</h2>
-                    <span class="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">Secure</span>
-                </div>
-                <form id="start-direct-form" class="mt-4 space-y-3" method="post" action="{% url 'service_dashboard:start_direct' %}">
-                    {% csrf_token %}
-                    <label for="target_profile_id" class="block text-sm font-medium text-slate-700">Recipient</label>
-                    <select id="target_profile_id" name="target_profile_id" required class="block w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200">
-                        <option value="">Select team member</option>
-                        {% for member in members %}
-                            <option value="{{ member.id }}">{{ member.user.get_full_name|default:member.user.username }}</option>
-                        {% endfor %}
-                    </select>
-                    <button type="submit" class="inline-flex w-full items-center justify-center rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700">
-                        <i class="fas fa-paper-plane mr-2"></i>
-                        Start Conversation
-                    </button>
-                    <p id="start-chat-error" class="hidden rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"></p>
-                </form>
-            </div>
-
-            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500">Tips</h3>
-                <ul class="mt-3 space-y-2 text-sm text-slate-600">
-                    <li class="flex items-start"><i class="fas fa-check mt-0.5 mr-2 text-teal-500"></i>Messages are scoped to your organization.</li>
-                    <li class="flex items-start"><i class="fas fa-check mt-0.5 mr-2 text-teal-500"></i>Use short, specific thread titles when needed.</li>
-                    <li class="flex items-start"><i class="fas fa-check mt-0.5 mr-2 text-teal-500"></i>Jump into any conversation to view full history.</li>
-                </ul>
-            </div>
-        </aside>
-
-        <div class="rounded-2xl border border-slate-200 bg-white shadow-sm xl:col-span-8">
-            <div class="border-b border-slate-200 p-4 sm:p-5">
-                <div class="flex items-center justify-between gap-4">
-                    <h2 class="text-base font-semibold text-slate-900">Conversation Inbox</h2>
-                    <div class="relative w-full max-w-xs">
-                        <i class="fas fa-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400"></i>
-                        <input id="conversation-search" type="text" placeholder="Search title..." class="w-full rounded-lg border border-slate-300 py-2 pl-8 pr-3 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-200">
-                    </div>
-                </div>
-            </div>
-
-            <div id="conversation-list" class="max-h-[62vh] overflow-y-auto p-3 sm:p-4">
-                {% for m in memberships %}
-                    <a href="{% url 'service_dashboard:thread' m.conversation.id %}" data-conversation-title="{% if m.conversation.title %}{{ m.conversation.title|lower }}{% else %}conversation {{ m.conversation.id }}{% endif %}" class="conversation-row mb-2 block rounded-xl border border-slate-200 p-4 transition hover:border-teal-300 hover:bg-teal-50/40">
-                        <div class="flex items-start gap-3">
-                            <div class="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cyan-100 text-cyan-700">
-                                <i class="fas fa-user-group text-sm"></i>
-                            </div>
-                            <div class="min-w-0 flex-1">
-                                <div class="flex flex-wrap items-center justify-between gap-2">
-                                    <p class="truncate text-sm font-semibold text-slate-900">
-                                        {% if m.conversation.title %}
-                                            {{ m.conversation.title }}
-                                        {% else %}
-                                            Conversation #{{ m.conversation.id }}
-                                        {% endif %}
-                                    </p>
-                                    <time class="text-xs text-slate-500">{{ m.conversation.last_message_at|date:"M j, H:i" }}</time>
-                                </div>
-                                <p class="mt-1 text-xs text-slate-500">Last activity in thread • Tap to open</p>
-                            </div>
-                        </div>
-                    </a>
-                {% empty %}
-                    <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-                        <i class="fas fa-comments text-3xl text-slate-300"></i>
-                        <p class="mt-3 text-sm text-slate-600">No conversations yet. Start your first one from the left panel.</p>
-                    </div>
-                {% endfor %}
-            </div>
-        </div>
-    </section>
+            <p id="start-chat-error" class="hidden rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"></p>
+            <button type="submit"
+                            class="flex w-full items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700">
+                <i class="fas fa-paper-plane"></i>
+                Start Conversation
+            </button>
+        </form>
+    </div>
 </div>
 
 <script>
-document.getElementById("start-direct-form").addEventListener("submit", async function (e) {
-    e.preventDefault();
-
-    const form = e.target;
-    const errorEl = document.getElementById("start-chat-error");
-    errorEl.classList.add("hidden");
-
-    const response = await fetch(form.action, {
-        method: "POST",
-        body: new FormData(form),
-        headers: { "X-Requested-With": "XMLHttpRequest" }
-    });
-
-    const data = await response.json();
-    if (data.ok) {
-        window.location.href = `/services/dashboard/messages/${data.conversation_id}/`;
-        return;
-    }
-
-    errorEl.textContent = data.error || "Could not start conversation.";
-    errorEl.classList.remove("hidden");
+// ── Avatar colours ────────────────────────────────────────────────────────────
+const _PALETTE = ['#0d9488','#0891b2','#4f46e5','#7c3aed','#db2777','#d97706','#059669','#2563eb'];
+function avatarBg(name) {
+    let h = 0;
+    for (const c of (name || '?')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    return _PALETTE[h % _PALETTE.length];
+}
+document.querySelectorAll('.conv-avatar').forEach(el => {
+    el.style.backgroundColor = avatarBg(el.dataset.name || '');
 });
 
-const searchInput = document.getElementById("conversation-search");
-if (searchInput) {
-    searchInput.addEventListener("input", function () {
-        const query = this.value.trim().toLowerCase();
-        document.querySelectorAll(".conversation-row").forEach((row) => {
-            const title = row.getAttribute("data-conversation-title") || "";
-            row.classList.toggle("hidden", query && !title.includes(query));
-        });
+// ── Search ────────────────────────────────────────────────────────────────────
+document.getElementById('conv-search').addEventListener('input', function () {
+    const q = this.value.trim().toLowerCase();
+    document.querySelectorAll('.conv-row').forEach(row => {
+        row.style.display = q && !(row.dataset.convTitle || '').includes(q) ? 'none' : '';
     });
-}
+});
+
+// ── New DM form ───────────────────────────────────────────────────────────────
+document.getElementById('start-direct-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const errEl = document.getElementById('start-chat-error');
+    errEl.classList.add('hidden');
+    const res = await fetch(this.action, {
+        method: 'POST',
+        body: new FormData(this),
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    });
+    const data = await res.json();
+    if (data.ok) {
+        window.location.href = `/services/dashboard/messages/${data.conversation_id}/`;
+    } else {
+        errEl.textContent = data.error || 'Could not start conversation.';
+        errEl.classList.remove('hidden');
+    }
+});
 </script>
 {% endblock %}

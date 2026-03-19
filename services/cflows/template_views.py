@@ -3,14 +3,18 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
+import logging
 import json
 from datetime import datetime
 
+from core.models import Team, UserProfile
 from .models import (
     Workflow, WorkflowStep, WorkflowTransition, WorkflowTemplate
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -55,7 +59,17 @@ def template_detail(request, template_id):
 @login_required
 def create_from_template(request, template_id):
     """Create a new workflow from a template"""
-    template = get_object_or_404(WorkflowTemplate, id=template_id, is_public=True)
+    template = get_object_or_404(WorkflowTemplate, id=template_id)
+
+    try:
+        profile = request.user.mediap_profile
+    except UserProfile.DoesNotExist:
+        messages.error(request, 'No user profile found. Please contact support.')
+        return redirect('cflows:index')
+
+    if not template.is_public and template.created_by_org != profile.organization:
+        messages.error(request, 'Access denied for this template.')
+        return redirect('cflows:template_list')
     
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
@@ -69,13 +83,23 @@ def create_from_template(request, template_id):
         
         try:
             with transaction.atomic():
+                owner_team = Team.objects.filter(
+                    organization=profile.organization,
+                    is_active=True
+                ).order_by('name').first()
+
+                if not owner_team:
+                    messages.error(request, 'Please create a team before creating a workflow from a template.')
+                    return redirect('cflows:create_team')
+
                 # Create the workflow
                 workflow = Workflow.objects.create(
+                    organization=profile.organization,
                     name=name,
                     description=description,
-                    organization=request.user.userprofile.organization,
-                    created_by=request.user,
-                    modified_by=request.user
+                    owner_team=owner_team,
+                    template=template,
+                    created_by=profile
                 )
                 
                 # Create steps from template
@@ -86,7 +110,7 @@ def create_from_template(request, template_id):
                             workflow=workflow,
                             name=step_data['name'],
                             description=step_data.get('description', ''),
-                            step_order=step_data.get('order', 1),
+                            order=step_data.get('order', 1),
                             requires_booking=step_data.get('requires_booking', False),
                             estimated_duration_hours=step_data.get('estimated_duration_hours', 0),
                             is_terminal=step_data.get('is_terminal', False)
@@ -111,7 +135,8 @@ def create_from_template(request, template_id):
             return redirect('cflows:workflow_detail', workflow_id=workflow.id)
             
         except Exception as e:
-            messages.error(request, f'Error creating workflow: {str(e)}')
+            logger.exception('Error creating workflow from template id=%s for user id=%s', template_id, request.user.id)
+            messages.error(request, 'Error creating workflow. Please try again or contact support.')
     
     return render(request, 'cflows/create_from_template.html', {
         'template': template,
@@ -123,10 +148,15 @@ def create_from_template(request, template_id):
 @require_POST
 def save_as_template(request, workflow_id):
     """Save an existing workflow as a template"""
+    try:
+        profile = request.user.mediap_profile
+    except UserProfile.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'No user profile found'}, status=400)
+
     workflow = get_object_or_404(
         Workflow, 
         id=workflow_id, 
-        organization=request.user.userprofile.organization
+        organization=profile.organization
     )
     
     try:
@@ -144,7 +174,7 @@ def save_as_template(request, workflow_id):
         transitions = []
         
         # Get steps
-        workflow_steps = workflow.steps.all().order_by('step_order')
+        workflow_steps = workflow.steps.all().order_by('order')
         step_mapping = {}
         
         for i, step in enumerate(workflow_steps):
@@ -155,7 +185,7 @@ def save_as_template(request, workflow_id):
                 'id': step_id,
                 'name': step.name,
                 'description': step.description,
-                'order': step.step_order,
+                'order': step.order,
                 'requires_booking': step.requires_booking,
                 'estimated_duration_hours': float(step.estimated_duration_hours or 0),
                 'is_terminal': step.is_terminal
@@ -186,8 +216,7 @@ def save_as_template(request, workflow_id):
             category=category,
             is_public=is_public,
             template_data=template_data,
-            created_by=request.user,
-            organization=request.user.userprofile.organization if not is_public else None
+            created_by_org=profile.organization if not is_public else None
         )
         
         return JsonResponse({
@@ -205,10 +234,15 @@ def save_as_template(request, workflow_id):
 @login_required
 def template_preview(request, template_id):
     """Preview template as JSON for API access"""
-    template = get_object_or_404(WorkflowTemplate, id=template_id, is_public=True)
+    template = get_object_or_404(WorkflowTemplate, id=template_id)
+
+    try:
+        profile = request.user.mediap_profile
+    except UserProfile.DoesNotExist:
+        return JsonResponse({'error': 'No user profile found'}, status=400)
     
     # Check access permissions
-    if not template.is_public and template.organization != request.user.userprofile.organization:
+    if not template.is_public and template.created_by_org != profile.organization:
         return JsonResponse({'error': 'Access denied'}, status=403)
     
     return JsonResponse({
@@ -219,8 +253,8 @@ def template_preview(request, template_id):
             'category': template.category,
             'is_public': template.is_public,
             'template_data': template.template_data,
-            'created_by': template.created_by.get_full_name() if template.created_by else None,
+            'created_by_org': template.created_by_org.name if template.created_by_org else None,
             'created_at': template.created_at.isoformat(),
-            'modified_at': template.modified_at.isoformat()
+            'updated_at': template.updated_at.isoformat()
         }
     })

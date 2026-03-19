@@ -20,7 +20,7 @@ def get_user_profile(request):
     """Safely get user profile"""
     try:
         return request.user.mediap_profile
-    except:
+    except UserProfile.DoesNotExist:
         return None
 
 

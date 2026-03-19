@@ -53,6 +53,40 @@ class Conversation(models.Model):
         self.last_message_at = timezone.now()
         self.save(update_fields=["last_message_at"])
 
+    def get_display_title(self, viewer_profile=None):
+        custom_title = (self.title or "").strip()
+        if custom_title:
+            return custom_title
+
+        participants = self._get_active_participants()
+        if viewer_profile is not None:
+            participants = [
+                participant
+                for participant in participants
+                if participant.user_profile_id != viewer_profile.id
+            ]
+
+        names = sorted(
+            [
+                participant.user_profile.user.get_full_name() or participant.user_profile.user.username
+                for participant in participants
+            ],
+            key=str.casefold,
+        )
+
+        if names:
+            return ", ".join(names)
+        if viewer_profile is not None:
+            return viewer_profile.user.get_full_name() or viewer_profile.user.username
+        return f"{self.get_conversation_type_display()} conversation"
+
+    def _get_active_participants(self):
+        prefetched = getattr(self, "_prefetched_objects_cache", {})
+        participants = prefetched.get("participants")
+        if participants is None:
+            participants = self.participants.select_related("user_profile__user").all()
+        return [participant for participant in participants if participant.is_active]
+
 class ConversationParticipant(models.Model):
     conversation = models.ForeignKey(
         Conversation,
@@ -131,3 +165,51 @@ class Message(models.Model):
             Conversation.objects.filter(pk=self.conversation_id).update(
                 last_message_at=self.created_at
             )
+
+
+class DashboardPreference(models.Model):
+    VISIBILITY_PARTICIPANTS = "participants"
+    VISIBILITY_ORGANIZATION = "organization"
+    VISIBILITY_CHOICES = [
+        (VISIBILITY_PARTICIPANTS, "Participants only"),
+        (VISIBILITY_ORGANIZATION, "Organization-wide (group only)"),
+    ]
+
+    DIGEST_DAILY = "daily"
+    DIGEST_WEEKLY = "weekly"
+    DIGEST_NEVER = "never"
+    DIGEST_CHOICES = [
+        (DIGEST_DAILY, "Daily"),
+        (DIGEST_WEEKLY, "Weekly"),
+        (DIGEST_NEVER, "Never"),
+    ]
+
+    user_profile = models.OneToOneField(
+        UserProfile,
+        on_delete=models.CASCADE,
+        related_name="dashboard_preferences",
+    )
+    show_read_receipts = models.BooleanField(default=True)
+    desktop_notifications = models.BooleanField(default=True)
+    auto_mark_threads_read = models.BooleanField(default=True)
+    email_alerts = models.BooleanField(default=True)
+    digest_frequency = models.CharField(
+        max_length=20,
+        choices=DIGEST_CHOICES,
+        default=DIGEST_WEEKLY,
+    )
+    message_retention_days = models.PositiveIntegerField(default=90)
+    default_visibility = models.CharField(
+        max_length=20,
+        choices=VISIBILITY_CHOICES,
+        default=VISIBILITY_PARTICIPANTS,
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["digest_frequency"]),
+        ]
+
+    def __str__(self):
+        return f"Dashboard preferences for {self.user_profile}"

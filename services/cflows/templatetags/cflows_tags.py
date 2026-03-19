@@ -1,5 +1,4 @@
 from django import template
-from services.cflows.models import WorkflowTransition
 
 register = template.Library()
 
@@ -19,7 +18,7 @@ def can_user_execute(transition, args):
         work_item = parts[1] if len(parts) > 1 else None
         
         return transition.can_user_execute(user_profile, work_item)
-    except:
+    except (AttributeError, TypeError, ValueError):
         return True
 
 @register.simple_tag

@@ -46,6 +46,22 @@
             </div>
 
             <div class="flex items-center gap-2">
+                {% if can_access_messages %}
+                <a href="{% url 'service_dashboard:messages' %}" class="hidden rounded-lg px-3 py-2 text-sm font-medium text-cyan-50 hover:bg-white/10 md:inline-flex">
+                    <i class="fas fa-comments mr-2"></i>
+                    Messages
+                    {% if unread_thread_count %}
+                    <span class="ml-2 rounded-full bg-white px-2 py-0.5 text-xs font-bold text-teal-700">{{ unread_thread_count }}</span>
+                    {% endif %}
+                </a>
+                {% endif %}
+                <a href="{% url 'service_dashboard:notifications' %}" class="rounded-lg px-3 py-2 text-sm font-medium text-cyan-50 hover:bg-white/10">
+                    <i class="fas fa-bell mr-2"></i>
+                    Notifications
+                    {% if unread_notifications_count %}
+                    <span class="ml-2 rounded-full bg-amber-200 px-2 py-0.5 text-xs font-bold text-amber-900">{{ unread_notifications_count }}</span>
+                    {% endif %}
+                </a>
                 <a href="/services/cflows/" class="hidden rounded-lg px-3 py-2 text-sm font-medium text-cyan-50 hover:bg-white/10 md:inline-flex">
                     <i class="fas fa-project-diagram mr-2"></i>
                     CFlows
@@ -72,18 +88,38 @@
                     <i class="fas fa-gauge-high mr-3 text-teal-500"></i>
                     Overview
                 </a>
+                {% if can_access_messages %}
                 <a href="{% url 'service_dashboard:messages' %}" class="{% if request.resolver_match.url_name == 'messages' or request.resolver_match.url_name == 'thread' %}bg-teal-50 text-teal-700 border-r-2 border-teal-600{% else %}text-slate-700 hover:bg-teal-50 hover:text-teal-700{% endif %} flex items-center rounded-lg px-3 py-2 text-sm font-medium">
                     <i class="fas fa-comments mr-3 text-cyan-500"></i>
                     Messages
+                    {% if unread_thread_count %}
+                    <span class="ml-auto rounded-full bg-cyan-100 px-2 py-0.5 text-xs font-bold text-cyan-700">{{ unread_thread_count }}</span>
+                    {% endif %}
                 </a>
+                {% else %}
+                <div class="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-slate-400">
+                    <i class="fas fa-lock mr-3 text-slate-300"></i>
+                    Messages
+                </div>
+                {% endif %}
                 <a href="{% url 'service_dashboard:notifications' %}" class="{% if request.resolver_match.url_name == 'notifications' %}bg-teal-50 text-teal-700 border-r-2 border-teal-600{% else %}text-slate-700 hover:bg-teal-50 hover:text-teal-700{% endif %} flex items-center rounded-lg px-3 py-2 text-sm font-medium">
                     <i class="fas fa-bell mr-3 text-amber-500"></i>
                     Notifications
+                    {% if unread_notifications_count %}
+                    <span class="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700">{{ unread_notifications_count }}</span>
+                    {% endif %}
                 </a>
+                {% if can_access_calendar %}
                 <a href="{% url 'service_dashboard:calendar' %}" class="{% if request.resolver_match.url_name == 'calendar' %}bg-teal-50 text-teal-700 border-r-2 border-teal-600{% else %}text-slate-700 hover:bg-teal-50 hover:text-teal-700{% endif %} flex items-center rounded-lg px-3 py-2 text-sm font-medium">
                     <i class="fas fa-calendar-days mr-3 text-indigo-500"></i>
                     Calendar
                 </a>
+                {% else %}
+                <div class="flex items-center rounded-lg px-3 py-2 text-sm font-medium text-slate-400">
+                    <i class="fas fa-lock mr-3 text-slate-300"></i>
+                    Calendar
+                </div>
+                {% endif %}
                 <a href="{% url 'service_dashboard:settings' %}" class="{% if request.resolver_match.url_name == 'settings' %}bg-teal-50 text-teal-700 border-r-2 border-teal-600{% else %}text-slate-700 hover:bg-teal-50 hover:text-teal-700{% endif %} flex items-center rounded-lg px-3 py-2 text-sm font-medium">
                     <i class="fas fa-sliders mr-3 text-purple-500"></i>
                     Settings
@@ -103,7 +139,7 @@
     </aside>
 
     <div class="lg:ml-64">
-        <main class="min-h-[calc(100vh-10rem)] px-4 py-6 sm:px-6 lg:px-8">
+        <main class="{% block main_class %}min-h-[calc(100vh-10rem)] px-4 py-6 sm:px-6 lg:px-8{% endblock %}">
             {% block content %}{% endblock %}
         </main>
 

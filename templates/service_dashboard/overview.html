@@ -18,14 +18,22 @@
         </p>
       </div>
       <div class="flex flex-wrap gap-3">
+        {% if can_access_messages %}
         <a href="{% url 'service_dashboard:messages' %}" class="inline-flex items-center rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 shadow hover:bg-slate-100">
           <i class="fas fa-comments mr-2"></i>
           Open Messages
         </a>
+        {% endif %}
         <a href="{% url 'service_dashboard:notifications' %}" class="inline-flex items-center rounded-lg border border-white/30 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/20">
           <i class="fas fa-bell mr-2"></i>
           View Notifications
         </a>
+        {% if can_access_calendar %}
+        <a href="{% url 'service_dashboard:calendar' %}" class="inline-flex items-center rounded-lg border border-white/30 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/20">
+          <i class="fas fa-calendar-days mr-2"></i>
+          Open Calendar
+        </a>
+        {% endif %}
       </div>
     </div>
   </section>
@@ -33,57 +41,150 @@
   <section class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
     <div class="rounded-xl border border-blue-100 bg-white p-5 shadow-sm">
       <div class="flex items-center justify-between">
-        <span class="text-sm font-medium text-gray-500">Messaging</span>
+        <span class="text-sm font-medium text-gray-500">Active Threads</span>
         <span class="rounded-md bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700">Live</span>
       </div>
-      <p class="mt-3 text-2xl font-bold text-gray-900">Direct Chat</p>
-      <p class="mt-2 text-sm text-gray-600">Start one-to-one conversations inside your organization.</p>
+      <p class="mt-3 text-2xl font-bold text-gray-900">{{ active_threads_count }}</p>
+      <p class="mt-2 text-sm text-gray-600">Conversation threads you currently participate in.</p>
     </div>
     <div class="rounded-xl border border-emerald-100 bg-white p-5 shadow-sm">
       <div class="flex items-center justify-between">
-        <span class="text-sm font-medium text-gray-500">Notifications</span>
+        <span class="text-sm font-medium text-gray-500">Unread Alerts</span>
         <span class="rounded-md bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Ready</span>
       </div>
-      <p class="mt-3 text-2xl font-bold text-gray-900">Central Feed</p>
-      <p class="mt-2 text-sm text-gray-600">Track announcements, alerts, and important events.</p>
+      <p class="mt-3 text-2xl font-bold text-gray-900">{{ unread_notifications_count }}</p>
+      <p class="mt-2 text-sm text-gray-600">Unread notifications assigned to your account.</p>
     </div>
     <div class="rounded-xl border border-amber-100 bg-white p-5 shadow-sm">
       <div class="flex items-center justify-between">
-        <span class="text-sm font-medium text-gray-500">Scheduling</span>
+        <span class="text-sm font-medium text-gray-500">Upcoming Items</span>
         <span class="rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">Connected</span>
       </div>
-      <p class="mt-3 text-2xl font-bold text-gray-900">Calendar View</p>
-      <p class="mt-2 text-sm text-gray-600">Link communication with planning and activity timelines.</p>
+      <p class="mt-3 text-2xl font-bold text-gray-900">{{ upcoming_total_count }}</p>
+      <p class="mt-2 text-sm text-gray-600">Events and bookings over the next 7 days.</p>
     </div>
     <div class="rounded-xl border border-purple-100 bg-white p-5 shadow-sm">
       <div class="flex items-center justify-between">
-        <span class="text-sm font-medium text-gray-500">Configuration</span>
+        <span class="text-sm font-medium text-gray-500">Organization Members</span>
         <span class="rounded-md bg-purple-100 px-2 py-1 text-xs font-semibold text-purple-700">Secure</span>
       </div>
-      <p class="mt-3 text-2xl font-bold text-gray-900">Settings</p>
-      <p class="mt-2 text-sm text-gray-600">Tune retention, privacy defaults, and user experience.</p>
+      <p class="mt-3 text-2xl font-bold text-gray-900">{{ organization_member_count }}</p>
+      <p class="mt-2 text-sm text-gray-600">Active user profiles in your organization.</p>
     </div>
   </section>
 
+  <section class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+    {% if can_access_messages %}
+    <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm xl:col-span-2">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-900">Recent Threads</h2>
+        <a href="{% url 'service_dashboard:messages' %}" class="text-sm font-semibold text-blue-600 hover:text-blue-800">Open messages</a>
+      </div>
+      <div class="space-y-3">
+        {% for membership in recent_threads %}
+          <a href="{% url 'service_dashboard:thread' membership.conversation.id %}" class="block rounded-lg border border-gray-200 p-4 hover:border-blue-300 hover:bg-blue-50/50">
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-sm font-semibold text-gray-900">{{ membership.conversation.display_title }}</p>
+              <time class="text-xs text-gray-500">{{ membership.conversation.last_message_at|date:"M j, H:i" }}</time>
+            </div>
+          </a>
+        {% empty %}
+          <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-sm text-gray-600">
+            No active threads yet.
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 shadow-sm xl:col-span-2">
+      <h2 class="text-lg font-semibold text-slate-900">Recent Threads</h2>
+      <p class="mt-2 text-sm text-slate-600">Messaging access is controlled by your organization role. Contact an administrator if you need inbox access.</p>
+    </div>
+    {% endif %}
+
+    <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-900">Recent Notifications</h2>
+        <span class="rounded bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-700">{{ unread_notifications_count }} unread</span>
+      </div>
+      <div class="space-y-3">
+        {% for notification in recent_notifications %}
+          <div class="rounded-lg border border-gray-200 p-3">
+            <p class="text-sm font-semibold text-gray-900">{{ notification.title }}</p>
+            <p class="mt-1 text-xs text-gray-600">{{ notification.message|truncatechars:120 }}</p>
+            <p class="mt-2 text-xs text-gray-500">{{ notification.created_at|date:"M j, H:i" }}</p>
+          </div>
+        {% empty %}
+          <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-center text-sm text-gray-600">
+            No notifications yet.
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+    {% if can_access_calendar %}
+    <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-900">Upcoming Events</h2>
+        <a href="{% url 'service_dashboard:calendar' %}" class="text-sm font-semibold text-blue-600 hover:text-blue-800">Calendar</a>
+      </div>
+      <div class="space-y-3">
+        {% for event in upcoming_events %}
+          <div class="rounded-lg border border-gray-200 p-3">
+            <p class="text-sm font-semibold text-gray-900">{{ event.title }}</p>
+            <p class="mt-1 text-xs text-gray-600">{{ event.start_time|date:"M j, H:i" }} - {{ event.end_time|date:"H:i" }}</p>
+          </div>
+        {% empty %}
+          <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-center text-sm text-gray-600">
+            No upcoming events.
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-900">Upcoming Bookings</h2>
+        <a href="/services/scheduling/" class="text-sm font-semibold text-blue-600 hover:text-blue-800">Scheduling</a>
+      </div>
+      <div class="space-y-3">
+        {% for booking in upcoming_bookings %}
+          <div class="rounded-lg border border-gray-200 p-3">
+            <p class="text-sm font-semibold text-gray-900">{{ booking.title }}</p>
+            <p class="mt-1 text-xs text-gray-600">{{ booking.requested_start|date:"M j, H:i" }} - {{ booking.requested_end|date:"H:i" }} ({{ booking.resource.name }})</p>
+          </div>
+        {% empty %}
+          <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-center text-sm text-gray-600">
+            No upcoming bookings.
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 shadow-sm xl:col-span-2">
+      <h2 class="text-lg font-semibold text-slate-900">Scheduling Feed</h2>
+      <p class="mt-2 text-sm text-slate-600">Calendar and booking visibility depends on your scheduling or booking permissions.</p>
+    </div>
+    {% endif %}
+  </section>
+
   <section class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-    <h2 class="text-lg font-semibold text-gray-900">Quick Navigation</h2>
-    <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <a href="{% url 'service_dashboard:messages' %}" class="group rounded-lg border border-gray-200 p-4 hover:border-blue-300 hover:bg-blue-50/60">
-        <p class="text-sm font-semibold text-gray-900 group-hover:text-blue-900">Messages</p>
-        <p class="mt-1 text-xs text-gray-500">Inbox and active chat threads</p>
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 class="text-lg font-semibold text-gray-900">Preferences Snapshot</h2>
+        <p class="mt-1 text-sm text-gray-600">Current communication defaults for your dashboard profile.</p>
+      </div>
+      <a href="{% url 'service_dashboard:settings' %}" class="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+        Manage settings
       </a>
-      <a href="{% url 'service_dashboard:notifications' %}" class="group rounded-lg border border-gray-200 p-4 hover:border-emerald-300 hover:bg-emerald-50/60">
-        <p class="text-sm font-semibold text-gray-900 group-hover:text-emerald-900">Notifications</p>
-        <p class="mt-1 text-xs text-gray-500">Organization updates and system notices</p>
-      </a>
-      <a href="{% url 'service_dashboard:calendar' %}" class="group rounded-lg border border-gray-200 p-4 hover:border-amber-300 hover:bg-amber-50/60">
-        <p class="text-sm font-semibold text-gray-900 group-hover:text-amber-900">Calendar</p>
-        <p class="mt-1 text-xs text-gray-500">Upcoming communication milestones</p>
-      </a>
-      <a href="{% url 'service_dashboard:settings' %}" class="group rounded-lg border border-gray-200 p-4 hover:border-purple-300 hover:bg-purple-50/60">
-        <p class="text-sm font-semibold text-gray-900 group-hover:text-purple-900">Settings</p>
-        <p class="mt-1 text-xs text-gray-500">Customize communication preferences</p>
-      </a>
+    </div>
+    <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
+      <div class="rounded-lg border border-gray-200 p-3">Read receipts: <span class="font-semibold">{{ preferences.show_read_receipts|yesno:"On,Off" }}</span></div>
+      <div class="rounded-lg border border-gray-200 p-3">Desktop notifications: <span class="font-semibold">{{ preferences.desktop_notifications|yesno:"On,Off" }}</span></div>
+      <div class="rounded-lg border border-gray-200 p-3">Email alerts: <span class="font-semibold">{{ preferences.email_alerts|yesno:"On,Off" }}</span></div>
+      <div class="rounded-lg border border-gray-200 p-3">Digest: <span class="font-semibold">{{ preferences.get_digest_frequency_display }}</span></div>
     </div>
   </section>
 </div>
