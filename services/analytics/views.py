@@ -1,4 +1,7 @@
 import logging
+import math
+import os
+import tempfile
 from io import BytesIO
 from decimal import Decimal, InvalidOperation
 
@@ -21,7 +24,7 @@ from core.models import UserProfile
 from core.views import require_organization_access
 from licensing.models import License, Service
 
-from .forms import StatistikUploadForm
+from .forms import StatistikLiteForm, StatistikUploadForm
 from .models import StatistikJob, VehicleRecord, VehicleValuation
 from .serializers import (
     StatistikJobSerializer,
@@ -178,6 +181,15 @@ def _save_vehicle_records(job, rows):
         VehicleRecord.objects.bulk_create(vehicle_records, batch_size=500)
 
 
+def _safe_str(value) -> str:
+    """Convert a value to string, treating NaN/None as empty string."""
+    if value is None:
+        return ''
+    if isinstance(value, float) and math.isnan(value):
+        return ''
+    return str(value)
+
+
 def _to_dataframe(rows):
     if not rows:
         return pd.DataFrame()
@@ -190,6 +202,28 @@ def _to_dataframe(rows):
         else:
             normalized_rows.append(vars(row))
     return pd.DataFrame(normalized_rows)
+
+
+def _normalize_citk_wayke_row(row):
+    """Normalize external comparison rows to template-safe keys."""
+    if hasattr(row, 'to_dict'):
+        row = row.to_dict()
+    elif not isinstance(row, dict):
+        row = vars(row)
+
+    return {
+        'registration': _safe_str(row.get('Reg', '')),
+        'station': _safe_str(row.get('CurrentStation') or row.get('OrderStations') or row.get('Station', '')),
+        'model': _safe_str(row.get('Model') or row.get('Modell') or row.get('Bilbeskrivning', '')),
+        'status': _safe_str(row.get('Status', '')),
+        'published': _to_bool(row.get('Published', False)),
+        'wayke_matched': _to_bool(row.get('WaykeMatched', False)),
+        'wayke_url': _safe_str(row.get('WaykeURL') or row.get('Wayke: URL', '')),
+        'note': _safe_str(row.get('Note') or row.get('note', '')),
+        'description': _safe_str(row.get('Bilbeskrivning', '')),
+        'flow': _safe_str(row.get('FlowId', '')),
+        'responsible': _safe_str(row.get('ResponsibleInUserName', '')),
+    }
 
 
 DETAIL_EXPORT_HEADERS = [
@@ -322,6 +356,7 @@ def _to_station_dataframe(station_data):
 def _build_statistik_export_excel(job):
     result_kpis = job.kpis or {}
     station_data = job.station_stats or []
+    processor_result = {}
 
     records = VehicleRecord.objects.filter(job=job)
     inventory_24_records = records.filter(status=24)
@@ -333,33 +368,46 @@ def _build_statistik_export_excel(job):
     inventory_24_rows = list(inventory_24_records)
     not_published_rows = list(not_published_records)
     sold_rows = list(sold_records)
+    citk_not_in_wayke_rows = []
+    citk_not_in_wayke_station_data = []
+
+    # Re-run processor for complete export-only datasets (for example CITK not in Wayke).
+    try:
+        from .services.statistik_processor import StatistikProcessor
+
+        processor = StatistikProcessor(
+            inventory_path=job.inventory_file.path,
+            wayke_path=job.wayke_file.path,
+            citk_path=job.citk_file.path,
+            notes_path=job.notes_file.path if job.notes_file else None,
+            inventory_sheet=job.inventory_sheet,
+            citk_sheet=job.citk_sheet,
+            photo_min_urls=job.photo_min_urls,
+        )
+        processor_result = processor.process()
+        citk_not_in_wayke_rows = processor_result.get('citk_not_in_wayke', []) or []
+        citk_not_in_wayke_station_data = processor_result.get('citk_not_in_wayke_by_station', []) or []
+    except Exception as exc:
+        logger.warning('Export processing refresh failed for job %s: %s', job.id, exc)
 
     # Fallback: regenerate detail rows from uploaded files when persisted rows are missing.
     if not inventory_24_rows and not not_published_rows and not sold_rows:
-        try:
-            from .services.statistik_processor import StatistikProcessor
+        inventory_24_rows = processor_result.get('inventory_24', []) or []
+        not_published_rows = processor_result.get('not_published', []) or []
+        sold_rows = processor_result.get('sold', []) or []
 
-            processor = StatistikProcessor(
-                inventory_path=job.inventory_file.path,
-                wayke_path=job.wayke_file.path,
-                citk_path=job.citk_file.path,
-                notes_path=job.notes_file.path if job.notes_file else None,
-                inventory_sheet=job.inventory_sheet,
-                citk_sheet=job.citk_sheet,
-                photo_min_urls=job.photo_min_urls,
-            )
-            processor_result = processor.process()
+        if not result_kpis:
+            result_kpis = processor_result.get('kpis', {}) or {}
+        if not station_data:
+            station_data = processor_result.get('by_station', []) or []
 
-            inventory_24_rows = processor_result.get('inventory_24', []) or []
-            not_published_rows = processor_result.get('not_published', []) or []
-            sold_rows = processor_result.get('sold', []) or []
-
-            if not result_kpis:
-                result_kpis = processor_result.get('kpis', {}) or {}
-            if not station_data:
-                station_data = processor_result.get('by_station', []) or []
-        except Exception as exc:
-            logger.warning('Export fallback processing failed for job %s: %s', job.id, exc)
+    if 'citk_not_in_wayke' not in result_kpis:
+        result_kpis['citk_not_in_wayke'] = len(citk_not_in_wayke_rows)
+    if 'citk_not_in_wayke_pct' not in result_kpis:
+        citk_total = processor_result.get('run_meta', {}).get('citk_count', 0) if processor_result else 0
+        result_kpis['citk_not_in_wayke_pct'] = (
+            round((len(citk_not_in_wayke_rows) / citk_total * 100), 1) if citk_total else 0
+        )
 
     summary_df = pd.DataFrame(
         [
@@ -369,6 +417,8 @@ def _build_statistik_export_excel(job):
                 'Published %': result_kpis.get('published_pct', 0),
                 'Need Photos': result_kpis.get('needs_photos', 0),
                 'Missing in CITK': result_kpis.get('missing_citk', 0),
+                'CITK not in Wayke': result_kpis.get('citk_not_in_wayke', 0),
+                'CITK not in Wayke %': result_kpis.get('citk_not_in_wayke_pct', 0),
             }
         ]
     )
@@ -376,6 +426,8 @@ def _build_statistik_export_excel(job):
     station_df = _to_station_dataframe(station_data)
     inventory_df = _to_detail_export_dataframe(inventory_24_rows)
     not_published_df = _to_detail_export_dataframe(not_published_rows)
+    citk_not_in_wayke_df = _to_dataframe(citk_not_in_wayke_rows)
+    citk_not_in_wayke_station_df = _to_station_dataframe(citk_not_in_wayke_station_data)
 
     # Explicit empty sheets required by spec.
     needs_photos_df = pd.DataFrame()
@@ -399,6 +451,8 @@ def _build_statistik_export_excel(job):
         missing_citk_df.to_excel(writer, index=False, sheet_name='Missing_in_CITK')
         sold_df.to_excel(writer, index=False, sheet_name='Sold_34_35_36')
         notes_df.to_excel(writer, index=False, sheet_name='Notes')
+        citk_not_in_wayke_df.to_excel(writer, index=False, sheet_name='CITK_not_in_Wayke')
+        citk_not_in_wayke_station_df.to_excel(writer, index=False, sheet_name='CITK_not_in_Wayke_Stations')
 
     output.seek(0)
     return output.getvalue()
@@ -707,6 +761,237 @@ def job_detail(request, job_id):
             'page_obj': page_obj,
             'kpis': job.kpis or {},
             'stations': job.station_stats or [],
+        },
+    )
+
+
+@analytics_access_required
+def job_citk_wayke_compare(request, job_id):
+    profile = request.analytics_profile
+    job = get_object_or_404(StatistikJob, id=job_id, organization=profile.organization)
+
+    try:
+        from .services.statistik_processor import StatistikProcessor
+    except ImportError:
+        messages.error(
+            request,
+            'Analytics processing dependency missing. Install pandas in the runtime environment.',
+        )
+        return redirect('analytics:job_detail', job_id=job.id)
+
+    try:
+        processor = StatistikProcessor(
+            inventory_path=job.inventory_file.path,
+            wayke_path=job.wayke_file.path,
+            citk_path=job.citk_file.path,
+            notes_path=job.notes_file.path if job.notes_file else None,
+            inventory_sheet=job.inventory_sheet,
+            citk_sheet=job.citk_sheet,
+            photo_min_urls=job.photo_min_urls,
+        )
+        result = processor.process_citk_wayke_only()
+    except Exception as exc:
+        logger.exception('Failed CITK vs Wayke comparison for analytics job %s: %s', job.id, exc)
+        messages.error(request, f'Failed to run CITK vs Wayke comparison: {exc}')
+        return redirect('analytics:job_detail', job_id=job.id)
+
+    raw_rows = result.get('citk_not_in_wayke', []) or []
+    rows = [_normalize_citk_wayke_row(row) for row in raw_rows]
+    paginator = Paginator(rows, 100)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    return render(
+        request,
+        'analytics/job_citk_wayke_compare.html',
+        {
+            'profile': profile,
+            'job': job,
+            'vehicles': page_obj,
+            'page_obj': page_obj,
+            'kpis': result.get('kpis', {}) or {},
+            'stations': result.get('citk_not_in_wayke_by_station', []) or [],
+            'run_meta': result.get('run_meta', {}) or {},
+        },
+    )
+
+
+@analytics_access_required
+def statistik_lite(request):
+    """CITK vs Wayke comparison – saves a Lite job and redirects to job detail."""
+    profile = request.analytics_profile
+    form = StatistikLiteForm()
+
+    if request.method == 'POST':
+        form = StatistikLiteForm(request.POST, request.FILES)
+        if form.is_valid():
+            tmp_files = []
+            try:
+                from .services.statistik_processor import StatistikProcessor
+
+                def _save_tmp(file_obj, suffix):
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                        for chunk in file_obj.chunks():
+                            tmp.write(chunk)
+                        tmp_files.append(tmp.name)
+                        return tmp.name
+
+                wayke_path = _save_tmp(request.FILES['wayke'], '.csv')
+                citk_path = _save_tmp(request.FILES['citk'], '.xlsx')
+                notes_path = (
+                    _save_tmp(request.FILES['notes'], '.csv')
+                    if request.FILES.get('notes')
+                    else None
+                )
+
+                processor = StatistikProcessor(
+                    wayke_path=wayke_path,
+                    citk_path=citk_path,
+                    notes_path=notes_path,
+                    citk_sheet=form.cleaned_data.get('citk_sheet') or 'Sheet1',
+                )
+                result_data = processor.process_citk_wayke_only()
+
+                job = StatistikJob.objects.create(
+                    organization=profile.organization,
+                    created_by=profile,
+                    job_type='lite',
+                    wayke_file=request.FILES['wayke'],
+                    citk_file=request.FILES['citk'],
+                    notes_file=request.FILES.get('notes'),
+                    citk_sheet=form.cleaned_data.get('citk_sheet') or 'Sheet1',
+                    kpis=result_data.get('kpis', {}),
+                    station_stats=result_data.get('citk_not_in_wayke_by_station', []),
+                    status='completed',
+                    processed_at=timezone.now(),
+                )
+                raw_rows = result_data.get('citk_not_in_wayke', []) or []
+                normalized = [_normalize_citk_wayke_row(r) for r in raw_rows]
+                _save_lite_vehicle_records(job, normalized)
+                messages.success(request, f'Lite job #{job.id} created with {len(normalized)} vehicles.')
+                return redirect('analytics:lite_job_detail', job_id=job.id)
+            except Exception as exc:
+                logger.exception('Lager Statistik Lite failed: %s', exc)
+                messages.error(request, f'Processing failed: {exc}')
+            finally:
+                for path in tmp_files:
+                    try:
+                        os.unlink(path)
+                    except OSError:
+                        pass
+
+    return render(
+        request,
+        'analytics/statistik_lite.html',
+        {
+            'profile': profile,
+            'form': form,
+        },
+    )
+
+
+def _save_lite_vehicle_records(job, normalized_rows):
+    """Bulk-create VehicleRecord entries from normalized CITK-not-in-Wayke rows."""
+    records = [
+        VehicleRecord(
+            job=job,
+            registration=row['registration'],
+            model=row['model'] or row['description'] or '',
+            current_station=row['station'],
+            status=0,
+            is_published=False,
+            notes=row['note'],
+            extra_data={
+                'flow': row['flow'],
+                'responsible': row['responsible'],
+                'wayke_url': row['wayke_url'],
+                'description': row['description'],
+            },
+        )
+        for row in normalized_rows
+    ]
+    VehicleRecord.objects.bulk_create(records)
+
+
+@analytics_access_required
+def lite_jobs_list(request):
+    profile = request.analytics_profile
+    jobs = (
+        StatistikJob.objects.filter(organization=profile.organization, job_type='lite')
+        .order_by('-uploaded_at')
+    )
+    paginator = Paginator(jobs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    return render(
+        request,
+        'analytics/lite_jobs_list.html',
+        {
+            'profile': profile,
+            'jobs': page_obj,
+            'page_obj': page_obj,
+        },
+    )
+
+
+_LITE_SORT_FIELDS = {'registration', 'model', 'current_station', 'notes'}
+
+
+@analytics_access_required
+def lite_job_detail(request, job_id):
+    profile = request.analytics_profile
+    job = get_object_or_404(
+        StatistikJob, id=job_id, organization=profile.organization, job_type='lite'
+    )
+
+    q = request.GET.get('q', '').strip()
+    station_filter = request.GET.get('station', '').strip()
+    sort = request.GET.get('sort', 'registration')
+    direction = request.GET.get('dir', 'asc')
+
+    if sort not in _LITE_SORT_FIELDS:
+        sort = 'registration'
+    if direction not in ('asc', 'desc'):
+        direction = 'asc'
+
+    from django.db.models import Q as DQ
+
+    qs = job.vehicle_records.all()
+    if q:
+        qs = qs.filter(
+            DQ(registration__icontains=q)
+            | DQ(model__icontains=q)
+            | DQ(current_station__icontains=q)
+            | DQ(notes__icontains=q)
+        )
+    if station_filter:
+        qs = qs.filter(current_station=station_filter)
+
+    order_field = sort if direction == 'asc' else f'-{sort}'
+    qs = qs.order_by(order_field)
+
+    stations = (
+        job.vehicle_records.values_list('current_station', flat=True)
+        .distinct()
+        .order_by('current_station')
+    )
+
+    paginator = Paginator(qs, 100)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    return render(
+        request,
+        'analytics/lite_job_detail.html',
+        {
+            'profile': profile,
+            'job': job,
+            'vehicles': page_obj,
+            'page_obj': page_obj,
+            'kpis': job.kpis or {},
+            'stations': job.station_stats or [],
+            'station_choices': stations,
+            'q': q,
+            'station_filter': station_filter,
+            'sort': sort,
+            'direction': direction,
         },
     )
 

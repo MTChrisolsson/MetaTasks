@@ -1,0 +1,78 @@
+{% extends 'analytics/analytics_base.html' %}
+
+{% block title %}Lager Statistik Lite – CITK vs Wayke{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+
+    <!-- Header -->
+    <section class="bg-white rounded-xl border border-gray-200 p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-semibold text-gray-900">
+                    <i class="fas fa-code-compare text-sky-600 mr-2"></i>Lager Statistik Lite
+                </h1>
+                <p class="text-sm text-gray-500 mt-1">
+                    Upload CITK and Wayke files to run a comparison. Results are saved as a Lite job.
+                </p>
+            </div>
+            <a href="{% url 'analytics:lite_jobs_list' %}" class="inline-flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800">
+                <i class="fas fa-list mr-1"></i>View all Lite jobs
+            </a>
+        </div>
+    </section>
+
+    <!-- Upload Form -->
+    <section class="bg-white rounded-xl border border-gray-200 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">
+            <i class="fas fa-upload mr-2 text-indigo-500"></i>Upload Files
+        </h2>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-5">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="id_wayke" class="block text-sm font-medium text-gray-700 mb-1">
+                        Wayke <span class="text-red-500">*</span>
+                    </label>
+                    <input id="id_wayke" name="wayke" type="file" accept=".csv"
+                           required class="block w-full text-sm text-gray-700 border border-gray-300 rounded-lg p-2">
+                    <p class="mt-1 text-xs text-gray-400">CSV file from Wayke API</p>
+                </div>
+                <div>
+                    <label for="id_citk" class="block text-sm font-medium text-gray-700 mb-1">
+                        CITK <span class="text-red-500">*</span>
+                    </label>
+                    <input id="id_citk" name="citk" type="file" accept=".xlsx"
+                           required class="block w-full text-sm text-gray-700 border border-gray-300 rounded-lg p-2">
+                    <p class="mt-1 text-xs text-gray-400">Excel file with vehicle matching data</p>
+                </div>
+                <div>
+                    <label for="id_notes" class="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+                    <input id="id_notes" name="notes" type="file" accept=".jsonl,.csv"
+                           class="block w-full text-sm text-gray-700 border border-gray-300 rounded-lg p-2">
+                </div>
+                <div>
+                    <label for="id_citk_sheet" class="block text-sm font-medium text-gray-700 mb-1">CITK Sheet Name</label>
+                    {{ form.citk_sheet }}
+                </div>
+            </div>
+
+            {% if form.errors %}
+            <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                {{ form.errors }}
+            </div>
+            {% endif %}
+
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button type="submit"
+                        class="inline-flex items-center px-5 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 font-medium">
+                    <i class="fas fa-play mr-2"></i>Run Comparison
+                </button>
+            </div>
+        </form>
+    </section>
+
+</div>
+{% endblock %}

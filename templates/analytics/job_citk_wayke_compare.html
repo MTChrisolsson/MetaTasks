@@ -1,50 +1,42 @@
 {% extends 'analytics/analytics_base.html' %}
 
-{% block title %}Analytics Job Details{% endblock %}
+{% block title %}CITK vs Wayke Comparison{% endblock %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
     <section class="bg-white rounded-xl border border-gray-200 p-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-                <h1 class="text-2xl font-semibold text-gray-900">Job #{{ job.id }}</h1>
-                <p class="text-sm text-gray-500">Uploaded {{ job.uploaded_at|date:"Y-m-d H:i" }} by {{ job.created_by.user.get_full_name|default:job.created_by.user.username }}</p>
+                <h1 class="text-2xl font-semibold text-gray-900">CITK vs Wayke for Job #{{ job.id }}</h1>
+                <p class="text-sm text-gray-500">Cars that exist in CITK but do not exist in Wayke.</p>
             </div>
             <div class="flex items-center gap-2">
-                <a href="{% url 'analytics:job_citk_wayke_compare' job.id %}" class="inline-flex items-center px-3 py-2 rounded-lg bg-sky-600 text-white hover:bg-sky-700 text-sm">
-                    <i class="fas fa-code-compare mr-2"></i>CITK vs Wayke
+                <a href="{% url 'analytics:job_detail' job.id %}" class="inline-flex items-center px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Job
                 </a>
                 <a href="{% url 'analytics:export_excel' job.id %}" class="inline-flex items-center px-3 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 text-sm">
                     <i class="fas fa-file-excel mr-2"></i>Export Excel
                 </a>
-                <span class="status-{{ job.status }} inline-flex px-3 py-1 rounded-full text-sm font-medium">{{ job.get_status_display }}</span>
             </div>
         </div>
-
-        {% if job.error_message %}
-        <div class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {{ job.error_message }}
-        </div>
-        {% endif %}
     </section>
 
     <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-white rounded-xl border border-gray-200 p-5">
-            <p class="text-sm text-gray-500">Inventory</p>
-            <p class="text-3xl font-bold text-gray-900 mt-1">{{ kpis.inventory_24|default:0 }}</p>
+            <p class="text-sm text-gray-500">CITK Total</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1">{{ kpis.citk_total|default:run_meta.citk_count|default:0 }}</p>
         </div>
         <div class="bg-white rounded-xl border border-gray-200 p-5">
-            <p class="text-sm text-gray-500">Published</p>
-            <p class="text-3xl font-bold text-emerald-700 mt-1">{{ kpis.published|default:0 }}</p>
-            <p class="text-xs text-gray-500 mt-1">{{ kpis.published_pct|default:0 }}%</p>
+            <p class="text-sm text-gray-500">Wayke Total</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1">{{ kpis.wayke_total|default:run_meta.wayke_count|default:0 }}</p>
         </div>
         <div class="bg-white rounded-xl border border-gray-200 p-5">
-            <p class="text-sm text-gray-500">Needs Photos</p>
-            <p class="text-3xl font-bold text-amber-700 mt-1">{{ kpis.needs_photos|default:0 }}</p>
+            <p class="text-sm text-gray-500">CITK Not in Wayke</p>
+            <p class="text-3xl font-bold text-rose-700 mt-1">{{ kpis.citk_not_in_wayke|default:0 }}</p>
         </div>
         <div class="bg-white rounded-xl border border-gray-200 p-5">
-            <p class="text-sm text-gray-500">Missing CITK</p>
-            <p class="text-3xl font-bold text-rose-700 mt-1">{{ kpis.missing_citk|default:0 }}</p>
+            <p class="text-sm text-gray-500">Share of CITK</p>
+            <p class="text-3xl font-bold text-sky-700 mt-1">{{ kpis.citk_not_in_wayke_pct|default:0 }}%</p>
         </div>
     </section>
 
@@ -66,19 +58,19 @@
                     </p>
                     <p class="text-indigo-700 font-semibold">{{ station.count|default:0 }}</p>
                 </div>
-                <p class="text-sm text-gray-500 mt-1">{{ station.pct|default:0 }}% of total</p>
+                <p class="text-sm text-gray-500 mt-1">{{ station.pct|default:0 }}% of missing set</p>
             </div>
             {% endfor %}
         </div>
         {% else %}
-        <p class="text-sm text-gray-500">No station summary available.</p>
+        <p class="text-sm text-gray-500">No station data available.</p>
         {% endif %}
     </section>
 
     <section class="bg-white rounded-xl border border-gray-200 p-6">
         <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-semibold text-gray-900">Vehicle Records</h2>
-            <a href="{% url 'analytics:jobs_list' %}" class="text-sm text-indigo-600 hover:text-indigo-800">Back to jobs</a>
+            <h2 class="text-xl font-semibold text-gray-900">Vehicles in CITK but Not in Wayke</h2>
+            <a href="{% url 'analytics:jobs_list' %}" class="text-sm text-indigo-600 hover:text-indigo-800">Back to Jobs</a>
         </div>
 
         <div class="overflow-x-auto">
@@ -86,26 +78,36 @@
                 <thead>
                     <tr class="border-b border-gray-200 text-left text-gray-600">
                         <th class="py-3 pr-4">Registration</th>
-                        <th class="py-3 pr-4">Model</th>
                         <th class="py-3 pr-4">Station</th>
+                        <th class="py-3 pr-4">Model</th>
+                        <th class="py-3 pr-4">Status</th>
                         <th class="py-3 pr-4">Published</th>
-                        <th class="py-3 pr-4">Photographed</th>
-                        <th class="py-3">Missing CITK</th>
+                        <th class="py-3 pr-4">Wayke Matched</th>
+                        <th class="py-3 pr-4">Wayke URL</th>
+                        <th class="py-3">Note</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for vehicle in vehicles %}
-                    <tr class="border-b border-gray-100">
+                    <tr class="border-b border-gray-100 align-top">
                         <td class="py-3 pr-4">{{ vehicle.registration }}</td>
+                        <td class="py-3 pr-4">{{ vehicle.station }}</td>
                         <td class="py-3 pr-4">{{ vehicle.model }}</td>
-                        <td class="py-3 pr-4">{{ vehicle.current_station }}</td>
-                        <td class="py-3 pr-4">{{ vehicle.is_published|yesno:'Yes,No' }}</td>
-                        <td class="py-3 pr-4">{{ vehicle.is_photographed|yesno:'Yes,No' }}</td>
-                        <td class="py-3">{{ vehicle.missing_citk|yesno:'Yes,No' }}</td>
+                        <td class="py-3 pr-4">{{ vehicle.status }}</td>
+                        <td class="py-3 pr-4">{{ vehicle.published|yesno:'Yes,No' }}</td>
+                        <td class="py-3 pr-4">{{ vehicle.wayke_matched|yesno:'Yes,No' }}</td>
+                        <td class="py-3 pr-4">
+                            {% if vehicle.wayke_url %}
+                            <a href="{{ vehicle.wayke_url }}" target="_blank" rel="noopener" class="text-indigo-600 hover:text-indigo-800">Link</a>
+                            {% else %}
+                            <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3">{{ vehicle.note }}</td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="py-8 text-center text-gray-500">No vehicle records stored for this job.</td>
+                        <td colspan="8" class="py-8 text-center text-gray-500">No vehicles found in CITK-only comparison.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

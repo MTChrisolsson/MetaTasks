@@ -38,6 +38,9 @@
         .status-processing { background-color: #dbeafe; color: #1e40af; }
         .status-completed { background-color: #d1fae5; color: #065f46; }
         .status-failed { background-color: #fee2e2; color: #991b1b; }
+
+        /* Hide Alpine-controlled elements before Alpine initialises */
+        [x-cloak] { display: none !important; }
     </style>
 </head>
 
@@ -90,15 +93,56 @@
         <!-- Navigation Tabs -->
         <div class="bg-white bg-opacity-10 border-t border-indigo-400 border-opacity-30">
             <div class="max-w-7xl mx-auto px-4">
-                <nav class="flex space-x-1 overflow-x-auto">
+                <nav class="flex space-x-1 overflow-visible">
                     <a href="{% url 'analytics:index' %}" 
                        class="px-4 py-3 text-sm font-medium text-white hover:bg-white hover:bg-opacity-20 transition-colors whitespace-nowrap {% if request.resolver_match.url_name == 'index' or request.resolver_match.url_name == 'dashboard' %}bg-white bg-opacity-20 border-b-2 border-white{% endif %}">
                         <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
                     </a>
-                    <a href="{% url 'analytics:upload' %}" 
-                       class="px-4 py-3 text-sm font-medium text-white hover:bg-white hover:bg-opacity-20 transition-colors whitespace-nowrap {% if request.resolver_match.url_name == 'upload' %}bg-white bg-opacity-20 border-b-2 border-white{% endif %}">
-                        <i class="fas fa-upload mr-2"></i>Upload Files
-                    </a>
+
+                    <!-- Internal Tools dropdown -->
+                    <div x-data="{ open: false }" class="relative">
+                        <button @click="open = !open" @keydown.escape.window="open = false"
+                                class="px-4 py-3 text-sm font-medium text-white hover:bg-white hover:bg-opacity-20 transition-colors whitespace-nowrap flex items-center gap-1
+                                {% if request.resolver_match.url_name == 'upload' or request.resolver_match.url_name == 'statistik_lite' or request.resolver_match.url_name == 'lite_jobs_list' or request.resolver_match.url_name == 'lite_job_detail' %}bg-white bg-opacity-20 border-b-2 border-white{% endif %}">
+                            <i class="fas fa-tools mr-2"></i>Internal Tools
+                            <i class="fas fa-chevron-down text-xs ml-1" :class="{ 'rotate-180': open }" style="transition: transform 0.15s"></i>
+                        </button>
+                        <div x-cloak
+                             x-show="open"
+                             @click.outside="open = false"
+                             x-transition:enter="transition ease-out duration-100"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             x-transition:leave="transition ease-in duration-75"
+                             x-transition:leave-start="opacity-100 scale-100"
+                             x-transition:leave-end="opacity-0 scale-95"
+                             class="absolute left-0 top-full mt-1 w-60 rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                            <div class="py-2">
+                                <a href="{% url 'analytics:upload' %}"
+                                   class="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+                                    <div class="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <i class="fas fa-table text-indigo-600 text-xs"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">Lager Statistik Full</p>
+                                        <p class="text-xs text-gray-500 mt-0.5">CITK, Wayke &amp; Inventory — saves as job</p>
+                                    </div>
+                                </a>
+                                <a href="{% url 'analytics:statistik_lite' %}"
+                                <a href="{% url 'analytics:lite_jobs_list' %}"
+                                   class="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+                                    <div class="w-8 h-8 rounded-lg bg-sky-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <i class="fas fa-code-compare text-sky-600 text-xs"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">Lager Statistik Lite</p>
+                                        <p class="text-xs text-gray-500 mt-0.5">CITK vs Wayke — saved as job</p>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
                     <a href="{% url 'analytics:jobs_list' %}" 
                        class="px-4 py-3 text-sm font-medium text-white hover:bg-white hover:bg-opacity-20 transition-colors whitespace-nowrap {% if request.resolver_match.url_name == 'jobs_list' or request.resolver_match.url_name == 'job_detail' %}bg-white bg-opacity-20 border-b-2 border-white{% endif %}">
                         <i class="fas fa-list mr-2"></i>All Jobs

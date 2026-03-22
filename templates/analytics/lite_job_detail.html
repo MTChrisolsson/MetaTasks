@@ -1,0 +1,196 @@
+{% extends 'analytics/analytics_base.html' %}
+
+{% block title %}Lite Job #{{ job.id }} – CITK vs Wayke{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+
+    {# ── Header ── #}
+    <div class="flex items-center justify-between">
+        <div>
+            <div class="flex items-center gap-3">
+                <a href="{% url 'analytics:lite_jobs_list' %}" class="text-gray-400 hover:text-gray-600 text-sm">← All Lite Jobs</a>
+            </div>
+            <h1 class="text-2xl font-semibold text-gray-900 mt-1">Lite Job #{{ job.id }}</h1>
+            <p class="text-sm text-gray-500">
+                Uploaded {{ job.uploaded_at|date:"Y-m-d H:i" }}
+                {% if job.created_by %} by {{ job.created_by.user.get_full_name|default:job.created_by.user.username }}{% endif %}
+            </p>
+        </div>
+        <span class="status-{{ job.status }} inline-flex px-3 py-1 rounded-full text-sm font-medium capitalize">{{ job.get_status_display }}</span>
+    </div>
+
+    {# ── KPI Cards ── #}
+    {% if kpis %}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
+            <div class="text-2xl font-bold text-gray-900">{{ kpis.citk_total|default:"–" }}</div>
+            <div class="text-xs text-gray-500 mt-1">CITK Total</div>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
+            <div class="text-2xl font-bold text-gray-900">{{ kpis.wayke_total|default:"–" }}</div>
+            <div class="text-xs text-gray-500 mt-1">Wayke Total</div>
+        </div>
+        <div class="bg-red-50 rounded-xl border border-red-100 p-4 text-center">
+            <div class="text-2xl font-bold text-red-600">{{ kpis.citk_not_in_wayke|default:"–" }}</div>
+            <div class="text-xs text-gray-500 mt-1">Not in Wayke</div>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
+            <div class="text-2xl font-bold text-gray-900">{{ kpis.citk_not_in_wayke_pct|default:"–" }}{% if kpis.citk_not_in_wayke_pct %}<span class="text-base font-normal text-gray-400">%</span>{% endif %}</div>
+            <div class="text-xs text-gray-500 mt-1">Not Published %</div>
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Station Breakdown ── #}
+    {% if stations %}
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+        <h2 class="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">By Station</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {% for st in stations %}
+            <div class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 text-sm">
+                <span class="text-gray-700 font-medium">{{ st.station }}</span>
+                <span class="ml-3 text-red-600 font-semibold">{{ st.citk_not_in_wayke }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Search / Filter ── #}
+    <div class="bg-white rounded-xl border border-gray-200 p-5">
+        <form method="get" class="flex flex-wrap gap-3 items-end" id="filter-form">
+            {# preserve sort/direction #}
+            {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+            {% if direction %}<input type="hidden" name="dir" value="{{ direction }}">{% endif %}
+
+            <div class="flex-1 min-w-48">
+                <label class="block text-xs text-gray-500 mb-1">Search</label>
+                <input type="text" name="q" value="{{ q }}"
+                    placeholder="Reg, model, station, notes…"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+            </div>
+            <div class="min-w-44">
+                <label class="block text-xs text-gray-500 mb-1">Station</label>
+                <select name="station"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                    <option value="">All stations</option>
+                    {% for st_name in station_choices %}
+                    <option value="{{ st_name }}" {% if st_name == station_filter %}selected{% endif %}>{{ st_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit"
+                class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700">
+                Filter
+            </button>
+            {% if q or station_filter %}
+            <a href="{% url 'analytics:lite_job_detail' job.id %}"
+                class="px-4 py-2 border border-gray-300 text-sm rounded-lg text-gray-600 hover:bg-gray-50">
+                Clear
+            </a>
+            {% endif %}
+        </form>
+    </div>
+
+    {# ── Vehicle Table ── #}
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+            <span class="text-sm text-gray-500">
+                {{ page_obj.paginator.count }} vehicle{{ page_obj.paginator.count|pluralize }}
+                {% if q %}matching "<strong>{{ q }}</strong>"{% endif %}
+                {% if station_filter %}at <strong>{{ station_filter }}</strong>{% endif %}
+            </span>
+        </div>
+
+        {# Helper: build sort URL preserving all current GET params #}
+        {% with current_q=q current_station=station_filter %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead>
+                    <tr class="bg-gray-50 border-b border-gray-200 text-left text-gray-600">
+                        <th class="py-3 px-4 whitespace-nowrap font-medium">
+                                {% if sort == 'registration' %}
+                                    <a href="?q={{ current_q }}&station={{ current_station }}&sort=registration&dir={% if direction == 'asc' %}desc{% else %}asc{% endif %}" class="inline-flex items-center gap-1 text-indigo-600">Reg {% if direction == 'asc' %}↑{% else %}↓{% endif %}</a>
+                                {% else %}
+                                    <a href="?q={{ current_q }}&station={{ current_station }}&sort=registration&dir=asc" class="hover:text-indigo-600">Reg</a>
+                                {% endif %}
+                            </th>
+                            <th class="py-3 px-4 whitespace-nowrap font-medium">
+                                {% if sort == 'model' %}
+                                    <a href="?q={{ current_q }}&station={{ current_station }}&sort=model&dir={% if direction == 'asc' %}desc{% else %}asc{% endif %}" class="inline-flex items-center gap-1 text-indigo-600">Description {% if direction == 'asc' %}↑{% else %}↓{% endif %}</a>
+                                {% else %}
+                                    <a href="?q={{ current_q }}&station={{ current_station }}&sort=model&dir=asc" class="hover:text-indigo-600">Description</a>
+                                {% endif %}
+                            </th>
+                            <th class="py-3 px-4 whitespace-nowrap font-medium">
+                                {% if sort == 'current_station' %}
+                                    <a href="?q={{ current_q }}&station={{ current_station }}&sort=current_station&dir={% if direction == 'asc' %}desc{% else %}asc{% endif %}" class="inline-flex items-center gap-1 text-indigo-600">Station {% if direction == 'asc' %}↑{% else %}↓{% endif %}</a>
+                                {% else %}
+                                    <a href="?q={{ current_q }}&station={{ current_station }}&sort=current_station&dir=asc" class="hover:text-indigo-600">Station</a>
+                                {% endif %}
+                            </th>
+                            <th class="py-3 px-4 whitespace-nowrap font-medium">
+                                {% if sort == 'notes' %}
+                                    <a href="?q={{ current_q }}&station={{ current_station }}&sort=notes&dir={% if direction == 'asc' %}desc{% else %}asc{% endif %}" class="inline-flex items-center gap-1 text-indigo-600">Notes {% if direction == 'asc' %}↑{% else %}↓{% endif %}</a>
+                                {% else %}
+                                    <a href="?q={{ current_q }}&station={{ current_station }}&sort=notes&dir=asc" class="hover:text-indigo-600">Notes</a>
+                                {% endif %}
+                            </th>
+                            <th class="py-3 px-4 whitespace-nowrap font-medium text-gray-500">Responsible</th>
+                            <th class="py-3 px-4 whitespace-nowrap font-medium text-gray-500">Flow</th>
+                            <th class="py-3 px-4 whitespace-nowrap font-medium text-gray-500">Wayke</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in vehicles %}
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                        <td class="py-3 px-4 font-mono font-medium">{{ v.registration|default:"–" }}</td>
+                        <td class="py-3 px-4">{{ v.model|default:"–" }}</td>
+                        <td class="py-3 px-4">{{ v.current_station|default:"–" }}</td>
+                        <td class="py-3 px-4 text-gray-500 text-xs">{{ v.notes|default:"–" }}</td>
+                        <td class="py-3 px-4 text-gray-400 text-xs">
+                            {% if v.extra_data.responsible %}{{ v.extra_data.responsible }}{% else %}–{% endif %}
+                        </td>
+                        <td class="py-3 px-4 text-gray-400 text-xs">
+                            {% if v.extra_data.flow %}{{ v.extra_data.flow }}{% else %}–{% endif %}
+                        </td>
+                        <td class="py-3 px-4 text-xs">
+                            {% if v.extra_data.wayke_url %}
+                                <a href="{{ v.extra_data.wayke_url }}" target="_blank" rel="noopener"
+                                   class="text-indigo-600 hover:underline">Link</a>
+                            {% else %}–{% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="py-10 text-center text-gray-500">
+                            No vehicles found{% if q or station_filter %} for the current filter{% endif %}.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endwith %}
+
+        {# ── Pagination ── #}
+        {% if page_obj.has_other_pages %}
+        <div class="px-5 py-4 flex items-center justify-between text-sm border-t border-gray-100">
+            <div class="text-gray-500">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</div>
+            <div class="space-x-2">
+                {% if page_obj.has_previous %}
+                <a href="?q={{ q }}&station={{ station_filter }}&sort={{ sort }}&dir={{ direction }}&page={{ page_obj.previous_page_number }}"
+                   class="px-3 py-1 border border-gray-300 rounded text-gray-700 hover:bg-gray-50">Previous</a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                <a href="?q={{ q }}&station={{ station_filter }}&sort={{ sort }}&dir={{ direction }}&page={{ page_obj.next_page_number }}"
+                   class="px-3 py-1 border border-gray-300 rounded text-gray-700 hover:bg-gray-50">Next</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

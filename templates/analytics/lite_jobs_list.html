@@ -1,0 +1,86 @@
+{% extends 'analytics/analytics_base.html' %}
+
+{% block title %}Lager Statistik Lite – Jobs{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+    <div class="bg-white rounded-xl border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-semibold text-gray-900">Lager Statistik Lite</h1>
+                <p class="text-sm text-gray-500 mt-1">CITK vs Wayke comparison runs for your organisation.</p>
+            </div>
+            <a href="{% url 'analytics:statistik_lite' %}" class="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">
+                <i class="fas fa-plus mr-2"></i>New Comparison
+            </a>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-200 text-left text-gray-600">
+                        <th class="py-3 pr-6">Uploaded</th>
+                        <th class="py-3 pr-6">Created By</th>
+                        <th class="py-3 pr-6">Status</th>
+                        <th class="py-3 pr-6">Vehicles</th>
+                        <th class="py-3 pr-6">CITK not in Wayke</th>
+                        <th class="py-3">Open</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job in jobs %}
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                        <td class="py-3 pr-6 whitespace-nowrap">{{ job.uploaded_at|date:"Y-m-d H:i" }}</td>
+                        <td class="py-3 pr-6">
+                            {% if job.created_by %}
+                                {{ job.created_by.user.get_full_name|default:job.created_by.user.username }}
+                            {% else %}
+                                –
+                            {% endif %}
+                        </td>
+                        <td class="py-3 pr-6">
+                            <span class="status-{{ job.status }} inline-flex px-2 py-1 rounded-full text-xs font-medium capitalize">{{ job.get_status_display }}</span>
+                        </td>
+                        <td class="py-3 pr-6">{{ job.kpis.citk_total|default:"–" }}</td>
+                        <td class="py-3 pr-6">
+                            {% if job.kpis.citk_not_in_wayke is not None %}
+                                {{ job.kpis.citk_not_in_wayke }}
+                                {% if job.kpis.citk_not_in_wayke_pct %}
+                                    <span class="text-gray-500">({{ job.kpis.citk_not_in_wayke_pct }}%)</span>
+                                {% endif %}
+                            {% else %}
+                                –
+                            {% endif %}
+                        </td>
+                        <td class="py-3">
+                            <a href="{% url 'analytics:lite_job_detail' job.id %}" class="text-indigo-600 hover:text-indigo-800 font-medium">Open</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-10 text-center text-gray-500">
+                            No Lite jobs yet.
+                            <a href="{% url 'analytics:statistik_lite' %}" class="text-indigo-600 hover:underline ml-1">Run your first comparison →</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <div class="mt-6 flex items-center justify-between text-sm">
+            <div class="text-gray-500">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</div>
+            <div class="space-x-2">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1 border border-gray-300 rounded text-gray-700 hover:bg-gray-50">Previous</a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1 border border-gray-300 rounded text-gray-700 hover:bg-gray-50">Next</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

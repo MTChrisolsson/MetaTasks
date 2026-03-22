@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class StatistikProcessor:
     """Process vehicle data files and generate KPIs"""
     
-    def __init__(self, inventory_path: str, wayke_path: str, citk_path: str, 
+    def __init__(self, inventory_path: Optional[str] = None, wayke_path: str = '', citk_path: str = '',
                  notes_path: Optional[str] = None,
                  inventory_sheet: str = 'toyota lager',
                  citk_sheet: str = 'Sheet1',
@@ -53,6 +53,10 @@ class StatistikProcessor:
             not_published = self._get_not_published(active_data)
             missing_citk = self._get_missing_citk(active_data)
             sold = self._get_sold(merged_data)
+
+            citk_wayke_result = self._build_citk_wayke_comparison(citk_df, wayke_df, notes)
+            kpis['citk_not_in_wayke'] = citk_wayke_result['kpis'].get('citk_not_in_wayke', 0)
+            kpis['citk_not_in_wayke_pct'] = citk_wayke_result['kpis'].get('citk_not_in_wayke_pct', 0)
             
             return {
                 'kpis': kpis,
@@ -62,6 +66,8 @@ class StatistikProcessor:
                 'not_published': not_published,
                 'missing_citk': missing_citk,
                 'sold': sold,
+                'citk_not_in_wayke': citk_wayke_result['citk_not_in_wayke'],
+                'citk_not_in_wayke_by_station': citk_wayke_result['citk_not_in_wayke_by_station'],
                 'notes_merged': notes,
                 'run_meta': {
                     'inventory_count': len(inventory_df),
@@ -72,6 +78,46 @@ class StatistikProcessor:
         except Exception as e:
             logger.error(f"Error processing statistik: {e}")
             raise
+
+    def process_citk_wayke_only(self) -> Dict[str, Any]:
+        """Comparison mode that only uses CITK and Wayke files."""
+        try:
+            wayke_df = self._load_wayke()
+            citk_df = self._load_citk()
+            notes = self._load_notes()
+
+            result = self._build_citk_wayke_comparison(citk_df, wayke_df, notes)
+            result['notes_merged'] = notes
+            result['run_meta'] = {
+                'wayke_count': len(wayke_df),
+                'citk_count': len(citk_df),
+            }
+            return result
+        except Exception as e:
+            logger.error(f"Error processing CITK vs Wayke statistik: {e}")
+            raise
+
+    def _build_citk_wayke_comparison(
+        self,
+        citk_df: pd.DataFrame,
+        wayke_df: pd.DataFrame,
+        notes: List[Dict],
+    ) -> Dict[str, Any]:
+        missing_df = self._get_citk_not_in_wayke(citk_df, wayke_df, notes)
+        by_station = self._group_by_station(missing_df)
+
+        kpis = {
+            'citk_total': len(citk_df),
+            'wayke_total': len(wayke_df),
+            'citk_not_in_wayke': len(missing_df),
+            'citk_not_in_wayke_pct': round((len(missing_df) / len(citk_df) * 100), 1) if len(citk_df) > 0 else 0,
+        }
+
+        return {
+            'kpis': kpis,
+            'citk_not_in_wayke': missing_df.to_dict('records'),
+            'citk_not_in_wayke_by_station': by_station,
+        }
     
     def _load_inventory(self) -> pd.DataFrame:
         """Load inventory Excel file"""
@@ -278,9 +324,23 @@ class StatistikProcessor:
         normalized = notes_df.rename(columns={reg_col: 'reg', note_col: 'note'})[['reg', 'note']]
         normalized['reg'] = normalized['reg'].astype(str).str.strip().str.upper()
         return normalized
+
+    @staticmethod
+    def _normalize_registration_key(value: Any) -> str:
+        if value is None or (isinstance(value, float) and pd.isna(value)):
+            return ''
+        return str(value).strip().upper()
     
     def _merge_data(self, inv, wayke, citk, notes) -> pd.DataFrame:
         """Merge all data sources"""
+        inv = inv.copy()
+        wayke = wayke.copy()
+        citk = citk.copy()
+
+        inv['Reg'] = inv['Reg'].apply(self._normalize_registration_key)
+        wayke['Reg'] = wayke['Reg'].apply(self._normalize_registration_key)
+        citk['Reg'] = citk['Reg'].apply(self._normalize_registration_key)
+
         # Merge on registration number
         merged = inv.merge(wayke, left_on='Reg', right_on='Reg', how='left', suffixes=('_inv', '_wayke'))
         merged = merged.merge(citk, left_on='Reg', right_on='Reg', how='left', suffixes=('', '_citk'))
@@ -323,6 +383,62 @@ class StatistikProcessor:
                     merged['Note'] = merged['note'].fillna('')
         
         return merged
+
+    def _get_citk_not_in_wayke(self, citk: pd.DataFrame, wayke: pd.DataFrame, notes: List[Dict]) -> pd.DataFrame:
+        """Return CITK vehicles that are missing in Wayke, including station/details."""
+        if citk.empty:
+            return pd.DataFrame()
+
+        citk_cmp = citk.copy()
+        wayke_cmp = wayke.copy()
+
+        citk_cmp['Reg'] = citk_cmp['Reg'].apply(self._normalize_registration_key)
+        wayke_cmp['Reg'] = wayke_cmp['Reg'].apply(self._normalize_registration_key)
+
+        citk_cmp['RegKey'] = citk_cmp['Reg']
+        wayke_cmp['RegKey'] = wayke_cmp['Reg']
+
+        station_col = self._find_column(citk_cmp, ['OrderStations', 'CurrentStation', 'Station'])
+        if station_col and station_col != 'OrderStations':
+            citk_cmp = citk_cmp.rename(columns={station_col: 'OrderStations'})
+        if 'OrderStations' not in citk_cmp.columns:
+            citk_cmp['OrderStations'] = pd.NA
+
+        wayke_cols = ['RegKey']
+        for col in ['Published', 'Status: Wayke', 'PhotoURL_Count', 'Photographed', 'Wayke: URL', 'Reg']:
+            if col in wayke_cmp.columns and col not in wayke_cols:
+                wayke_cols.append(col)
+
+        wayke_join = wayke_cmp[wayke_cols].drop_duplicates(subset=['RegKey'], keep='first')
+        compared = citk_cmp.merge(wayke_join, on='RegKey', how='left', suffixes=('', '_wayke'), indicator=True)
+
+        compared['WaykeMatched'] = compared['_merge'] == 'both'
+        if 'Published' in compared.columns:
+            compared['Published'] = compared['Published'].fillna(False).astype(bool)
+        else:
+            compared['Published'] = False
+        compared['CITKMatched'] = True
+        compared['CurrentStation'] = compared['OrderStations'].fillna('Unknown')
+
+        if 'Wayke: URL' in compared.columns:
+            compared['WaykeURL'] = compared['Wayke: URL'].fillna('')
+        else:
+            compared['WaykeURL'] = ''
+
+        if 'Note' not in compared.columns:
+            compared['Note'] = ''
+
+        notes_df = pd.DataFrame(notes) if notes else pd.DataFrame()
+        if not notes_df.empty:
+            notes_df = self._normalize_notes_df(notes_df)
+            if not notes_df.empty:
+                compared = compared.merge(notes_df, left_on='Reg', right_on='reg', how='left')
+                if 'note' in compared.columns:
+                    compared['Note'] = compared['note'].fillna('')
+
+        not_in_wayke = compared[compared['WaykeMatched'] == False].copy()
+        not_in_wayke['Published'] = False
+        return not_in_wayke.drop(columns=['_merge'], errors='ignore')
     
     def _calculate_kpis(self, data: pd.DataFrame) -> Dict[str, Any]:
         """Calculate key performance indicators"""

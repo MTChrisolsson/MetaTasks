@@ -17,8 +17,14 @@ class StatistikJob(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
     processed_at = models.DateTimeField(null=True, blank=True)
     
+    JOB_TYPE_CHOICES = [
+        ('full', 'Full'),
+        ('lite', 'Lite'),
+    ]
+    job_type = models.CharField(max_length=10, choices=JOB_TYPE_CHOICES, default='full')
+
     # File references
-    inventory_file = models.FileField(upload_to='analytics/inventory/%Y/%m/')
+    inventory_file = models.FileField(upload_to='analytics/inventory/%Y/%m/', null=True, blank=True)
     wayke_file = models.FileField(upload_to='analytics/wayke/%Y/%m/')
     citk_file = models.FileField(upload_to='analytics/citk/%Y/%m/')
     notes_file = models.FileField(upload_to='analytics/notes/%Y/%m/', null=True, blank=True)
@@ -63,7 +69,8 @@ class VehicleRecord(models.Model):
     missing_citk = models.BooleanField(default=False)
     is_sold = models.BooleanField(default=False)
     notes = models.TextField(blank=True)
-    
+    extra_data = models.JSONField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
