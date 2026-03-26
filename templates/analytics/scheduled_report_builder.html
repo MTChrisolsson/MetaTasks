@@ -1,0 +1,65 @@
+{% extends 'analytics/analytics_base.html' %}
+
+{% block title %}Scheduled Report Builder{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+    <section class="bg-white rounded-xl border border-gray-200 p-6">
+        <div class="flex items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-semibold text-gray-900">Scheduled Report Builder</h1>
+                <p class="text-sm text-gray-500 mt-1">Build practical analytics reports and export previews to CSV.</p>
+            </div>
+            <form method="get" class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
+                <div>
+                    <label for="report_type" class="block text-xs text-gray-600 mb-1">Report Type</label>
+                    <select id="report_type" name="report_type" class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                        <option value="jobs_summary" {% if report_type == 'jobs_summary' %}selected{% endif %}>Jobs Summary</option>
+                        <option value="station_breakdown" {% if report_type == 'station_breakdown' %}selected{% endif %}>Station Breakdown</option>
+                        <option value="data_quality_timeline" {% if report_type == 'data_quality_timeline' %}selected{% endif %}>Data Quality Timeline</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="days" class="block text-xs text-gray-600 mb-1">Window (days)</label>
+                    <input id="days" name="days" type="number" min="1" max="365" value="{{ days }}" class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                </div>
+                <button class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 text-sm">Refresh</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="bg-white rounded-xl border border-gray-200 p-6">
+        <div class="flex items-center justify-between gap-4">
+            <h2 class="text-lg font-semibold text-gray-900">{{ report_title }} Preview</h2>
+            <a href="{% url 'analytics:scheduled_report_export' %}?report_type={{ report_type }}&days={{ days }}" class="inline-flex items-center px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-file-csv mr-2"></i>Export CSV
+            </a>
+        </div>
+
+        <div class="overflow-x-auto mt-4">
+            <table class="min-w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-200 text-left text-gray-600">
+                        {% for h in headers %}
+                        <th class="py-3 pr-4">{{ h }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr class="border-b border-gray-100">
+                        {% for cell in row %}
+                        <td class="py-3 pr-4 text-gray-800">{{ cell }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td class="py-4 text-gray-500" colspan="{{ headers|length }}">No rows found for selected filters.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

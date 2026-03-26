@@ -1,5 +1,84 @@
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.urls import NoReverseMatch, reverse
 from core.models import Organization, UserProfile
+
+
+class AnalyticsTool(models.Model):
+    """Organization-scoped analytics tools shown in the analytics menu."""
+
+    ACTION_TYPE_CHOICES = [
+        ('internal_url', 'Internal URL'),
+        ('named_view', 'Named View'),
+    ]
+
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name='analytics_tools',
+    )
+    created_by = models.ForeignKey(UserProfile, on_delete=models.SET_NULL, null=True, blank=True)
+
+    name = models.CharField(max_length=120)
+    slug = models.SlugField(max_length=120)
+    description = models.CharField(max_length=255, blank=True)
+    icon = models.CharField(max_length=100, default='fas fa-tools')
+    sort_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    action_type = models.CharField(max_length=20, choices=ACTION_TYPE_CHOICES, default='named_view')
+    target_path = models.CharField(max_length=255, blank=True)
+    target_view_name = models.CharField(max_length=255, blank=True)
+    open_in_new_tab = models.BooleanField(default=False)
+
+    metadata = models.JSONField(default=dict, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['sort_order', 'name']
+        unique_together = [('organization', 'slug')]
+        indexes = [
+            models.Index(fields=['organization', 'is_active']),
+            models.Index(fields=['organization', 'action_type']),
+        ]
+
+    def __str__(self):
+        return f"{self.organization.name} - {self.name}"
+
+    def clean(self):
+        super().clean()
+
+        if self.action_type == 'internal_url':
+            if not self.target_path:
+                raise ValidationError({'target_path': 'Target path is required for Internal URL tools.'})
+            if not self.target_path.startswith('/'):
+                raise ValidationError({'target_path': 'Target path must start with /.'})
+            if self.target_view_name:
+                raise ValidationError({'target_view_name': 'Target view name must be empty for Internal URL tools.'})
+
+        if self.action_type == 'named_view':
+            if not self.target_view_name:
+                raise ValidationError({'target_view_name': 'Target view name is required for Named View tools.'})
+            if self.target_path:
+                raise ValidationError({'target_path': 'Target path must be empty for Named View tools.'})
+            try:
+                reverse(self.target_view_name)
+            except NoReverseMatch as exc:
+                raise ValidationError({'target_view_name': f'Could not resolve named view: {exc}'})
+
+    @property
+    def resolved_url(self):
+        if self.action_type == 'internal_url':
+            return self.target_path
+        if self.action_type == 'named_view' and self.target_view_name:
+            try:
+                return reverse(self.target_view_name)
+            except NoReverseMatch:
+                return ''
+        return ''
+
 
 class StatistikJob(models.Model):
     """Track statistik processing jobs"""

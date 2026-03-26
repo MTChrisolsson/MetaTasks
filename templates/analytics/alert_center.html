@@ -1,0 +1,70 @@
+{% extends 'analytics/analytics_base.html' %}
+
+{% block title %}Alert Center{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+    <section class="bg-white rounded-xl border border-gray-200 p-6">
+        <div class="flex items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-semibold text-gray-900">Alert Center</h1>
+                <p class="text-sm text-gray-500 mt-1">Threshold-based alert evaluation for the last {{ days }} days.</p>
+            </div>
+            <form method="get" class="flex items-center gap-2">
+                <label for="days" class="text-sm text-gray-600">Window</label>
+                <select id="days" name="days" class="border border-gray-300 rounded-lg p-2 text-sm">
+                    <option value="7" {% if days == 7 %}selected{% endif %}>7 days</option>
+                    <option value="30" {% if days == 30 %}selected{% endif %}>30 days</option>
+                    <option value="90" {% if days == 90 %}selected{% endif %}>90 days</option>
+                </select>
+                <button class="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 text-sm">Apply</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <p class="text-sm text-gray-500">Triggered alerts</p>
+            <p class="text-3xl font-bold text-red-600 mt-1">{{ triggered_count }}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <p class="text-sm text-gray-500">Healthy checks</p>
+            <p class="text-3xl font-bold text-emerald-600 mt-1">{{ ok_count }}</p>
+        </div>
+    </section>
+
+    <section class="bg-white rounded-xl border border-gray-200 p-6">
+        <h2 class="text-lg font-semibold text-gray-900">Rule Evaluation</h2>
+        <div class="overflow-x-auto mt-4">
+            <table class="min-w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-200 text-left text-gray-600">
+                        <th class="py-3 pr-4">Rule</th>
+                        <th class="py-3 pr-4">Metric</th>
+                        <th class="py-3 pr-4">Threshold</th>
+                        <th class="py-3 pr-4">Status</th>
+                        <th class="py-3 pr-4">Recommendation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rule in rules %}
+                    <tr class="border-b border-gray-100">
+                        <td class="py-3 pr-4 text-gray-900">{{ rule.name }}</td>
+                        <td class="py-3 pr-4 text-gray-700">{{ rule.metric_label }}: {{ rule.current|floatformat:2 }}</td>
+                        <td class="py-3 pr-4 text-gray-700">{{ rule.threshold|floatformat:2 }}</td>
+                        <td class="py-3 pr-4">
+                            {% if rule.triggered %}
+                            <span class="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">Triggered</span>
+                            {% else %}
+                            <span class="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">OK</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 pr-4 text-gray-700">{{ rule.recommendation }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

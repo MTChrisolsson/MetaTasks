@@ -2,13 +2,17 @@ import logging
 import math
 import os
 import tempfile
+import csv
 from io import BytesIO
+from datetime import timedelta
 from decimal import Decimal, InvalidOperation
+from functools import wraps
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
+from django.db.models import Count
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -25,7 +29,7 @@ from core.views import require_organization_access
 from licensing.models import License, Service
 
 from .forms import StatistikLiteForm, StatistikUploadForm
-from .models import StatistikJob, VehicleRecord, VehicleValuation
+from .models import AnalyticsTool, StatistikJob, VehicleRecord, VehicleValuation
 from .serializers import (
     StatistikJobSerializer,
     VehicleValuationBatchResponseSerializer,
@@ -486,6 +490,7 @@ def _enforce_analytics_access_or_response(request):
 
 
 def analytics_access_required(view_func):
+    @wraps(view_func)
     @login_required
     @require_organization_access
     def _wrapped(request, *args, **kwargs):
@@ -495,6 +500,221 @@ def analytics_access_required(view_func):
         return view_func(request, *args, **kwargs)
 
     return _wrapped
+
+
+def _get_active_organization_tools(organization):
+    return AnalyticsTool.objects.filter(organization=organization, is_active=True)
+
+
+def _resolve_current_tool_match(request, profile):
+    current_view_name = ''
+    if request.resolver_match:
+        if request.resolver_match.namespace:
+            current_view_name = f"{request.resolver_match.namespace}:{request.resolver_match.url_name}"
+        else:
+            current_view_name = request.resolver_match.url_name
+
+    current_path = request.path
+
+    tools = _get_active_organization_tools(profile.organization).only(
+        'action_type',
+        'target_path',
+        'target_view_name',
+    )
+    for tool in tools:
+        if tool.action_type == 'named_view' and tool.target_view_name == current_view_name:
+            return tool
+        if tool.action_type == 'internal_url' and tool.target_path == current_path:
+            return tool
+    return None
+
+
+def analytics_tool_access_required(view_func):
+    @wraps(view_func)
+    def _wrapped(request, *args, **kwargs):
+        profile = getattr(request, 'analytics_profile', None)
+        if not profile:
+            return render(request, 'analytics/no_profile.html')
+
+        matched_tool = _resolve_current_tool_match(request, profile)
+        if not matched_tool:
+            raise Http404('Tool not available for this organization.')
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped
+
+
+def _parse_days_window(request, default=30, min_days=1, max_days=365):
+    raw = request.GET.get('days', default)
+    try:
+        days = int(raw)
+    except (TypeError, ValueError):
+        return default
+    return max(min_days, min(max_days, days))
+
+
+def _percent(numerator, denominator):
+    if not denominator:
+        return 0.0
+    return round((numerator / denominator) * 100, 2)
+
+
+def _window_bounds(days, offset=0):
+    end = timezone.now() - timedelta(days=days * offset)
+    start = end - timedelta(days=days)
+    return start, end
+
+
+def _processing_hours(job):
+    if not job.processed_at:
+        return None
+    return max(0.0, (job.processed_at - job.uploaded_at).total_seconds() / 3600)
+
+
+def _build_metrics_for_range(profile, start, end):
+    jobs_qs = StatistikJob.objects.filter(
+        organization=profile.organization,
+        uploaded_at__gte=start,
+        uploaded_at__lt=end,
+    )
+    vehicles_qs = VehicleRecord.objects.filter(
+        job__organization=profile.organization,
+        job__uploaded_at__gte=start,
+        job__uploaded_at__lt=end,
+    )
+
+    total_jobs = jobs_qs.count()
+    completed_jobs_qs = jobs_qs.filter(status='completed')
+    completed_jobs = completed_jobs_qs.count()
+    failed_jobs = jobs_qs.filter(status='failed').count()
+
+    processing_values = [
+        value
+        for value in (_processing_hours(job) for job in completed_jobs_qs.only('uploaded_at', 'processed_at'))
+        if value is not None
+    ]
+    avg_processing_hours = round(sum(processing_values) / len(processing_values), 2) if processing_values else 0.0
+
+    total_vehicles = vehicles_qs.count()
+    published_count = vehicles_qs.filter(is_published=True).count()
+    missing_citk_count = vehicles_qs.filter(missing_citk=True).count()
+    needs_photos_count = vehicles_qs.filter(needs_photos=True).count()
+    photo_covered_count = vehicles_qs.filter(is_photographed=True).count()
+    with_days_count = vehicles_qs.exclude(days_in_stock__isnull=True).count()
+    days_sum = sum(vehicles_qs.exclude(days_in_stock__isnull=True).values_list('days_in_stock', flat=True))
+    avg_days_in_stock = round(days_sum / with_days_count, 2) if with_days_count else 0.0
+
+    return {
+        'total_jobs': total_jobs,
+        'completed_jobs': completed_jobs,
+        'failed_jobs': failed_jobs,
+        'failed_job_rate': _percent(failed_jobs, total_jobs),
+        'avg_processing_hours': avg_processing_hours,
+        'latest_completed_at': completed_jobs_qs.order_by('-processed_at').values_list('processed_at', flat=True).first(),
+        'total_vehicles': total_vehicles,
+        'published_count': published_count,
+        'published_rate': _percent(published_count, total_vehicles),
+        'missing_citk_count': missing_citk_count,
+        'missing_citk_rate': _percent(missing_citk_count, total_vehicles),
+        'needs_photos_count': needs_photos_count,
+        'photo_coverage_rate': _percent(photo_covered_count, total_vehicles),
+        'avg_days_in_stock': avg_days_in_stock,
+    }
+
+
+def _kpi_catalog():
+    return {
+        'total_vehicles': {'label': 'Total Vehicles', 'unit': 'count'},
+        'published_rate': {'label': 'Published Rate', 'unit': 'pct'},
+        'photo_coverage_rate': {'label': 'Photo Coverage Rate', 'unit': 'pct'},
+        'missing_citk_rate': {'label': 'Missing CITK Rate', 'unit': 'pct'},
+        'avg_days_in_stock': {'label': 'Average Days In Stock', 'unit': 'days'},
+        'failed_job_rate': {'label': 'Failed Job Rate', 'unit': 'pct'},
+    }
+
+
+def _format_metric_value(value, unit):
+    if unit == 'pct':
+        return f"{value:.2f}%"
+    if unit == 'days':
+        return f"{value:.2f} days"
+    return f"{int(value)}"
+
+
+def _build_report_dataset(profile, report_type, days):
+    start, end = _window_bounds(days)
+    jobs_qs = StatistikJob.objects.filter(
+        organization=profile.organization,
+        uploaded_at__gte=start,
+        uploaded_at__lt=end,
+    )
+    vehicles_qs = VehicleRecord.objects.filter(
+        job__organization=profile.organization,
+        job__uploaded_at__gte=start,
+        job__uploaded_at__lt=end,
+    )
+
+    if report_type == 'station_breakdown':
+        rows = []
+        stations = (
+            vehicles_qs.values('current_station')
+            .annotate(total=Count('id'))
+            .order_by('-total', 'current_station')
+        )
+        for station in stations:
+            station_name = station['current_station'] or 'Unassigned'
+            station_qs = vehicles_qs.filter(current_station=station['current_station'])
+            published = station_qs.filter(is_published=True).count()
+            sold = station_qs.filter(is_sold=True).count()
+            rows.append([
+                station_name,
+                station['total'],
+                published,
+                f"{_percent(published, station['total']):.2f}%",
+                sold,
+                station_qs.filter(needs_photos=True).count(),
+                station_qs.filter(missing_citk=True).count(),
+            ])
+        return (
+            'Station Breakdown',
+            ['Station', 'Vehicles', 'Published', 'Published %', 'Sold', 'Needs Photos', 'Missing CITK'],
+            rows,
+        )
+
+    if report_type == 'data_quality_timeline':
+        rows = []
+        for day_offset in range(days - 1, -1, -1):
+            day_start, day_end = _window_bounds(1, offset=day_offset)
+            day_jobs = jobs_qs.filter(uploaded_at__gte=day_start, uploaded_at__lt=day_end)
+            day_vehicles = vehicles_qs.filter(job__uploaded_at__gte=day_start, job__uploaded_at__lt=day_end)
+            total_day_vehicles = day_vehicles.count()
+            rows.append([
+                day_start.date().isoformat(),
+                day_jobs.count(),
+                day_jobs.filter(status='completed').count(),
+                total_day_vehicles,
+                day_vehicles.filter(missing_citk=True).count(),
+                day_vehicles.filter(needs_photos=True).count(),
+                f"{_percent(day_vehicles.filter(is_photographed=True).count(), total_day_vehicles):.2f}%",
+            ])
+        return (
+            'Data Quality Timeline',
+            ['Date', 'Jobs', 'Completed Jobs', 'Vehicles', 'Missing CITK', 'Needs Photos', 'Photo Coverage %'],
+            rows,
+        )
+
+    status_counts = jobs_qs.values('status').annotate(total=Count('id')).order_by('status')
+    rows = []
+    total_jobs = jobs_qs.count()
+    for status_row in status_counts:
+        rows.append([
+            status_row['status'],
+            status_row['total'],
+            f"{_percent(status_row['total'], total_jobs):.2f}%",
+        ])
+    rows.append(['Vehicles in window', vehicles_qs.count(), ''])
+    rows.append(['Published vehicles', vehicles_qs.filter(is_published=True).count(), ''])
+    return ('Jobs Summary', ['Category', 'Value', 'Share'], rows)
 
 
 @analytics_access_required
@@ -547,6 +767,232 @@ def index(request):
             'latest_job': latest_completed,
             'stats': stats,
             'blocket_stats': blocket_stats,
+        },
+    )
+
+
+@analytics_access_required
+def data_health_monitor(request):
+    profile = request.analytics_profile
+    days = _parse_days_window(request, default=30)
+    start, end = _window_bounds(days)
+    metrics = _build_metrics_for_range(profile, start, end)
+
+    vehicles_qs = VehicleRecord.objects.filter(
+        job__organization=profile.organization,
+        job__uploaded_at__gte=start,
+        job__uploaded_at__lt=end,
+    )
+    issues = [
+        {
+            'label': 'Missing model',
+            'count': vehicles_qs.filter(model='').count(),
+            'severity': 'warning',
+        },
+        {
+            'label': 'Missing station',
+            'count': vehicles_qs.filter(current_station='').count(),
+            'severity': 'warning',
+        },
+        {
+            'label': 'Missing CITK',
+            'count': metrics['missing_citk_count'],
+            'severity': 'critical' if metrics['missing_citk_rate'] > 35 else 'warning',
+        },
+        {
+            'label': 'Needs photos',
+            'count': metrics['needs_photos_count'],
+            'severity': 'warning',
+        },
+        {
+            'label': 'Published without price',
+            'count': vehicles_qs.filter(is_published=True, published_price__isnull=True).count(),
+            'severity': 'critical',
+        },
+    ]
+
+    return render(
+        request,
+        'analytics/data_health_monitor.html',
+        {
+            'profile': profile,
+            'days': days,
+            'metrics': metrics,
+            'issues': issues,
+        },
+    )
+
+
+@analytics_access_required
+def scheduled_report_builder(request):
+    profile = request.analytics_profile
+    days = _parse_days_window(request, default=30)
+    report_type = request.GET.get('report_type', 'jobs_summary')
+    valid_types = {'jobs_summary', 'station_breakdown', 'data_quality_timeline'}
+    if report_type not in valid_types:
+        report_type = 'jobs_summary'
+
+    report_title, headers, rows = _build_report_dataset(profile, report_type, days)
+    return render(
+        request,
+        'analytics/scheduled_report_builder.html',
+        {
+            'profile': profile,
+            'days': days,
+            'report_type': report_type,
+            'report_title': report_title,
+            'headers': headers,
+            'rows': rows,
+        },
+    )
+
+
+@analytics_access_required
+def scheduled_report_export(request):
+    profile = request.analytics_profile
+    days = _parse_days_window(request, default=30)
+    report_type = request.GET.get('report_type', 'jobs_summary')
+    valid_types = {'jobs_summary', 'station_breakdown', 'data_quality_timeline'}
+    if report_type not in valid_types:
+        report_type = 'jobs_summary'
+
+    report_title, headers, rows = _build_report_dataset(profile, report_type, days)
+    response = HttpResponse(content_type='text/csv')
+    filename = f"analytics_{report_type}_{timezone.now().date().isoformat()}.csv"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    writer = csv.writer(response)
+    writer.writerow([report_title])
+    writer.writerow(headers)
+    for row in rows:
+        writer.writerow(row)
+    return response
+
+
+@analytics_access_required
+def kpi_builder(request):
+    profile = request.analytics_profile
+    days = _parse_days_window(request, default=30)
+    metric_key = request.GET.get('metric', 'published_rate')
+    catalog = _kpi_catalog()
+    if metric_key not in catalog:
+        metric_key = 'published_rate'
+
+    current_start, current_end = _window_bounds(days, offset=0)
+    previous_start, previous_end = _window_bounds(days, offset=1)
+    current_metrics = _build_metrics_for_range(profile, current_start, current_end)
+    previous_metrics = _build_metrics_for_range(profile, previous_start, previous_end)
+
+    current_value = float(current_metrics.get(metric_key, 0) or 0)
+    previous_value = float(previous_metrics.get(metric_key, 0) or 0)
+    delta = round(current_value - previous_value, 2)
+
+    trend = 'flat'
+    if delta > 0:
+        trend = 'up'
+    elif delta < 0:
+        trend = 'down'
+
+    target_raw = request.GET.get('target', '').strip()
+    target_value = None
+    target_status = 'not_set'
+    try:
+        if target_raw:
+            target_value = float(target_raw)
+            target_status = 'met' if current_value >= target_value else 'below'
+    except ValueError:
+        target_value = None
+        target_status = 'invalid'
+
+    selected_meta = catalog[metric_key]
+
+    return render(
+        request,
+        'analytics/kpi_builder.html',
+        {
+            'profile': profile,
+            'days': days,
+            'metric_key': metric_key,
+            'metric_catalog': catalog,
+            'selected_metric_label': selected_meta['label'],
+            'selected_metric_unit': selected_meta['unit'],
+            'current_value': current_value,
+            'current_value_display': _format_metric_value(current_value, selected_meta['unit']),
+            'previous_value_display': _format_metric_value(previous_value, selected_meta['unit']),
+            'delta': delta,
+            'trend': trend,
+            'target_raw': target_raw,
+            'target_value': target_value,
+            'target_status': target_status,
+        },
+    )
+
+
+@analytics_access_required
+def alert_center(request):
+    profile = request.analytics_profile
+    days = _parse_days_window(request, default=30)
+    start, end = _window_bounds(days)
+    metrics = _build_metrics_for_range(profile, start, end)
+
+    rules = [
+        {
+            'name': 'High missing CITK rate',
+            'metric_label': 'Missing CITK Rate',
+            'current': metrics['missing_citk_rate'],
+            'threshold': 35.0,
+            'severity': 'critical',
+            'direction': 'gt',
+            'recommendation': 'Review source mapping and matching rules for recent uploads.',
+        },
+        {
+            'name': 'Low photo coverage',
+            'metric_label': 'Photo Coverage Rate',
+            'current': metrics['photo_coverage_rate'],
+            'threshold': 70.0,
+            'severity': 'warning',
+            'direction': 'lt',
+            'recommendation': 'Prioritize vehicles missing images before publication.',
+        },
+        {
+            'name': 'Job failure rate',
+            'metric_label': 'Failed Job Rate',
+            'current': metrics['failed_job_rate'],
+            'threshold': 10.0,
+            'severity': 'critical',
+            'direction': 'gt',
+            'recommendation': 'Inspect the latest failed jobs and fix ingest errors.',
+        },
+        {
+            'name': 'Average days in stock',
+            'metric_label': 'Average Days In Stock',
+            'current': metrics['avg_days_in_stock'],
+            'threshold': 45.0,
+            'severity': 'warning',
+            'direction': 'gt',
+            'recommendation': 'Investigate stations with long inventory aging.',
+        },
+    ]
+
+    triggered = 0
+    for rule in rules:
+        if rule['direction'] == 'gt':
+            is_triggered = rule['current'] > rule['threshold']
+        else:
+            is_triggered = rule['current'] < rule['threshold']
+        rule['triggered'] = is_triggered
+        if is_triggered:
+            triggered += 1
+
+    return render(
+        request,
+        'analytics/alert_center.html',
+        {
+            'profile': profile,
+            'days': days,
+            'rules': rules,
+            'triggered_count': triggered,
+            'ok_count': len(rules) - triggered,
         },
     )
 
@@ -648,6 +1094,7 @@ def blocket_listings(request):
 
 
 @analytics_access_required
+@analytics_tool_access_required
 def upload(request):
     profile = request.analytics_profile
 
@@ -816,6 +1263,7 @@ def job_citk_wayke_compare(request, job_id):
 
 
 @analytics_access_required
+@analytics_tool_access_required
 def statistik_lite(request):
     """CITK vs Wayke comparison – saves a Lite job and redirects to job detail."""
     profile = request.analytics_profile

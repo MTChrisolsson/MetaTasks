@@ -1,0 +1,65 @@
+{% extends 'analytics/analytics_base.html' %}
+
+{% block title %}KPI Builder{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+    <section class="bg-white rounded-xl border border-gray-200 p-6">
+        <div class="flex items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-semibold text-gray-900">KPI Builder</h1>
+                <p class="text-sm text-gray-500 mt-1">Evaluate current and previous-period KPI values with optional target tracking.</p>
+            </div>
+            <form method="get" class="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end">
+                <div>
+                    <label for="metric" class="block text-xs text-gray-600 mb-1">Metric</label>
+                    <select id="metric" name="metric" class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                        {% for key, info in metric_catalog.items %}
+                        <option value="{{ key }}" {% if key == metric_key %}selected{% endif %}>{{ info.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="days" class="block text-xs text-gray-600 mb-1">Window (days)</label>
+                    <input id="days" name="days" type="number" min="1" max="365" value="{{ days }}" class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+                </div>
+                <div>
+                    <label for="target" class="block text-xs text-gray-600 mb-1">Target (optional)</label>
+                    <input id="target" name="target" type="text" value="{{ target_raw }}" class="w-full border border-gray-300 rounded-lg p-2 text-sm" placeholder="e.g. 80">
+                </div>
+                <button class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 text-sm">Apply</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <p class="text-sm text-gray-500">Current {{ selected_metric_label }}</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1">{{ current_value_display }}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <p class="text-sm text-gray-500">Previous window</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1">{{ previous_value_display }}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <p class="text-sm text-gray-500">Delta</p>
+            <p class="text-3xl font-bold {% if trend == 'up' %}text-emerald-600{% elif trend == 'down' %}text-red-600{% else %}text-gray-900{% endif %} mt-1">{{ delta }}</p>
+        </div>
+    </section>
+
+    <section class="bg-white rounded-xl border border-gray-200 p-6">
+        <h2 class="text-lg font-semibold text-gray-900">Target Status</h2>
+        <p class="text-sm text-gray-600 mt-2">
+            {% if target_status == 'met' %}
+            Target met.
+            {% elif target_status == 'below' %}
+            Current value is below target.
+            {% elif target_status == 'invalid' %}
+            Invalid target value provided.
+            {% else %}
+            No target set.
+            {% endif %}
+        </p>
+    </section>
+</div>
+{% endblock %}
