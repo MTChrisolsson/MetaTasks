@@ -1,0 +1,82 @@
+{% extends 'inventory/inventory_base.html' %}
+
+{% block content %}
+<div class="space-y-4">
+    <div class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900">Stock Movements</h2>
+            <p class="text-sm text-slate-600">Track every inventory change and quickly register new in/out/transfer updates.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="{% url 'inventory:movement-create' %}" class="rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700">
+                <i class="fas fa-plus mr-2"></i>New Movement
+            </a>
+            <a href="{% url 'inventory:item-create' %}" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                <i class="fas fa-box mr-2"></i>New Item
+            </a>
+            <a href="{% url 'inventory:location-create' %}" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                <i class="fas fa-warehouse mr-2"></i>New Location
+            </a>
+        </div>
+    </div>
+
+    <form method="get" class="rounded-xl border border-amber-100 bg-white p-4 shadow-sm">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <select name="movement_type" class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200 sm:w-64">
+                <option value="">All movement types</option>
+                {% for value,label in movement_types %}
+                <option value="{{ value }}" {% if movement_type == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700">Filter</button>
+        </div>
+    </form>
+
+    <div class="rounded-xl border border-amber-100 bg-white shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead class="bg-amber-50/60 text-left text-gray-600">
+                    <tr>
+                        <th class="px-5 py-3">When</th>
+                        <th class="px-5 py-3">Item</th>
+                        <th class="px-5 py-3">Type</th>
+                        <th class="px-5 py-3">Qty</th>
+                        <th class="px-5 py-3">From</th>
+                        <th class="px-5 py-3">To</th>
+                        <th class="px-5 py-3">Reason</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-amber-100">
+                    {% for movement in movements %}
+                    <tr class="hover:bg-amber-50/40">
+                        <td class="px-5 py-3 text-gray-500">{{ movement.created_at|date:'Y-m-d H:i' }}</td>
+                        <td class="px-5 py-3">{{ movement.item.sku }}</td>
+                        <td class="px-5 py-3">{{ movement.get_movement_type_display }}</td>
+                        <td class="px-5 py-3">{{ movement.quantity }}</td>
+                        <td class="px-5 py-3">{% if movement.source_location %}{{ movement.source_location.code }}{% else %}-{% endif %}</td>
+                        <td class="px-5 py-3">{% if movement.target_location %}{{ movement.target_location.code }}{% else %}-{% endif %}</td>
+                        <td class="px-5 py-3">{% if movement.reason %}{{ movement.reason.name }}{% else %}-{% endif %}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="px-5 py-8 text-center text-gray-500">No movements found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if movements.has_other_pages %}
+    <div class="flex items-center justify-between text-sm">
+        <div class="text-gray-600">Page {{ movements.number }} of {{ movements.paginator.num_pages }}</div>
+        <div class="flex gap-2">
+            {% if movements.has_previous %}
+            <a href="?page={{ movements.previous_page_number }}{% if movement_type %}&movement_type={{ movement_type }}{% endif %}" class="rounded-lg border border-amber-200 px-3 py-1 hover:bg-amber-50">Previous</a>
+            {% endif %}
+            {% if movements.has_next %}
+            <a href="?page={{ movements.next_page_number }}{% if movement_type %}&movement_type={{ movement_type }}{% endif %}" class="rounded-lg border border-amber-200 px-3 py-1 hover:bg-amber-50">Next</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -115,6 +115,7 @@ INSTALLED_APPS = [
     'services.cflows',
     'services.scheduling',
     'services.analytics',
+    'services.inventory',
     'services.dashboard',
 ]
 

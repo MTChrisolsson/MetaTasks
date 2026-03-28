@@ -60,6 +60,15 @@ class PermissionService:
             ('scheduling.create', 'Create Schedules', 'Create scheduling entries and resources', 'booking', False, 'scheduling'),
             ('scheduling.edit', 'Edit Schedules', 'Modify scheduling entries', 'booking', False, 'scheduling'),
             ('scheduling.view', 'View Schedules', 'View scheduling information and calendar', 'booking', False, 'scheduling'),
+
+            # Inventory permissions
+            ('inventory.view', 'View Inventory', 'View inventory items, stock levels, and movement history', 'custom', False, 'inventory'),
+            ('inventory.create', 'Create Inventory Records', 'Create inventory items and locations', 'custom', False, 'inventory'),
+            ('inventory.adjust', 'Adjust Inventory', 'Receive stock, issue stock, and make stock adjustments', 'custom', False, 'inventory'),
+            ('inventory.transfer', 'Transfer Inventory', 'Transfer stock between locations', 'custom', False, 'inventory'),
+            ('inventory.import', 'Import Inventory Data', 'Import inventory data from external files', 'custom', False, 'inventory'),
+            ('inventory.export', 'Export Inventory Data', 'Export inventory balances and movement history', 'custom', False, 'inventory'),
+            ('inventory.manage_config', 'Manage Inventory Configuration', 'Manage inventory fields, movement reasons, and service settings', 'custom', False, 'inventory'),
             
             # Reporting permissions
             ('reports.view', 'View Reports', 'Access reporting and analytics features', 'reporting', False, 'core'),
@@ -126,7 +135,10 @@ class PermissionService:
                     'workitem.create', 'workitem.edit', 'workitem.assign', 
                     'workitem.transition', 'workitem.view',
                     'team.view', 'user.view', 'booking.create', 'booking.edit', 
-                    'booking.complete', 'booking.view', 'customfields.manage'
+                    'booking.complete', 'booking.view', 'customfields.manage',
+                    'inventory.view', 'inventory.create', 'inventory.adjust',
+                    'inventory.transfer', 'inventory.import', 'inventory.export',
+                    'inventory.manage_config'
                 ]
             )
             workflow_manager.permissions.set(workflow_perms)
@@ -149,7 +161,8 @@ class PermissionService:
                     'workitem.edit', 'workitem.assign', 'workitem.transition', 'workitem.view',
                     'team.manage_members', 'team.view',
                     'booking.create', 'booking.edit', 'booking.complete', 'booking.view',
-                    'user.view', 'workflow.view'
+                    'user.view', 'workflow.view',
+                    'inventory.view', 'inventory.adjust', 'inventory.transfer'
                 ]
             )
             team_lead.permissions.set(team_perms)
@@ -171,7 +184,7 @@ class PermissionService:
                 codename__in=[
                     'workitem.view', 'workitem.edit', 'workitem.transition',
                     'team.view', 'booking.view', 'user.view', 'workflow.view',
-                    'scheduling.view'
+                    'scheduling.view', 'inventory.view'
                 ]
             )
             team_member.permissions.set(member_perms)
@@ -315,6 +328,13 @@ class PermissionService:
             'workitem.create': 'You need permission to create work items. Contact your administrator for access.',
             'workitem.edit': 'You need permission to edit work items. Contact your administrator for access.',
             'booking.create': 'You need permission to create bookings. Contact your administrator for access.',
+            'inventory.view': 'You need permission to view inventory. Contact your administrator for access.',
+            'inventory.create': 'You need permission to create inventory records. Contact your administrator for access.',
+            'inventory.adjust': 'You need permission to adjust inventory stock. Contact your administrator for access.',
+            'inventory.transfer': 'You need permission to transfer inventory between locations. Contact your administrator for access.',
+            'inventory.import': 'You need permission to import inventory data. Contact your administrator for access.',
+            'inventory.export': 'You need permission to export inventory data. Contact your administrator for access.',
+            'inventory.manage_config': 'You need permission to manage inventory configuration. Contact your administrator for access.',
             'reports.view': 'You need permission to view reports. Contact your administrator for access.',
         }
         

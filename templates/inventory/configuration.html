@@ -1,0 +1,60 @@
+{% extends 'inventory/inventory_base.html' %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="rounded-xl border border-amber-100 bg-white p-5 shadow-sm">
+        <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-900">Movement Reasons</h2>
+            <a href="{% url 'inventory:movement-reason-create' %}" class="rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700">Add Reason</a>
+        </div>
+        <div class="mt-4 overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead class="bg-amber-50/60 text-left text-gray-600">
+                    <tr><th class="px-4 py-2">Code</th><th class="px-4 py-2">Name</th><th class="px-4 py-2">Type</th><th class="px-4 py-2">Active</th><th class="px-4 py-2"></th></tr>
+                </thead>
+                <tbody class="divide-y divide-amber-100">
+                    {% for reason in reasons %}
+                    <tr>
+                        <td class="px-4 py-2">{{ reason.code }}</td>
+                        <td class="px-4 py-2">{{ reason.name }}</td>
+                        <td class="px-4 py-2">{{ reason.get_movement_type_display }}</td>
+                        <td class="px-4 py-2">{{ reason.is_active|yesno:'Yes,No' }}</td>
+                        <td class="px-4 py-2 text-right"><a class="text-amber-700 hover:text-amber-800" href="{% url 'inventory:movement-reason-edit' reason.id %}">Edit</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">No movement reasons defined.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="rounded-xl border border-amber-100 bg-white p-5 shadow-sm">
+        <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-900">Custom Item Fields</h2>
+            <a href="{% url 'inventory:field-definition-create' %}" class="rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700">Add Field</a>
+        </div>
+        <div class="mt-4 overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead class="bg-amber-50/60 text-left text-gray-600">
+                    <tr><th class="px-4 py-2">Key</th><th class="px-4 py-2">Name</th><th class="px-4 py-2">Type</th><th class="px-4 py-2">Required</th><th class="px-4 py-2">Active</th><th class="px-4 py-2"></th></tr>
+                </thead>
+                <tbody class="divide-y divide-amber-100">
+                    {% for field in field_definitions %}
+                    <tr>
+                        <td class="px-4 py-2">{{ field.key }}</td>
+                        <td class="px-4 py-2">{{ field.name }}</td>
+                        <td class="px-4 py-2">{{ field.get_field_type_display }}</td>
+                        <td class="px-4 py-2">{{ field.is_required|yesno:'Yes,No' }}</td>
+                        <td class="px-4 py-2">{{ field.is_active|yesno:'Yes,No' }}</td>
+                        <td class="px-4 py-2 text-right"><a class="text-amber-700 hover:text-amber-800" href="{% url 'inventory:field-definition-edit' field.id %}">Edit</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="px-4 py-6 text-center text-gray-500">No custom fields defined.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends 'inventory/inventory_base.html' %}
+
+{% block content %}
+<div class="space-y-4">
+    <div class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900">Items</h2>
+            <p class="text-sm text-slate-600">Manage your catalog and open each item for location-level stock details.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="{% url 'inventory:item-create' %}" class="rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700">
+                <i class="fas fa-plus mr-2"></i>New Item
+            </a>
+            <a href="{% url 'inventory:movement-create' %}" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                <i class="fas fa-right-left mr-2"></i>Record Movement
+            </a>
+        </div>
+    </div>
+
+    <form method="get" class="rounded-xl border border-amber-100 bg-white p-4 shadow-sm">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <input type="text" name="search" value="{{ search_query }}" placeholder="Search by SKU or name"
+                   class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200">
+            <button type="submit" class="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700">Search</button>
+        </div>
+    </form>
+
+    <div class="rounded-xl border border-amber-100 bg-white shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead class="bg-amber-50/60 text-left text-gray-600">
+                    <tr>
+                        <th class="px-5 py-3">SKU</th>
+                        <th class="px-5 py-3">Name</th>
+                        <th class="px-5 py-3">Unit</th>
+                        <th class="px-5 py-3">Min Stock</th>
+                        <th class="px-5 py-3">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-amber-100">
+                    {% for item in items %}
+                    <tr class="hover:bg-amber-50/40">
+                        <td class="px-5 py-3 font-medium text-gray-900">
+                            <a class="text-amber-700 hover:text-amber-800" href="{% url 'inventory:item-detail' item.id %}">{{ item.sku }}</a>
+                        </td>
+                        <td class="px-5 py-3">{{ item.name }}</td>
+                        <td class="px-5 py-3">{{ item.unit }}</td>
+                        <td class="px-5 py-3">{{ item.minimum_stock_level }}</td>
+                        <td class="px-5 py-3">
+                            {% if item.is_active %}
+                            <span class="rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-700">Active</span>
+                            {% else %}
+                            <span class="rounded-full bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-600">Inactive</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-5 py-10 text-center">
+                            <p class="text-sm text-gray-500">No items found yet.</p>
+                            <a href="{% url 'inventory:item-create' %}" class="mt-3 inline-flex rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700">
+                                <i class="fas fa-plus mr-2"></i>Create your first item
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if items.has_other_pages %}
+    <div class="flex items-center justify-between text-sm">
+        <div class="text-gray-600">Page {{ items.number }} of {{ items.paginator.num_pages }}</div>
+        <div class="flex gap-2">
+            {% if items.has_previous %}
+            <a href="?page={{ items.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="rounded-lg border border-amber-200 px-3 py-1 hover:bg-amber-50">Previous</a>
+            {% endif %}
+            {% if items.has_next %}
+            <a href="?page={{ items.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="rounded-lg border border-amber-200 px-3 py-1 hover:bg-amber-50">Next</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ page_title|default:'Inventory' }}{% endblock %}</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    {% block extra_head %}{% endblock %}
+
+    <style>
+        :root {
+            --inventory-primary: #b45309;
+            --inventory-secondary: #d97706;
+            --inventory-soft: #fffbeb;
+            --inventory-surface: #f8fafc;
+            --inventory-border: #fde68a;
+        }
+
+        .inventory-gradient {
+            background: linear-gradient(135deg, #334155 0%, #475569 50%, var(--inventory-primary) 100%);
+        }
+
+        .sidebar-transition {
+            transition: transform 0.25s ease-in-out;
+        }
+
+        [x-cloak] {
+            display: none !important;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans" x-data="{ sidebarOpen: false }">
+    <header class="inventory-gradient sticky top-0 z-40 border-b border-slate-700/50 shadow-lg lg:z-30">
+        <div class="flex h-16 items-center justify-between px-4">
+            <div class="flex items-center">
+                <button @click="sidebarOpen = !sidebarOpen" class="mr-3 rounded-lg p-2 text-white hover:bg-white/10 lg:hidden">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="flex items-center">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/15">
+                        <i class="fas fa-boxes-stacked text-lg text-white"></i>
+                    </div>
+                    <div class="ml-3">
+                        <a href="{% url 'inventory:index' %}" class="text-xl font-bold text-white">Inventory</a>
+                        <div class="text-xs text-amber-100">{% if profile %}{{ profile.organization.name }}{% endif %}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <a href="{% url 'dashboard:dashboard' %}" class="hidden rounded-lg px-3 py-2 text-sm font-medium text-amber-100 transition hover:bg-white/10 sm:flex sm:items-center">
+                    <i class="fas fa-home mr-2"></i>Dashboard
+                </a>
+                <a href="{% url 'inventory:movement-create' %}" class="hidden rounded-lg px-3 py-2 text-sm font-medium text-amber-100 transition hover:bg-white/10 md:flex md:items-center">
+                    <i class="fas fa-right-left mr-2"></i>Record Movement
+                </a>
+                <a href="{% url 'inventory:location-create' %}" class="hidden rounded-lg px-3 py-2 text-sm font-medium text-amber-100 transition hover:bg-white/10 xl:flex xl:items-center">
+                    <i class="fas fa-warehouse mr-2"></i>Add Location
+                </a>
+                <a href="{% url 'inventory:item-create' %}" class="rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-amber-600">
+                    <i class="fas fa-plus mr-2"></i>Add Item
+                </a>
+                <div class="border-l border-amber-300/30 pl-2 text-sm text-amber-100">
+                    {{ user.get_full_name|default:user.username }}
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div x-show="sidebarOpen"
+         @click="sidebarOpen = false"
+         class="fixed inset-0 z-40 bg-slate-900/50 lg:hidden"
+         x-transition:enter="transition-opacity ease-linear duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition-opacity ease-linear duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"></div>
+
+    <aside class="sidebar-transition fixed left-0 top-16 z-50 h-[calc(100vh-4rem)] w-64 border-r border-amber-100 bg-white transform lg:translate-x-0"
+           :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
+        <div class="flex h-full flex-col px-4 py-6">
+            <div>
+                <h3 class="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Navigation</h3>
+                <nav class="space-y-1 text-sm">
+                    <a href="{% url 'inventory:index' %}" class="{% if request.resolver_match.url_name == 'index' %}bg-amber-50 text-amber-800 border-r-2 border-amber-500{% else %}text-slate-700 hover:bg-amber-50 hover:text-amber-800{% endif %} flex items-center rounded-lg px-3 py-2 font-medium transition-colors">
+                        <i class="fas fa-chart-line mr-3 text-amber-500"></i>Dashboard
+                    </a>
+                    <a href="{% url 'inventory:items-list' %}" class="{% if 'item' in request.resolver_match.url_name %}bg-amber-50 text-amber-800 border-r-2 border-amber-500{% else %}text-slate-700 hover:bg-amber-50 hover:text-amber-800{% endif %} flex items-center rounded-lg px-3 py-2 font-medium transition-colors">
+                        <i class="fas fa-box mr-3 text-slate-500"></i>Items
+                    </a>
+                    <a href="{% url 'inventory:locations-list' %}" class="{% if 'location' in request.resolver_match.url_name %}bg-amber-50 text-amber-800 border-r-2 border-amber-500{% else %}text-slate-700 hover:bg-amber-50 hover:text-amber-800{% endif %} flex items-center rounded-lg px-3 py-2 font-medium transition-colors">
+                        <i class="fas fa-warehouse mr-3 text-slate-500"></i>Locations
+                    </a>
+                    <a href="{% url 'inventory:movements-list' %}" class="{% if 'movement' in request.resolver_match.url_name %}bg-amber-50 text-amber-800 border-r-2 border-amber-500{% else %}text-slate-700 hover:bg-amber-50 hover:text-amber-800{% endif %} flex items-center rounded-lg px-3 py-2 font-medium transition-colors">
+                        <i class="fas fa-right-left mr-3 text-slate-500"></i>Movements
+                    </a>
+                    <a href="{% url 'inventory:low-stock-alerts' %}" class="{% if 'low-stock' in request.resolver_match.url_name %}bg-amber-50 text-amber-800 border-r-2 border-amber-500{% else %}text-slate-700 hover:bg-amber-50 hover:text-amber-800{% endif %} flex items-center rounded-lg px-3 py-2 font-medium transition-colors">
+                        <i class="fas fa-triangle-exclamation mr-3 text-slate-500"></i>Low Stock Alerts
+                    </a>
+                    <a href="{% url 'inventory:configuration' %}" class="{% if 'configuration' in request.resolver_match.url_name or 'reason' in request.resolver_match.url_name or 'field-definition' in request.resolver_match.url_name %}bg-amber-50 text-amber-800 border-r-2 border-amber-500{% else %}text-slate-700 hover:bg-amber-50 hover:text-amber-800{% endif %} flex items-center rounded-lg px-3 py-2 font-medium transition-colors">
+                        <i class="fas fa-sliders mr-3 text-slate-500"></i>Configuration
+                    </a>
+                </nav>
+            </div>
+
+            <div class="mt-8 border-t border-amber-100 pt-5">
+                <h3 class="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Quick Create</h3>
+                <div class="space-y-1 text-sm">
+                    <a href="{% url 'inventory:item-create' %}" class="{% if request.resolver_match.url_name == 'item-create' %}bg-amber-50 text-amber-800 border-r-2 border-amber-500{% else %}text-slate-700 hover:bg-amber-50 hover:text-amber-800{% endif %} flex items-center rounded-lg px-3 py-2 font-medium transition-colors">
+                        <i class="fas fa-plus mr-3 text-amber-600"></i>New Item
+                    </a>
+                    <a href="{% url 'inventory:location-create' %}" class="{% if request.resolver_match.url_name == 'location-create' %}bg-amber-50 text-amber-800 border-r-2 border-amber-500{% else %}text-slate-700 hover:bg-amber-50 hover:text-amber-800{% endif %} flex items-center rounded-lg px-3 py-2 font-medium transition-colors">
+                        <i class="fas fa-warehouse mr-3 text-amber-600"></i>New Location
+                    </a>
+                    <a href="{% url 'inventory:movement-create' %}" class="{% if request.resolver_match.url_name == 'movement-create' %}bg-amber-50 text-amber-800 border-r-2 border-amber-500{% else %}text-slate-700 hover:bg-amber-50 hover:text-amber-800{% endif %} flex items-center rounded-lg px-3 py-2 font-medium transition-colors">
+                        <i class="fas fa-right-left mr-3 text-amber-600"></i>New Movement
+                    </a>
+                </div>
+            </div>
+
+            <div class="mt-8 border-t border-amber-100 pt-5">
+                <h3 class="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Exports</h3>
+                <div class="space-y-1 text-sm">
+                    <a href="{% url 'inventory:export-stock-csv' %}" class="flex items-center rounded-lg px-3 py-2 font-medium text-slate-700 transition-colors hover:bg-amber-50 hover:text-amber-800">
+                        <i class="fas fa-file-csv mr-3 text-slate-500"></i>Stock CSV
+                    </a>
+                    <a href="{% url 'inventory:export-movements-csv' %}" class="flex items-center rounded-lg px-3 py-2 font-medium text-slate-700 transition-colors hover:bg-amber-50 hover:text-amber-800">
+                        <i class="fas fa-file-export mr-3 text-slate-500"></i>Movements CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="px-4 py-6 lg:ml-64 lg:px-8">
+        <div class="mx-auto max-w-7xl space-y-6">
+            <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-900">{{ page_title|default:'Inventory' }}</h1>
+                        <p class="mt-1 text-sm text-slate-500">Stock operations and configurable inventory management</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <a href="{% url 'inventory:movement-create' %}" class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-100">
+                            <i class="fas fa-right-left mr-2"></i>Record Movement
+                        </a>
+                        <a href="{% url 'inventory:item-create' %}" class="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700">
+                            <i class="fas fa-plus mr-2"></i>Add Item
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            {% if messages %}
+            <div class="space-y-3">
+                {% for message in messages %}
+                <div class="rounded-lg border px-4 py-3 text-sm {% if message.tags == 'error' %}border-red-200 bg-red-50 text-red-800{% elif message.tags == 'warning' %}border-amber-200 bg-amber-50 text-amber-800{% elif message.tags == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-800{% else %}border-blue-200 bg-blue-50 text-blue-800{% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

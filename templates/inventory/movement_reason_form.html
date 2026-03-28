@@ -1,0 +1,22 @@
+{% extends 'inventory/inventory_base.html' %}
+
+{% block content %}
+<div class="rounded-xl border border-amber-100 bg-white p-5 shadow-sm">
+    <h2 class="mb-4 text-lg font-semibold text-gray-900">{{ form_title }}</h2>
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+        {% for field in form %}
+        <div>
+            <label class="mb-1 block text-sm font-medium text-gray-700" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+            {% for error in field.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+        </div>
+        {% endfor %}
+        <div class="flex gap-2 pt-2">
+            <button type="submit" class="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700">{{ submit_label }}</button>
+            <a href="{% url 'inventory:configuration' %}" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
