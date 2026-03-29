@@ -1,7 +1,16 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .models import KBArticle, KBCategory, SupportTicket, SupportTicketComment
+from .models import (
+    KBArticle,
+    KBCategory,
+    SupportTag,
+    SupportTemplate,
+    SupportTicket,
+    SupportTicketAuditLog,
+    SupportTicketComment,
+    TicketRelationship,
+)
 
 
 class SupportTicketCommentSerializer(serializers.ModelSerializer):
@@ -88,11 +97,103 @@ class SupportTicketCreateSerializer(serializers.ModelSerializer):
         model = SupportTicket
         fields = ['title', 'description', 'category', 'priority', 'severity', 'attachment']
 
+    def create(self, validated_data):
+        request = self.context.get('request')
+        profile = getattr(request.user, 'mediap_profile', None) if request else None
+        if not profile:
+            raise serializers.ValidationError({'detail': 'A valid organization profile is required.'})
+        return SupportTicket.objects.create(
+            organization=profile.organization,
+            created_by=request.user,
+            **validated_data,
+        )
+
 
 class SupportTicketUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = SupportTicket
         fields = ['status', 'priority', 'assigned_to', 'severity', 'is_internal', 'is_archived']
+
+
+class SupportTagSerializer(serializers.ModelSerializer):
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True)
+
+    class Meta:
+        model = SupportTag
+        fields = ['id', 'name', 'color', 'created_by', 'created_by_username', 'created_at']
+        read_only_fields = ['id', 'created_by', 'created_by_username', 'created_at']
+
+
+class SupportTemplateSerializer(serializers.ModelSerializer):
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True)
+
+    class Meta:
+        model = SupportTemplate
+        fields = [
+            'id',
+            'name',
+            'category',
+            'title_template',
+            'description_template',
+            'default_priority',
+            'created_by',
+            'created_by_username',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'created_by', 'created_by_username', 'created_at']
+
+
+class TicketRelationshipSerializer(serializers.ModelSerializer):
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True)
+
+    class Meta:
+        model = TicketRelationship
+        fields = [
+            'id',
+            'from_ticket',
+            'to_ticket',
+            'relationship_type',
+            'created_by',
+            'created_by_username',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'created_by', 'created_by_username', 'created_at']
+
+    def validate(self, attrs):
+        from_ticket = attrs.get('from_ticket')
+        to_ticket = attrs.get('to_ticket')
+
+        if from_ticket and to_ticket and from_ticket.organization_id != to_ticket.organization_id:
+            raise serializers.ValidationError('Both tickets must belong to the same organization.')
+        if from_ticket and to_ticket and from_ticket.id == to_ticket.id:
+            raise serializers.ValidationError('A ticket cannot relate to itself.')
+
+        request = self.context.get('request')
+        profile = getattr(request.user, 'mediap_profile', None) if request else None
+        if profile and from_ticket and from_ticket.organization_id != profile.organization_id:
+            raise serializers.ValidationError('Tickets must belong to your organization.')
+
+        return attrs
+
+
+class SupportTicketAuditLogSerializer(serializers.ModelSerializer):
+    performed_by_username = serializers.CharField(source='performed_by.username', read_only=True)
+    ticket_id = serializers.CharField(source='ticket.ticket_id', read_only=True)
+
+    class Meta:
+        model = SupportTicketAuditLog
+        fields = [
+            'id',
+            'ticket',
+            'ticket_id',
+            'action',
+            'performed_by',
+            'performed_by_username',
+            'old_value',
+            'new_value',
+            'timestamp',
+        ]
+        read_only_fields = fields
 
 
 # ---------------------------------------------------------------------------

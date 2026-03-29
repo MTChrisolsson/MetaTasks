@@ -4,7 +4,7 @@ from django.test import TestCase
 
 from core.models import Organization, UserProfile
 
-from .models import SupportTicket
+from .models import SupportTag, SupportTemplate, SupportTicket, SupportTicketAuditLog
 
 
 class SupportTicketAPITests(TestCase):
@@ -36,6 +36,14 @@ class SupportTicketAPITests(TestCase):
         UserProfile.objects.create(user=self.agent, organization=self.org_a)
         support_agent_group, _ = Group.objects.get_or_create(name='support_agent')
         self.agent.groups.add(support_agent_group)
+
+        self.admin = self.user_model.objects.create_user(
+            username='admin_1',
+            email='admin@example.com',
+            password='ComplexPass123!',
+            is_staff=True,
+        )
+        UserProfile.objects.create(user=self.admin, organization=self.org_a)
 
     def test_create_ticket_api(self):
         self.client.force_login(self.customer_a)
@@ -112,3 +120,117 @@ class SupportTicketAPITests(TestCase):
         self.assertEqual(allowed.status_code, 200)
         ticket.refresh_from_db()
         self.assertEqual(ticket.status, 'in_progress')
+
+    def test_tag_create_requires_staff_tier(self):
+        self.client.force_login(self.customer_a)
+        forbidden = self.client.post(
+            '/api/support/tags/',
+            data={'name': 'Urgent', 'color': '#EF4444'},
+            content_type='application/json',
+        )
+        self.assertEqual(forbidden.status_code, 403)
+
+        self.client.force_login(self.agent)
+        allowed = self.client.post(
+            '/api/support/tags/',
+            data={'name': 'Urgent', 'color': '#EF4444'},
+            content_type='application/json',
+        )
+        self.assertEqual(allowed.status_code, 201)
+        self.assertTrue(SupportTag.objects.filter(name='Urgent').exists())
+
+    def test_template_create_requires_staff_tier(self):
+        self.client.force_login(self.customer_a)
+        forbidden = self.client.post(
+            '/api/support/templates/',
+            data={
+                'name': 'Billing Default',
+                'category': 'billing',
+                'title_template': 'Billing request',
+                'description_template': 'Please provide invoice details.',
+                'default_priority': 'medium',
+            },
+            content_type='application/json',
+        )
+        self.assertEqual(forbidden.status_code, 403)
+
+        self.client.force_login(self.agent)
+        allowed = self.client.post(
+            '/api/support/templates/',
+            data={
+                'name': 'Billing Default',
+                'category': 'billing',
+                'title_template': 'Billing request',
+                'description_template': 'Please provide invoice details.',
+                'default_priority': 'medium',
+            },
+            content_type='application/json',
+        )
+        self.assertEqual(allowed.status_code, 201)
+        self.assertTrue(SupportTemplate.objects.filter(name='Billing Default').exists())
+
+    def test_relationship_create_enforces_same_organization(self):
+        ticket_a = SupportTicket.objects.create(
+            organization=self.org_a,
+            created_by=self.customer_a,
+            title='Org A ticket',
+            description='Ticket in org A',
+            category='general',
+            priority='low',
+            severity='low',
+        )
+        ticket_b = SupportTicket.objects.create(
+            organization=self.org_b,
+            created_by=self.customer_b,
+            title='Org B ticket',
+            description='Ticket in org B',
+            category='general',
+            priority='low',
+            severity='low',
+        )
+
+        self.client.force_login(self.agent)
+        response = self.client.post(
+            '/api/support/relationships/',
+            data={
+                'from_ticket': ticket_a.id,
+                'to_ticket': ticket_b.id,
+                'relationship_type': 'related',
+            },
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_audit_logs_are_staff_only_and_org_scoped(self):
+        ticket_a = SupportTicket.objects.create(
+            organization=self.org_a,
+            created_by=self.customer_a,
+            title='Audit target A',
+            description='Ticket in org A',
+            category='general',
+            priority='low',
+            severity='low',
+        )
+        ticket_b = SupportTicket.objects.create(
+            organization=self.org_b,
+            created_by=self.customer_b,
+            title='Audit target B',
+            description='Ticket in org B',
+            category='general',
+            priority='low',
+            severity='low',
+        )
+        SupportTicketAuditLog.objects.create(ticket=ticket_a, action='create', performed_by=self.customer_a)
+        SupportTicketAuditLog.objects.create(ticket=ticket_b, action='create', performed_by=self.customer_b)
+
+        self.client.force_login(self.customer_a)
+        forbidden = self.client.get('/api/support/audit-logs/')
+        self.assertEqual(forbidden.status_code, 403)
+
+        self.client.force_login(self.agent)
+        allowed = self.client.get('/api/support/audit-logs/')
+        self.assertEqual(allowed.status_code, 200)
+        payload = allowed.json()
+        results = payload.get('results', payload)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]['ticket_id'], ticket_a.ticket_id)

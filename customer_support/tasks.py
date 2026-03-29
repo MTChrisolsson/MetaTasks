@@ -13,8 +13,10 @@ import logging
 from datetime import timedelta
 
 from celery import shared_task
+from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.core.mail import send_mail
+from django.db.models import Q
 from django.utils import timezone
 
 from core.models import Notification
@@ -112,21 +114,37 @@ def monitor_sla_deadlines():
     ).exclude(status__in=['resolved', 'closed']).select_related('assigned_to', 'organization')
 
     for ticket in breached:
-        recipient = ticket.assigned_to
-        if recipient is None:
-            continue  # Skip if no agent assigned; could be extended to notify org admins
-        Notification.objects.get_or_create(
-            recipient=recipient,
-            content_type='SupportTicket',
-            object_id=str(ticket.pk),
-            title=f'SLA Breached: {ticket.ticket_id}',
-            defaults={
-                'message': f'Ticket "{ticket.title}" has breached its SLA deadline.',
-                'notification_type': 'warning',
-                'action_url': f'/support/tickets/{ticket.ticket_id}/',
-                'action_text': 'View Ticket',
-            },
-        )
+        recipients = []
+        if ticket.assigned_to is not None:
+            recipients = [ticket.assigned_to]
+        else:
+            # Fallback: notify active support operators/admins in the organization.
+            user_model = get_user_model()
+            recipients = list(
+                user_model.objects.filter(
+                    mediap_profile__organization=ticket.organization,
+                    is_active=True,
+                ).filter(
+                    Q(is_staff=True)
+                    | Q(groups__name='support_admin')
+                    | Q(groups__name='support_agent')
+                    | Q(groups__name='customer_support')
+                ).distinct()
+            )
+
+        for recipient in recipients:
+            Notification.objects.get_or_create(
+                recipient=recipient,
+                content_type='SupportTicket',
+                object_id=str(ticket.pk),
+                title=f'SLA Breached: {ticket.ticket_id}',
+                defaults={
+                    'message': f'Ticket "{ticket.title}" has breached its SLA deadline.',
+                    'notification_type': 'warning',
+                    'action_url': f'/support/tickets/{ticket.ticket_id}/',
+                    'action_text': 'View Ticket',
+                },
+            )
     logger.info('SLA monitor: checked %d breached tickets', breached.count())
 
 
@@ -150,6 +168,9 @@ def auto_close_resolved_tickets():
         resolved_at__lt=cutoff,
         is_archived=False,
     )
-    count = resolved_qs.count()
-    resolved_qs.update(status='closed', closed_at=timezone.now())
+    count = 0
+    for ticket in resolved_qs.iterator():
+        ticket.status = 'closed'
+        ticket.save(update_fields=['status', 'updated_at', 'resolved_at', 'closed_at'])
+        count += 1
     logger.info('Auto-close: closed %d resolved tickets older than %d days', count, auto_close_days)

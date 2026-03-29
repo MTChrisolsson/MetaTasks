@@ -1,9 +1,14 @@
-from django.contrib.auth import get_user_model
-from django.test import TestCase
+from datetime import timedelta
 
-from core.models import Organization, UserProfile
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
+from django.test import TestCase
+from django.utils import timezone
+
+from core.models import Notification, Organization, UserProfile
 
 from .models import SupportTicket
+from .tasks import auto_close_resolved_tickets, monitor_sla_deadlines
 
 
 class SupportTicketModelTests(TestCase):
@@ -53,3 +58,70 @@ class SupportTicketModelTests(TestCase):
         ticket.status = 'closed'
         ticket.save()
         self.assertIsNotNone(ticket.closed_at)
+
+
+class SupportTaskTests(TestCase):
+    def setUp(self):
+        self.user_model = get_user_model()
+        self.organization = Organization.objects.create(
+            name='Task Test Org',
+            organization_type='business',
+        )
+        self.customer = self.user_model.objects.create_user(
+            username='task_customer',
+            email='task_customer@example.com',
+            password='ComplexPass123!',
+        )
+        UserProfile.objects.create(user=self.customer, organization=self.organization)
+
+        self.agent = self.user_model.objects.create_user(
+            username='task_agent',
+            email='task_agent@example.com',
+            password='ComplexPass123!',
+        )
+        UserProfile.objects.create(user=self.agent, organization=self.organization)
+        support_agent_group, _ = Group.objects.get_or_create(name='support_agent')
+        self.agent.groups.add(support_agent_group)
+
+    def test_monitor_sla_deadlines_notifies_support_agents_when_unassigned(self):
+        ticket = SupportTicket.objects.create(
+            organization=self.organization,
+            created_by=self.customer,
+            title='Unassigned SLA breach',
+            description='Breach should notify fallback support agents',
+            category='technical_support',
+            priority='high',
+            severity='high',
+            status='open',
+            sla_deadline=timezone.now() - timedelta(hours=2),
+        )
+
+        monitor_sla_deadlines()
+
+        self.assertTrue(
+            Notification.objects.filter(
+                recipient=self.agent,
+                content_type='SupportTicket',
+                object_id=str(ticket.pk),
+                title=f'SLA Breached: {ticket.ticket_id}',
+            ).exists()
+        )
+
+    def test_auto_close_resolved_tickets_sets_closed_status(self):
+        old_resolved = SupportTicket.objects.create(
+            organization=self.organization,
+            created_by=self.customer,
+            title='Resolved old ticket',
+            description='Should be auto-closed',
+            category='general',
+            priority='medium',
+            severity='low',
+            status='resolved',
+            resolved_at=timezone.now() - timedelta(days=20),
+        )
+
+        auto_close_resolved_tickets()
+
+        old_resolved.refresh_from_db()
+        self.assertEqual(old_resolved.status, 'closed')
+        self.assertIsNotNone(old_resolved.closed_at)

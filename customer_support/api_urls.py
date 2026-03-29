@@ -7,6 +7,10 @@ app_name = 'customer_support_api'
 
 router = DefaultRouter()
 router.register('tickets', api_views.SupportTicketViewSet, basename='support-tickets')
+router.register('tags', api_views.SupportTagViewSet, basename='support-tags')
+router.register('templates', api_views.SupportTemplateViewSet, basename='support-templates')
+router.register('relationships', api_views.TicketRelationshipViewSet, basename='support-relationships')
+router.register('audit-logs', api_views.SupportTicketAuditLogViewSet, basename='support-audit-logs')
 router.register('kb/articles', api_views.KBArticleViewSet, basename='kb-articles')
 router.register('kb/categories', api_views.KBCategoryViewSet, basename='kb-categories')
 

@@ -9,15 +9,28 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import KBArticle, KBCategory, SupportTicket, SupportTicketAuditLog, SupportTicketComment
+from .models import (
+    KBArticle,
+    KBCategory,
+    SupportTag,
+    SupportTemplate,
+    SupportTicket,
+    SupportTicketAuditLog,
+    SupportTicketComment,
+    TicketRelationship,
+)
 from .serializers import (
     KBArticleDetailSerializer,
     KBArticleListSerializer,
     KBCategorySerializer,
+    SupportTagSerializer,
+    SupportTemplateSerializer,
+    SupportTicketAuditLogSerializer,
     SupportTicketCommentSerializer,
     SupportTicketCreateSerializer,
     SupportTicketSerializer,
     SupportTicketUpdateSerializer,
+    TicketRelationshipSerializer,
 )
 
 
@@ -114,13 +127,7 @@ class SupportTicketViewSet(viewsets.ModelViewSet):
         return SupportTicketSerializer
 
     def perform_create(self, serializer):
-        profile = getattr(self.request.user, 'mediap_profile', None)
-        if not profile:
-            raise permissions.PermissionDenied('A valid organization profile is required.')
-        ticket = serializer.save(
-            organization=profile.organization,
-            created_by=self.request.user,
-        )
+        ticket = serializer.save()
         log_ticket_audit(ticket, 'create', self.request.user, old_value={}, new_value={'status': ticket.status})
 
     def perform_update(self, serializer):
@@ -385,4 +392,78 @@ class KBCategoryViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         profile = getattr(self.request.user, 'mediap_profile', None)
         serializer.save(organization=profile.organization if profile else None)
+
+
+class SupportTagViewSet(viewsets.ModelViewSet):
+    permission_classes = [SupportAccessPermission]
+    serializer_class = SupportTagSerializer
+
+    def get_permissions(self):
+        if self.action in {'create', 'update', 'partial_update', 'destroy'}:
+            return [SupportStaffPermission()]
+        return [SupportAccessPermission()]
+
+    def get_queryset(self):
+        return SupportTag.objects.select_related('created_by').order_by('name')
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+
+class SupportTemplateViewSet(viewsets.ModelViewSet):
+    permission_classes = [SupportAccessPermission]
+    serializer_class = SupportTemplateSerializer
+
+    def get_permissions(self):
+        if self.action in {'create', 'update', 'partial_update', 'destroy'}:
+            return [SupportStaffPermission()]
+        return [SupportAccessPermission()]
+
+    def get_queryset(self):
+        return SupportTemplate.objects.select_related('created_by').order_by('name')
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+
+class TicketRelationshipViewSet(viewsets.ModelViewSet):
+    permission_classes = [SupportStaffPermission]
+    serializer_class = TicketRelationshipSerializer
+
+    def get_queryset(self):
+        profile = getattr(self.request.user, 'mediap_profile', None)
+        if not profile:
+            return TicketRelationship.objects.none()
+        return TicketRelationship.objects.select_related(
+            'from_ticket',
+            'to_ticket',
+            'created_by',
+        ).filter(from_ticket__organization=profile.organization)
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+
+class SupportTicketAuditLogViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [SupportStaffPermission]
+    serializer_class = SupportTicketAuditLogSerializer
+
+    def get_queryset(self):
+        profile = getattr(self.request.user, 'mediap_profile', None)
+        if not profile:
+            return SupportTicketAuditLog.objects.none()
+
+        queryset = SupportTicketAuditLog.objects.select_related('ticket', 'performed_by').filter(
+            ticket__organization=profile.organization
+        )
+
+        ticket_id = (self.request.query_params.get('ticket_id') or '').strip()
+        if ticket_id:
+            queryset = queryset.filter(ticket__ticket_id=ticket_id)
+
+        action_name = (self.request.query_params.get('action') or '').strip()
+        if action_name:
+            queryset = queryset.filter(action=action_name)
+
+        return queryset
 
