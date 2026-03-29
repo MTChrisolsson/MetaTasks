@@ -163,8 +163,8 @@ def require_customer_access(view_func):
     @login_required
     def wrapper(request, *args, **kwargs):
         tier = get_user_support_tier(request.user)
-        if tier not in {'superuser', 'staff', 'support_agent', 'customer'}:
-            messages.error(request, 'Customer portal access is required.')
+        if tier not in {'superuser', 'staff', 'support_agent'}:
+            messages.error(request, 'Support access is required.')
             return redirect('dashboard:dashboard')
         return view_func(request, *args, **kwargs)
 

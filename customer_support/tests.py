@@ -161,7 +161,12 @@ class SupportAccessControlTests(TestCase):
         response = self.client.get('/customer-support/')
         self.assertEqual(response.status_code, 200)
 
-    def test_customer_can_still_access_self_service_portal(self):
+    def test_customer_cannot_access_self_service_portal(self):
         self.client.force_login(self.customer)
+        response = self.client.get('/customer-support/portal/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_support_agent_can_access_self_service_portal(self):
+        self.client.force_login(self.agent)
         response = self.client.get('/customer-support/portal/')
         self.assertEqual(response.status_code, 200)
