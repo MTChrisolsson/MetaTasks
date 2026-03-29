@@ -79,6 +79,15 @@ class PermissionService:
             ('organization.settings', 'Organization Settings', 'Modify organization settings and configuration', 'system', False, 'core'),
             ('customfields.manage', 'Manage Custom Fields', 'Create and modify custom fields', 'system', False, 'cflows'),
         ]
+        default_permissions += [
+            # Customer Support permissions
+            ('support.view', 'View Support Tickets', 'View support tickets and ticket details', 'support', False, 'customer_support'),
+            ('support.create', 'Create Support Tickets', 'Create new support tickets', 'support', False, 'customer_support'),
+            ('support.manage', 'Manage Support Tickets', 'Update, reassign, and resolve support tickets', 'support', False, 'customer_support'),
+            ('support.admin', 'Support Admin', 'Full support portal administration including merge, close, analytics', 'support', False, 'customer_support'),
+            ('support.kb.view', 'View Knowledge Base', 'Read knowledge base articles', 'support', False, 'customer_support'),
+            ('support.kb.manage', 'Manage Knowledge Base', 'Create, edit, and publish KB articles', 'support', False, 'customer_support'),
+        ]
         
         permissions = []
         for perm_data in default_permissions:

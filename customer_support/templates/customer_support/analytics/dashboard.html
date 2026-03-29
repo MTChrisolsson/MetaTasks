@@ -1,0 +1,20 @@
+{% extends 'customer_support/base.html' %}
+
+{% block title %}Support Analytics{% endblock %}
+
+{% block customer_support_content %}
+<div class="grid gap-6 lg:grid-cols-3">
+    <div class="rounded-xl border border-slate-200 bg-white p-6">
+        <p class="text-sm text-slate-500">Average CSAT</p>
+        <p class="text-3xl font-black text-slate-900">{{ avg_csat|floatformat:1 }}</p>
+    </div>
+    <div class="rounded-xl border border-slate-200 bg-white p-6 lg:col-span-2">
+        <h3 class="text-lg font-semibold text-slate-900 mb-2">Status Breakdown</h3>
+        <ul class="space-y-2 text-sm text-slate-700">
+            {% for row in status_breakdown %}
+            <li>{{ row.status }}: {{ row.count }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

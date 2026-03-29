@@ -90,6 +90,9 @@ if codespace_name:
 # Application definition
 
 INSTALLED_APPS = [
+    # Daphne must be first (before staticfiles) for ASGI/WebSocket support
+    'daphne',
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -99,9 +102,11 @@ INSTALLED_APPS = [
     
     # Third party apps
     'rest_framework',
+    'django_filters',
     'guardian',
     'corsheaders',
-    
+    'channels',
+
     # Project apps
     'core',
     'accounts',
@@ -150,6 +155,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'mediap.wsgi.application'
+ASGI_APPLICATION = 'mediap.asgi.application'
 
 
 # Database
@@ -242,6 +248,26 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ],
+}
+
+CUSTOMER_SUPPORT = {
+    'AUTO_CLOSE_AFTER_DAYS': config('CS_AUTO_CLOSE_AFTER_DAYS', default=14, cast=int),
+    'SLA_RESPONSE_TIME_HOURS': config('CS_SLA_RESPONSE_TIME_HOURS', default=4, cast=int),
+    'SLA_RESOLUTION_TIME_HOURS': config('CS_SLA_RESOLUTION_TIME_HOURS', default=24, cast=int),
+    'ENABLE_CUSTOMER_PORTAL': config('CS_ENABLE_CUSTOMER_PORTAL', default=True, cast=bool),
+    'NOTIFY_VIA_WEBSOCKET': config('CS_NOTIFY_VIA_WEBSOCKET', default=True, cast=bool),
+    'ENABLE_KB_SUGGESTIONS': config('CS_ENABLE_KB_SUGGESTIONS', default=True, cast=bool),
+    'MAX_ATTACHMENT_SIZE_MB': config('CS_MAX_ATTACHMENT_SIZE_MB', default=10, cast=int),
+    'ALLOWED_ATTACHMENT_EXTENSIONS': config(
+        'CS_ALLOWED_ATTACHMENT_EXTENSIONS',
+        default='.pdf,.jpg,.png,.doc,.docx',
+        cast=lambda v: [s.strip() for s in v.split(',') if s.strip()],
+    ),
+    'EMAIL_NOTIFICATIONS_ENABLED': config('CS_EMAIL_NOTIFICATIONS_ENABLED', default=True, cast=bool),
+    'TICKET_ID_PREFIX': config('CS_TICKET_ID_PREFIX', default='TKT'),
 }
 
 # Guardian configuration for object-level permissions
@@ -262,7 +288,32 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'services.dashboard.tasks.enforce_message_retention',
         'schedule': crontab(hour=3, minute=0),
     },
+    'support-sla-monitor': {
+        'task': 'customer_support.tasks.monitor_sla_deadlines',
+        'schedule': crontab(minute='*/30'),
+    },
+    'support-auto-close-resolved': {
+        'task': 'customer_support.tasks.auto_close_resolved_tickets',
+        'schedule': crontab(hour=2, minute=0),
+    },
 }
+
+# Channel Layers for WebSocket support
+if config('USE_LOCAL_CACHE', default=False, cast=bool):
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        }
+    }
+else:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                'hosts': [config('REDIS_URL', default='redis://localhost:6379/0')],
+            },
+        },
+    }
 
 # Cache configuration with Redis
 if config('USE_LOCAL_CACHE', default=False, cast=bool):

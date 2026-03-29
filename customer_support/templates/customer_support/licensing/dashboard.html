@@ -1,0 +1,109 @@
+{% extends 'customer_support/base.html' %}
+
+{% block title %}Support Licensing{% endblock %}
+
+{% block customer_support_content %}
+<div class="space-y-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+        <article class="rounded-xl border border-cyan-200 bg-gradient-to-br from-cyan-500 to-cyan-700 text-white p-5 shadow-lg">
+            <p class="text-cyan-100 text-xs uppercase tracking-wide">Organizations</p>
+            <p class="mt-2 text-3xl font-bold">{{ page_obj.paginator.count }}</p>
+        </article>
+        <article class="rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-500 to-indigo-700 text-white p-5 shadow-lg">
+            <p class="text-indigo-100 text-xs uppercase tracking-wide">Services</p>
+            <p class="mt-2 text-3xl font-bold">{{ service_count }}</p>
+        </article>
+        <article class="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-500 to-emerald-700 text-white p-5 shadow-lg">
+            <p class="text-emerald-100 text-xs uppercase tracking-wide">Mode</p>
+            <p class="mt-2 text-2xl font-bold">License Ops</p>
+        </article>
+        <article class="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-500 to-amber-700 text-white p-5 shadow-lg">
+            <p class="text-amber-100 text-xs uppercase tracking-wide">Control Model</p>
+            <p class="mt-2 text-2xl font-bold">Warnings</p>
+        </article>
+    </div>
+
+    <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Support Admin</p>
+                <h2 class="mt-1 text-2xl font-black tracking-tight text-slate-900">Licensing Dashboard</h2>
+                <p class="mt-1 text-sm text-slate-500">Provision and monitor service licenses across organizations.</p>
+            </div>
+            <form method="get" class="flex items-center gap-2">
+                <input type="text" name="search" value="{{ search }}" placeholder="Search organizations"
+                       class="w-72 rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500">
+                <button type="submit" class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">Search</button>
+            </form>
+        </div>
+    </section>
+
+    <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-sm text-cyan-900">
+        {{ service_count }} active service{{ service_count|pluralize }} available for licensing.
+    </div>
+
+    <section class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                        <th class="px-5 py-3 text-left font-semibold text-slate-700">Organization</th>
+                        <th class="px-5 py-3 text-left font-semibold text-slate-700">Service Licenses</th>
+                        <th class="px-5 py-3 text-left font-semibold text-slate-700">Active Licenses</th>
+                        <th class="px-5 py-3 text-left font-semibold text-slate-700">Assigned Seats</th>
+                        <th class="px-5 py-3 text-left font-semibold text-slate-700">Seats Left</th>
+                        <th class="px-5 py-3 text-left font-semibold text-slate-700">Warnings</th>
+                        <th class="px-5 py-3 text-left font-semibold text-slate-700">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                    {% for row in org_rows %}
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-5 py-3">
+                            <p class="font-semibold text-slate-900">{{ row.organization.name }}</p>
+                            <p class="text-xs text-slate-500">{{ row.service_count }} service{{ row.service_count|pluralize }} configured</p>
+                        </td>
+                        <td class="px-5 py-3 text-slate-700">{{ row.total_licenses }}</td>
+                        <td class="px-5 py-3 text-slate-700">{{ row.active_license_count }}</td>
+                        <td class="px-5 py-3 text-slate-700">{{ row.total_assigned }}</td>
+                        <td class="px-5 py-3 text-slate-700">{% if row.remaining_seats != None %}{{ row.remaining_seats }}{% else %}Unlimited{% endif %}</td>
+                        <td class="px-5 py-3">
+                            {% if row.warnings %}
+                            <ul class="space-y-1">
+                                {% for warning in row.warnings %}
+                                <li class="text-xs text-amber-800">{{ warning }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <span class="text-xs text-emerald-700">No warnings</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-3">
+                            <a href="{% url 'customer_support:support_licensing_organization_detail' row.organization.id %}" class="font-semibold text-cyan-700 hover:text-cyan-900">Manage</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-5 py-8 text-center text-slate-500">No organizations found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <div class="border-t border-slate-200 p-4 flex items-center justify-between text-sm">
+            <p class="text-slate-600">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</p>
+            <div class="flex items-center gap-2">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}" class="rounded border border-slate-300 bg-white px-3 py-1 text-slate-700">Previous</a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}" class="rounded border border-slate-300 bg-white px-3 py-1 text-slate-700">Next</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

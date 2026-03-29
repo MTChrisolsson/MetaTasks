@@ -1,0 +1,20 @@
+{% extends 'customer_support/base.html' %}
+{% block title %}New KB Article{% endblock %}
+{% block customer_support_content %}
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="flex items-center gap-4">
+        <a href="{% url 'customer_support:kb_list' %}" class="text-sm text-cyan-700 hover:underline">← Back to KB</a>
+        <h2 class="text-xl font-bold text-slate-900">New Article</h2>
+    </div>
+    <div class="rounded-xl border border-slate-200 bg-white p-6">
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <div class="flex gap-3 pt-2">
+                <button type="submit" class="rounded-lg bg-cyan-600 text-white px-5 py-2 text-sm font-semibold">Create Article</button>
+                <a href="{% url 'customer_support:kb_list' %}" class="rounded-lg border border-slate-300 px-5 py-2 text-sm font-medium">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

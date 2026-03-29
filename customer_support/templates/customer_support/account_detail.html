@@ -69,6 +69,28 @@
             {% if user_profile.user.is_active %}Deactivate Account{% else %}Activate Account{% endif %}
         </button>
         {% endif %}
+
+        <div class="mt-6 border-t border-slate-200 pt-6">
+            <h3 class="font-semibold text-slate-900 mb-3">Support Licensing</h3>
+            {% if support_license_context.has_support_license %}
+            <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+                {{ support_license_context.active_license_count }} active customer support license{{ support_license_context.active_license_count|pluralize }}.
+            </div>
+            {% if support_license_context.warning_count %}
+            <div class="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                {{ support_license_context.warning_count }} non-active license record{{ support_license_context.warning_count|pluralize }} needs review.
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                No customer support license is provisioned for this organization.
+            </div>
+            {% endif %}
+
+            <a href="{% url 'customer_support:support_licensing_organization_detail' user_profile.organization.id %}" class="mt-3 inline-block text-sm font-semibold text-cyan-700 hover:text-cyan-900">
+                Manage Organization Licensing
+            </a>
+        </div>
     </aside>
 </div>
 

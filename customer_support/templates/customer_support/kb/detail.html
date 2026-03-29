@@ -1,0 +1,72 @@
+{% extends 'customer_support/base.html' %}
+
+{% block title %}{{ article.title }} - Knowledge Base{% endblock %}
+
+{% block customer_support_content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <div class="flex items-center justify-between gap-4">
+        <a href="{% url 'customer_support:kb_list' %}" class="text-sm text-cyan-700 hover:underline">← Back to KB</a>
+        {% if is_staff %}
+        <a href="{% url 'customer_support:kb_article_edit' article.slug %}"
+           class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-50">Edit</a>
+        {% endif %}
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-8">
+        <div class="mb-2 flex flex-wrap gap-2 items-center text-xs text-slate-500">
+            {% if article.category %}<span class="rounded-full bg-cyan-50 text-cyan-700 px-2 py-0.5">{{ article.category.name }}</span>{% endif %}
+            {% if is_staff %}<span class="rounded-full px-2 py-0.5
+                {% if article.status == 'published' %}bg-green-100 text-green-700{% elif article.status == 'draft' %}bg-amber-100 text-amber-700{% else %}bg-slate-100 text-slate-500{% endif %}">
+                {{ article.status }}</span>{% endif %}
+        </div>
+        <h1 class="text-2xl font-black text-slate-900 mb-1">{{ article.title }}</h1>
+        <p class="text-xs text-slate-400 mb-6">
+            By {{ article.authored_by.get_full_name|default:article.authored_by.username|default:"Staff" }}
+            {% if article.published_at %}· Published {{ article.published_at|date:"Y-m-d" }}{% endif %}
+            · {{ article.view_count }} view{{ article.view_count|pluralize }}
+        </p>
+        <div class="prose prose-slate max-w-none text-slate-700 whitespace-pre-wrap">{{ article.content }}</div>
+    </div>
+
+    {# Helpfulness widget #}
+    <div id="helpful-widget" class="rounded-xl border border-slate-200 bg-white p-6 flex items-center gap-6">
+        <p class="text-sm font-medium text-slate-700">Was this article helpful?</p>
+        <button id="btn-helpful" onclick="rateArticle(true)"
+                class="rounded-lg bg-green-50 border border-green-300 text-green-700 px-4 py-2 text-sm font-semibold hover:bg-green-100">
+            👍 Yes
+        </button>
+        <button id="btn-not-helpful" onclick="rateArticle(false)"
+                class="rounded-lg bg-red-50 border border-red-300 text-red-700 px-4 py-2 text-sm font-semibold hover:bg-red-100">
+            👎 No
+        </button>
+        <span id="helpful-thanks" class="hidden text-sm text-slate-500">Thanks for your feedback!</span>
+    </div>
+
+    {% if is_staff and related_tickets %}
+    <div class="rounded-xl border border-slate-200 bg-white p-6">
+        <h3 class="text-sm font-semibold text-slate-700 mb-3">Linked Tickets</h3>
+        <ul class="space-y-1">
+            {% for t in related_tickets %}
+            <li class="text-sm"><a href="{% url 'customer_support:ticket_detail' t.ticket_id %}" class="text-cyan-700 hover:underline">{{ t.ticket_id }}: {{ t.title }}</a></li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function rateArticle(helpful) {
+    fetch('{% url "customer_support:kb_article_helpful" article.slug %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ helpful }),
+    }).then(() => {
+        document.getElementById('btn-helpful').style.display = 'none';
+        document.getElementById('btn-not-helpful').style.display = 'none';
+        document.getElementById('helpful-thanks').classList.remove('hidden');
+    });
+}
+</script>
+{% endblock %}

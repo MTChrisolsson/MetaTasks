@@ -70,7 +70,12 @@
                         {% endif %}
                     </td>
                     <td class="px-5 py-3">
-                        <a href="{% url 'customer_support:account_detail' account.id %}" class="text-cyan-700 hover:text-cyan-900 font-semibold">View</a>
+                        <div class="flex items-center gap-3">
+                            <a href="{% url 'customer_support:account_detail' account.id %}" class="text-cyan-700 hover:text-cyan-900 font-semibold">View</a>
+                            {% if account.organization %}
+                            <a href="{% url 'customer_support:support_licensing_organization_detail' account.organization.id %}" class="text-slate-600 hover:text-slate-900 font-semibold">Licensing</a>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
                 {% empty %}

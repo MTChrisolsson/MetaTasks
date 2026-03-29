@@ -7,7 +7,9 @@ python manage.py migrate --noinput
 echo "Collecting static files..."
 python manage.py collectstatic --noinput
 
-echo "Starting Gunicorn..."
-exec gunicorn \
-    -c gunicorn.conf.py \
-    mediap.wsgi:application
+echo "Starting Daphne (ASGI)..."
+exec daphne \
+    -b 0.0.0.0 \
+    -p 8000 \
+    --proxy-headers \
+    mediap.asgi:application

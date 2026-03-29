@@ -12,4 +12,5 @@ urlpatterns = [
     path('auth/', include('rest_framework.urls')),
     path('health/', views.health_check, name='health_check'),
     path('services/', views.services_list, name='services_list'),
+    path('support/', include('customer_support.api_urls')),
 ]

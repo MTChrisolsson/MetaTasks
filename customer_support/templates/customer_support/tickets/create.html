@@ -1,0 +1,14 @@
+{% extends 'customer_support/base.html' %}
+
+{% block title %}Create Ticket - Customer Support{% endblock %}
+
+{% block customer_support_content %}
+<div class="max-w-3xl rounded-xl border border-slate-200 bg-white p-6">
+    <h2 class="text-xl font-bold text-slate-900 mb-4">Create Support Ticket</h2>
+    <form method="post" enctype="multipart/form-data" class="space-y-4">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="rounded-lg bg-cyan-600 text-white px-4 py-2 text-sm font-semibold">Create Ticket</button>
+    </form>
+</div>
+{% endblock %}

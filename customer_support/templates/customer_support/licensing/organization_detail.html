@@ -1,0 +1,209 @@
+{% extends 'customer_support/base.html' %}
+
+{% block title %}{{ organization.name }} Licensing{% endblock %}
+
+{% block customer_support_content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <a href="{% url 'customer_support:support_licensing_dashboard' %}" class="text-sm font-semibold text-cyan-700 hover:text-cyan-900">Back to Licensing Dashboard</a>
+            <h2 class="mt-1 text-2xl font-black tracking-tight text-slate-900">{{ organization.name }}</h2>
+            <p class="text-sm text-slate-500">Manage service licenses and customer support seat assignments.</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+        <article class="rounded-xl border border-cyan-200 bg-gradient-to-br from-cyan-500 to-cyan-700 text-white p-5 shadow-lg">
+            <p class="text-cyan-100 text-xs uppercase tracking-wide">Active Licenses</p>
+            <p class="mt-2 text-3xl font-bold">{{ capacity_summary.active_license_count }}</p>
+        </article>
+        <article class="rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-500 to-indigo-700 text-white p-5 shadow-lg">
+            <p class="text-indigo-100 text-xs uppercase tracking-wide">Assigned Seats</p>
+            <p class="mt-2 text-3xl font-bold">{{ capacity_summary.total_assigned }}</p>
+        </article>
+        <article class="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-500 to-emerald-700 text-white p-5 shadow-lg">
+            <p class="text-emerald-100 text-xs uppercase tracking-wide">Capacity</p>
+            <p class="mt-2 text-3xl font-bold">{% if capacity_summary.total_capacity != None %}{{ capacity_summary.total_capacity }}{% else %}Unlimited{% endif %}</p>
+        </article>
+        <article class="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-500 to-amber-700 text-white p-5 shadow-lg">
+            <p class="text-amber-100 text-xs uppercase tracking-wide">Seats Left</p>
+            <p class="mt-2 text-3xl font-bold">{% if capacity_summary.total_remaining != None %}{{ capacity_summary.total_remaining }}{% else %}Unlimited{% endif %}</p>
+        </article>
+    </div>
+
+    <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h3 class="text-base font-bold text-slate-900 mb-4">Add or Update Service License</h3>
+        <form method="post" class="grid gap-4 md:grid-cols-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="provision_service_license">
+
+            <div class="md:col-span-2">
+                <label class="mb-1 block text-sm font-semibold text-slate-700">License Type</label>
+                <select name="license_type_id" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" required>
+                    {% for license_type in license_types %}
+                    <option value="{{ license_type.id }}">{{ license_type.service.name }} - {{ license_type.display_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="mb-1 block text-sm font-semibold text-slate-700">Status</label>
+                <select name="status" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" required>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if value == 'active' %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="mb-1 block text-sm font-semibold text-slate-700">Billing Cycle</label>
+                <select name="billing_cycle" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" required>
+                    {% for value, label in billing_choices %}
+                    <option value="{{ value }}" {% if value == 'monthly' %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="mb-1 block text-sm font-semibold text-slate-700">Duration (days)</label>
+                <input type="number" name="duration_days" min="0" value="365" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+            </div>
+
+            <div>
+                <label class="mb-1 block text-sm font-semibold text-slate-700">Expiration Date</label>
+                <input type="date" name="expiration_date" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                <p class="mt-1 text-xs text-slate-500">If set, this overrides duration.</p>
+            </div>
+
+            <div class="md:col-span-4">
+                <button type="submit" class="rounded-lg bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-700">Save Service License</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h3 class="text-base font-bold text-slate-900 mb-4">Service Licenses</h3>
+        <div class="space-y-3">
+            {% for row in service_license_rows %}
+            <div class="rounded-lg border border-slate-200 p-4">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-sm font-semibold text-slate-900">{{ row.license.license_type.service.name }} - {{ row.license.license_type.display_name }}</p>
+                        <p class="text-xs text-slate-500">Status: {{ row.license.status|title }} · Billing: {{ row.license.billing_cycle|title }}</p>
+                        <p class="text-xs text-slate-500">Start: {{ row.license.start_date|date:'Y-m-d' }}{% if row.license.end_date %} · End: {{ row.license.end_date|date:'Y-m-d' }}{% else %} · End: Unlimited{% endif %}</p>
+                        <p class="text-xs text-slate-500">Assigned: {{ row.assigned_count }} · Remaining: {% if row.remaining_seats != None %}{{ row.remaining_seats }}{% else %}Unlimited{% endif %}</p>
+                    </div>
+                    <span class="rounded-full px-2 py-0.5 text-xs font-semibold {% if row.license.status == 'active' or row.license.status == 'trial' %}bg-emerald-100 text-emerald-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+                        {{ row.license.status|title }}
+                    </span>
+                </div>
+                {% if row.warnings %}
+                <ul class="mt-2 space-y-1">
+                    {% for warning in row.warnings %}
+                    <li class="text-xs text-amber-800">{{ warning }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+            {% empty %}
+            <p class="text-sm text-slate-500">No service licenses provisioned for this organization.</p>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h3 class="text-base font-bold text-slate-900 mb-4">Customer Support Licenses</h3>
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {% for row in license_rows %}
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <div class="flex items-center justify-between">
+                    <p class="font-semibold text-slate-900">{{ row.license.license_type.display_name }}</p>
+                    <span class="rounded-full px-2 py-0.5 text-xs font-semibold {% if row.license.status == 'active' or row.license.status == 'trial' %}bg-emerald-100 text-emerald-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+                        {{ row.license.status|title }}
+                    </span>
+                </div>
+                <p class="mt-2 text-sm text-slate-600">
+                    Seats: {{ row.assigned_count }}{% if row.seat_limit %} / {{ row.seat_limit }}{% else %} / Unlimited{% endif %}
+                </p>
+                {% if row.license.end_date %}
+                <p class="text-xs text-slate-500">Expires {{ row.license.end_date|date:'Y-m-d' }}</p>
+                {% endif %}
+                {% if row.warnings %}
+                <ul class="mt-3 space-y-1">
+                    {% for warning in row.warnings %}
+                    <li class="text-xs text-amber-800">{{ warning }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+            {% empty %}
+            <p class="text-sm text-slate-500">No customer support licenses are configured for this organization.</p>
+            {% endfor %}
+        </div>
+    </section>
+
+    <div class="grid gap-6 lg:grid-cols-2">
+        <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h3 class="text-base font-bold text-slate-900 mb-4">Assign User to License</h3>
+            {% if service_license_rows and assignable_members %}
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="assign_seat">
+
+                <div>
+                    <label class="mb-1 block text-sm font-semibold text-slate-700">License</label>
+                    <select name="license_id" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" required>
+                        {% for row in service_license_rows %}
+                        {% if row.license.status == 'active' or row.license.status == 'trial' %}
+                        <option value="{{ row.license.id }}">{{ row.license.license_type.service.name }} - {{ row.license.license_type.display_name }} ({{ row.license.status|title }})</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="mb-1 block text-sm font-semibold text-slate-700">User</label>
+                    <select name="user_profile_id" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" required>
+                        {% for member in assignable_members %}
+                        <option value="{{ member.id }}">{{ member.user.get_full_name|default:member.user.username }} ({{ member.user.username }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <button type="submit" class="rounded-lg bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-700">Assign Seat</button>
+            </form>
+            {% elif not service_license_rows %}
+            <p class="text-sm text-slate-500">Configure at least one service license before assigning users.</p>
+            {% else %}
+            <p class="text-sm text-slate-500">No active members available to assign.</p>
+            {% endif %}
+        </section>
+
+        <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h3 class="text-base font-bold text-slate-900 mb-4">Active Assignments</h3>
+            <div class="space-y-3">
+                {% for assignment in assignments %}
+                <div class="rounded-lg border border-slate-200 p-3">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-semibold text-slate-900">{{ assignment.user_profile.user.get_full_name|default:assignment.user_profile.user.username }}</p>
+                            <p class="text-xs text-slate-500">{{ assignment.user_profile.user.username }} · {{ assignment.license.license_type.service.name }} / {{ assignment.license.license_type.display_name }}</p>
+                            <p class="text-xs text-slate-400">Assigned {{ assignment.assigned_at|date:'Y-m-d H:i' }}</p>
+                        </div>
+                        <form method="post" class="flex items-center gap-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="revoke_seat">
+                            <input type="hidden" name="assignment_id" value="{{ assignment.id }}">
+                            <input type="text" name="reason" placeholder="Reason (optional)" class="rounded border border-slate-300 px-2 py-1 text-xs">
+                            <button type="submit" class="rounded bg-rose-600 px-3 py-1 text-xs font-semibold text-white hover:bg-rose-700">Revoke</button>
+                        </form>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-sm text-slate-500">No active support seat assignments.</p>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
