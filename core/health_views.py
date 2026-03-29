@@ -1,14 +1,18 @@
-from django.shortcuts import render
-from django.contrib.admin.views.decorators import staff_member_required
+from django.shortcuts import redirect, render
+from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
 from django.contrib import messages
 from core.models import Team
 from services.cflows.models import TeamBooking
 
 
-@staff_member_required
+@login_required
 def system_health_check(request):
     """System health check dashboard for administrators"""
+    profile = getattr(request.user, 'mediap_profile', None)
+    if not (request.user.is_superuser or (profile and (profile.is_organization_admin or profile.has_staff_panel_access))):
+        messages.error(request, 'You do not have permission to access the health dashboard.')
+        return redirect('dashboard:dashboard')
     
     # Check for teams with bookings but no active members
     problematic_teams = Team.objects.annotate(

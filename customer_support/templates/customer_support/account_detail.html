@@ -1,0 +1,110 @@
+{% extends "customer_support/base.html" %}
+
+{% block customer_support_content %}
+<div class="mb-6">
+    <a href="{% url 'customer_support:account_management' %}" class="text-cyan-700 hover:text-cyan-900 font-semibold">Back to accounts</a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <section class="lg:col-span-2 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="text-xl font-bold text-slate-900">{{ user_profile.user.get_full_name|default:user_profile.user.username }}</h2>
+        <p class="text-sm text-slate-500 mb-6">@{{ user_profile.user.username }}</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <p class="text-xs uppercase tracking-wide text-slate-500">Organization</p>
+                <p class="text-slate-800">{{ user_profile.organization.name|default:'Unassigned' }}</p>
+            </div>
+            <div>
+                <p class="text-xs uppercase tracking-wide text-slate-500">Email</p>
+                <p class="text-slate-800">{{ user_profile.user.email|default:'-' }}</p>
+            </div>
+            <div>
+                <p class="text-xs uppercase tracking-wide text-slate-500">Department</p>
+                <p class="text-slate-800">{{ user_profile.department|default:'-' }}</p>
+            </div>
+            <div>
+                <p class="text-xs uppercase tracking-wide text-slate-500">Location</p>
+                <p class="text-slate-800">{{ user_profile.location|default:'-' }}</p>
+            </div>
+            <div>
+                <p class="text-xs uppercase tracking-wide text-slate-500">Status</p>
+                <p class="text-slate-800">{% if user_profile.user.is_active %}Active{% else %}Inactive{% endif %}</p>
+            </div>
+        </div>
+
+        <div class="mt-6">
+            <h3 class="font-semibold text-slate-900 mb-2">Recent Activity</h3>
+            <div class="space-y-2">
+                {% for item in activity_items %}
+                <div class="rounded-lg border border-slate-200 p-3 text-sm">
+                    <p class="text-slate-800">{{ item.description }}</p>
+                    <p class="text-xs text-slate-500">{{ item.timestamp|date:'M d, Y H:i' }}</p>
+                </div>
+                {% empty %}
+                <p class="text-sm text-slate-500">No activity yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <aside class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h3 class="font-semibold text-slate-900 mb-3">Assigned Roles</h3>
+        <div class="space-y-2 mb-6">
+            {% for assignment in role_assignments %}
+            <div class="rounded-lg border border-cyan-200 bg-cyan-50 p-3">
+                <p class="text-cyan-900 font-medium">{{ assignment.role.name }}</p>
+                <p class="text-xs text-cyan-700">Assigned {{ assignment.assigned_at|date:'M d, Y' }}</p>
+            </div>
+            {% empty %}
+            <p class="text-sm text-slate-500">No roles assigned.</p>
+            {% endfor %}
+        </div>
+
+        {% if can_edit %}
+        <button
+            id="toggle-status-btn"
+            class="w-full rounded-lg px-4 py-2 font-semibold {% if user_profile.user.is_active %}bg-rose-600 hover:bg-rose-700 text-white{% else %}bg-emerald-600 hover:bg-emerald-700 text-white{% endif %}"
+        >
+            {% if user_profile.user.is_active %}Deactivate Account{% else %}Activate Account{% endif %}
+        </button>
+        {% endif %}
+    </aside>
+</div>
+
+{% if can_edit %}
+<script>
+function getCookie(name) {
+    const cookies = document.cookie ? document.cookie.split('; ') : [];
+    for (let i = 0; i < cookies.length; i += 1) {
+        const parts = cookies[i].split('=');
+        const key = decodeURIComponent(parts[0]);
+        if (key === name) {
+            return decodeURIComponent(parts.slice(1).join('='));
+        }
+    }
+    return null;
+}
+
+document.getElementById('toggle-status-btn')?.addEventListener('click', async function () {
+    const btn = this;
+    btn.disabled = true;
+    const response = await fetch("{% url 'customer_support:toggle_account_status' user_profile.id %}", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken') || '',
+            'Content-Type': 'application/json'
+        }
+    });
+
+    if (!response.ok) {
+        btn.disabled = false;
+        alert('Unable to update account status.');
+        return;
+    }
+
+    window.location.reload();
+});
+</script>
+{% endif %}
+{% endblock %}

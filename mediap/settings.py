@@ -109,6 +109,7 @@ INSTALLED_APPS = [
     'licensing',
     'homepage',
     'api',
+    'customer_support',
     
     # Services
     'services.staff_panel',

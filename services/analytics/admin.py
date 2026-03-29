@@ -88,7 +88,10 @@ class StatistikJobAdmin(admin.ModelAdmin):
     )
     
     def has_delete_permission(self, request, obj=None):
-        return request.user.is_staff
+        if request.user.is_superuser:
+            return True
+        profile = getattr(request.user, 'mediap_profile', None)
+        return bool(profile and profile.is_organization_admin)
 
 
 @admin.register(VehicleRecord)

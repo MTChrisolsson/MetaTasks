@@ -1,0 +1,46 @@
+{% extends "customer_support/base.html" %}
+
+{% block customer_support_content %}
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+    <article class="rounded-xl border border-cyan-200 bg-gradient-to-br from-cyan-500 to-cyan-700 text-white p-5 shadow-lg">
+        <p class="text-cyan-100 text-xs uppercase tracking-wide">Total Accounts</p>
+        <p class="mt-2 text-3xl font-bold">{{ total_accounts }}</p>
+    </article>
+    <article class="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-500 to-emerald-700 text-white p-5 shadow-lg">
+        <p class="text-emerald-100 text-xs uppercase tracking-wide">Active</p>
+        <p class="mt-2 text-3xl font-bold">{{ active_accounts }}</p>
+    </article>
+    <article class="rounded-xl border border-rose-200 bg-gradient-to-br from-rose-500 to-rose-700 text-white p-5 shadow-lg">
+        <p class="text-rose-100 text-xs uppercase tracking-wide">Inactive</p>
+        <p class="mt-2 text-3xl font-bold">{{ inactive_accounts }}</p>
+    </article>
+    <article class="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-500 to-amber-700 text-white p-5 shadow-lg">
+        <p class="text-amber-100 text-xs uppercase tracking-wide">Recent Activities</p>
+        <p class="mt-2 text-3xl font-bold">{{ recent_activity_count }}</p>
+    </article>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <section class="lg:col-span-2 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="text-lg font-bold text-slate-900 mb-4">Support Quick Actions</h2>
+        <div class="space-y-3">
+            <a href="{% url 'customer_support:account_management' %}" class="group flex items-center justify-between rounded-xl border border-slate-200 p-4 hover:border-cyan-300 hover:bg-cyan-50 transition">
+                <div>
+                    <p class="font-semibold text-slate-900">Manage Customer Accounts</p>
+                    <p class="text-sm text-slate-600">Search users across organizations and resolve account access issues.</p>
+                </div>
+                <span class="text-cyan-700 group-hover:translate-x-1 transition">Open</span>
+            </a>
+        </div>
+    </section>
+
+    <aside class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h3 class="text-base font-bold text-slate-900 mb-3">Access Policy</h3>
+        <ul class="text-sm text-slate-700 space-y-2">
+            <li>Portal access requires support team membership.</li>
+            <li>Account edits are restricted to support admins.</li>
+            <li>Status changes are audit-logged.</li>
+        </ul>
+    </aside>
+</div>
+{% endblock %}
