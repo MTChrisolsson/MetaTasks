@@ -1,96 +1,420 @@
-{% extends 'base.html' %}
+{% extends 'base_public.html' %}
+
+{% block title %}MetaTask 2.0 | Enterprise BPM Platform{% endblock %}
 
 {% block content %}
-<div class="px-4 py-6 sm:px-0">
+
     <!-- Hero Section -->
-    <div class="text-center py-16">
-        <h1 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
-            Welcome to MetaTask
+    <section class="public-hero-grid px-8 py-20 max-w-7xl mx-auto flex flex-col items-center text-center">
+        <span class="bg-secondary-container text-on-secondary-container px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase mb-6">Introducing MetaTask 2.0</span>
+        <h1 class="text-5xl md:text-7xl font-extrabold text-on-surface tracking-tight leading-[1.1] mb-8 max-w-4xl">
+            Streamline Workflows. <span class="text-primary">Empower Organizations.</span>
         </h1>
-        <p class="mt-6 text-lg leading-8 text-gray-600 max-w-2xl mx-auto">
-            Comprehensive service platform designed to streamline workflows for organizations, 
-            small teams, companies, and individuals.
+        <p class="text-lg md:text-xl text-on-surface-variant max-w-2xl mb-12 leading-relaxed">
+            MetaTask is the unified business process management platform designed for organizations of all sizes to automate workflows, collaborate effectively, and drive productivity.
         </p>
-        <div class="mt-10 flex items-center justify-center gap-x-6">
-            <a href="{% url 'homepage:services' %}" 
-               class="rounded-md bg-blue-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
-                Explore Services
-            </a>
-            <a href="{% url 'homepage:about' %}" class="text-sm font-semibold leading-6 text-gray-900">
-                Learn more <span aria-hidden="true">→</span>
-            </a>
+        <div class="flex flex-col sm:flex-row gap-4 mb-20">
+            <a href="{% url 'accounts:register' %}" class="premium-gradient text-white px-8 py-4 rounded-xl font-bold text-lg shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform">Start Free Trial</a>
+            <a href="#solutions" class="bg-surface-container-low text-primary px-8 py-4 rounded-xl font-bold text-lg border border-outline-variant/20 hover:bg-surface-container transition-colors">Learn More</a>
         </div>
-    </div>
+        <div class="w-full relative rounded-2xl overflow-hidden shadow-2xl bg-surface-container-highest aspect-[16/9] md:aspect-[21/9]">
+            <img alt="MetaTask Dashboard Interface" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOchAtuo7-q_e_0AIm0J1zNRoootHnT2_Ht_RNe8Duj8ImwtHPZyQ4ardtDW86ctrQiGhxKr8JWxb0JL7Gg3WrqgMw5S6UxiaFZ9TZL-IZDvDHyvh-1cUIXBz_UXqoYRdUXdtUKelaGlZuL3jpkp9KakuIXX4VqQeFvVJX-Yg7k6IrEFt2xCxYZFZ6vBKrLzxdtdkQpEMCN20WotDpJ5gURptBQs26QkEZZDQUxHo2i4pcTSB-bb7R-Gsq3dR0mQgaEayi4rjCogE"/>
+            <div class="absolute inset-0 bg-gradient-to-t from-on-surface/10 to-transparent"></div>
+        </div>
+    </section>
+
+    <!-- Problem/Solution Section -->
+    <section class="py-24 bg-surface-container-low" id="solutions">
+        <div class="max-w-7xl mx-auto px-8">
+            <div class="mb-16">
+                <h2 class="text-3xl font-bold text-on-surface mb-4">The Better Way to Work</h2>
+                <p class="text-on-surface-variant max-w-xl">Traditional process management is broken. We've rebuilt it for the modern enterprise.</p>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="bg-surface-container-lowest p-8 rounded-2xl relative overflow-hidden group">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-error/20 group-hover:bg-error transition-colors"></div>
+                    <div class="mb-6 text-error flex items-center gap-2">
+                        <span class="material-symbols-outlined">error</span>
+                        <span class="font-bold text-sm uppercase tracking-widest">The Problem</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4">Siloed Communication</h3>
+                    <p class="text-on-surface-variant text-sm mb-8">Teams lose 20 hours a week switching between tools and searching for updates across emails and chats.</p>
+                    <div class="pt-8 border-t border-outline-variant/10 text-secondary flex items-center gap-2">
+                        <span class="material-symbols-outlined">check_circle</span>
+                        <span class="font-bold text-sm">MetaTask Unified Workspace</span>
+                    </div>
+                </div>
+                <div class="bg-surface-container-lowest p-8 rounded-2xl relative overflow-hidden group">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-error/20 group-hover:bg-error transition-colors"></div>
+                    <div class="mb-6 text-error flex items-center gap-2">
+                        <span class="material-symbols-outlined">error</span>
+                        <span class="font-bold text-sm uppercase tracking-widest">The Problem</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4">Manual Bottlenecks</h3>
+                    <p class="text-on-surface-variant text-sm mb-8">Repetitive tasks and manual handoffs create invisible delays that stall production and frustrate employees.</p>
+                    <div class="pt-8 border-t border-outline-variant/10 text-secondary flex items-center gap-2">
+                        <span class="material-symbols-outlined">check_circle</span>
+                        <span class="font-bold text-sm">Automated Workflows</span>
+                    </div>
+                </div>
+                <div class="bg-surface-container-lowest p-8 rounded-2xl relative overflow-hidden group">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-error/20 group-hover:bg-error transition-colors"></div>
+                    <div class="mb-6 text-error flex items-center gap-2">
+                        <span class="material-symbols-outlined">error</span>
+                        <span class="font-bold text-sm uppercase tracking-widest">The Problem</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4">Zero Visibility</h3>
+                    <p class="text-on-surface-variant text-sm mb-8">Leadership lacks real-time insights into process health, making it impossible to optimize performance or identify risks.</p>
+                    <div class="pt-8 border-t border-outline-variant/10 text-secondary flex items-center gap-2">
+                        <span class="material-symbols-outlined">check_circle</span>
+                        <span class="font-bold text-sm">Real-time Analytics</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <!-- Services Overview -->
-    <div class="py-16">
-        <div class="mx-auto max-w-7xl px-6 lg:px-8">
-            <div class="mx-auto max-w-2xl text-center">
-                <h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Our Services</h2>
-                <p class="mt-4 text-lg leading-8 text-gray-600">
-                    Integrated services to help you manage workflows and resources efficiently.
-                </p>
+    <section class="py-24 max-w-7xl mx-auto px-8">
+        <div class="text-center mb-16">
+            <h2 class="text-4xl font-bold mb-4">A Complete Ecosystem</h2>
+            <p class="text-on-surface-variant">Everything you need to run a high-performance organization.</p>
+        </div>
+        <div class="grid md:grid-cols-3 gap-6">
+            <div class="bg-surface p-8 rounded-2xl border border-outline-variant/20 hover:border-primary/40 hover:bg-surface-container-lowest transition-all">
+                <div class="w-12 h-12 rounded-xl bg-primary-container flex items-center justify-center text-on-primary-container mb-6">
+                    <span class="material-symbols-outlined">account_tree</span>
+                </div>
+                <h3 class="text-xl font-bold mb-3">CFlows</h3>
+                <p class="text-on-surface-variant text-sm mb-6">Advanced conditional flow engine for complex enterprise logic and branching paths.</p>
+                <a class="text-primary font-bold text-sm flex items-center gap-1 group" href="#">
+                    Learn More <span class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                </a>
             </div>
-            <div class="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
-                <dl class="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-2">
-                    {% for service in services %}
-                    <div class="flex flex-col">
-                        <dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-gray-900">
-                            <div class="h-5 w-5 bg-blue-600 rounded-full"></div>
-                            {{ service.name }}
-                        </dt>
-                        <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-600">
-                            <p class="flex-auto">{{ service.description }}</p>
-                            <p class="mt-6">
-                                <a href="#" class="text-sm font-semibold leading-6 text-blue-600">
-                                    Learn more <span aria-hidden="true">→</span>
-                                </a>
-                            </p>
-                        </dd>
-                    </div>
-                    {% endfor %}
-                </dl>
+            <div class="bg-surface p-8 rounded-2xl border border-outline-variant/20 hover:border-primary/40 hover:bg-surface-container-lowest transition-all">
+                <div class="w-12 h-12 rounded-xl bg-primary-container flex items-center justify-center text-on-primary-container mb-6">
+                    <span class="material-symbols-outlined">calendar_today</span>
+                </div>
+                <h3 class="text-xl font-bold mb-3">Scheduling</h3>
+                <p class="text-on-surface-variant text-sm mb-6">Automate task recurrence and resource allocation with our precision scheduling engine.</p>
+                <a class="text-primary font-bold text-sm flex items-center gap-1 group" href="#">
+                    Learn More <span class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                </a>
+            </div>
+            <div class="bg-surface p-8 rounded-2xl border border-outline-variant/20 hover:border-primary/40 hover:bg-surface-container-lowest transition-all">
+                <div class="w-12 h-12 rounded-xl bg-primary-container flex items-center justify-center text-on-primary-container mb-6">
+                    <span class="material-symbols-outlined">dashboard</span>
+                </div>
+                <h3 class="text-xl font-bold mb-3">Dashboard</h3>
+                <p class="text-on-surface-variant text-sm mb-6">Centralized mission control for all active processes, tasks, and organizational KPIs.</p>
+                <a class="text-primary font-bold text-sm flex items-center gap-1 group" href="#">
+                    Learn More <span class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                </a>
+            </div>
+            <div class="bg-surface p-8 rounded-2xl border border-outline-variant/20 hover:border-primary/40 hover:bg-surface-container-lowest transition-all">
+                <div class="w-12 h-12 rounded-xl bg-primary-container flex items-center justify-center text-on-primary-container mb-6">
+                    <span class="material-symbols-outlined">badge</span>
+                </div>
+                <h3 class="text-xl font-bold mb-3">Staff Panel</h3>
+                <p class="text-on-surface-variant text-sm mb-6">Dedicated interface for staff to manage personal workloads and report progress effortlessly.</p>
+                <a class="text-primary font-bold text-sm flex items-center gap-1 group" href="#">
+                    Learn More <span class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                </a>
+            </div>
+            <div class="bg-surface-container-low p-8 rounded-2xl border border-dashed border-outline-variant flex flex-col items-start opacity-75">
+                <div class="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center text-outline mb-6">
+                    <span class="material-symbols-outlined">analytics</span>
+                </div>
+                <div class="flex items-center gap-2 mb-3">
+                    <h3 class="text-xl font-bold">Analytics</h3>
+                    <span class="bg-surface-container-highest text-[10px] px-2 py-0.5 rounded font-black uppercase tracking-tighter">Coming Soon</span>
+                </div>
+                <p class="text-on-surface-variant text-sm mb-6">Predictive modeling and deep historical reporting to drive data-led process optimization.</p>
+            </div>
+            <div class="bg-surface-container-low p-8 rounded-2xl border border-dashed border-outline-variant flex flex-col items-start opacity-75">
+                <div class="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center text-outline mb-6">
+                    <span class="material-symbols-outlined">inventory_2</span>
+                </div>
+                <div class="flex items-center gap-2 mb-3">
+                    <h3 class="text-xl font-bold">Inventory</h3>
+                    <span class="bg-surface-container-highest text-[10px] px-2 py-0.5 rounded font-black uppercase tracking-tighter">Coming Soon</span>
+                </div>
+                <p class="text-on-surface-variant text-sm mb-6">Integrated resource tracking to sync physical assets with your digital workflow steps.</p>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- Features Section -->
-    <div class="bg-white py-16">
-        <div class="mx-auto max-w-7xl px-6 lg:px-8">
-            <div class="mx-auto max-w-2xl text-center">
-                <h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-                    Why Choose MetaTask?
-                </h2>
+    <!-- Features (Two-column) -->
+    <section class="py-24 bg-surface-container-low/50 overflow-hidden">
+        <div class="max-w-7xl mx-auto px-8 grid lg:grid-cols-2 gap-20 items-center">
+            <div>
+                <h2 class="text-4xl font-bold mb-8 leading-tight">Built for the Rigorous Demands of Enterprise IT</h2>
+                <div class="space-y-8">
+                    <div class="flex gap-4">
+                        <div class="text-secondary mt-1">
+                            <span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-1">Multi-tenant Architecture</h4>
+                            <p class="text-on-surface-variant text-sm">Isolate data and customize configurations for different business units or clients seamlessly.</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="text-secondary mt-1">
+                            <span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-1">Granular RBAC</h4>
+                            <p class="text-on-surface-variant text-sm">Enterprise-grade Role-Based Access Control to ensure data security and compliance at every level.</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="text-secondary mt-1">
+                            <span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-1">WebSocket Notifications</h4>
+                            <p class="text-on-surface-variant text-sm">Zero-latency updates keep your team in sync without manual refreshing or lag.</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="text-secondary mt-1">
+                            <span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-1">GDPR</h4>
+                            <p class="text-on-surface-variant text-sm">Global standards for data protection and security are baked into the core platform.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
-                <dl class="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-3">
-                    <div class="flex flex-col">
-                        <dt class="text-base font-semibold leading-7 text-gray-900">
-                            GDPR Compliant
-                        </dt>
-                        <dd class="mt-1 flex flex-auto flex-col text-base leading-7 text-gray-600">
-                            <p class="flex-auto">Built with privacy by design principles and full GDPR compliance.</p>
-                        </dd>
-                    </div>
-                    <div class="flex flex-col">
-                        <dt class="text-base font-semibold leading-7 text-gray-900">
-                            Multi-Service Platform
-                        </dt>
-                        <dd class="mt-1 flex flex-auto flex-col text-base leading-7 text-gray-600">
-                            <p class="flex-auto">Integrated workflow management and job planning in one platform.</p>
-                        </dd>
-                    </div>
-                    <div class="flex flex-col">
-                        <dt class="text-base font-semibold leading-7 text-gray-900">
-                            Scalable Architecture
-                        </dt>
-                        <dd class="mt-1 flex flex-auto flex-col text-base leading-7 text-gray-600">
-                            <p class="flex-auto">Designed to grow with your organization's needs.</p>
-                        </dd>
-                    </div>
-                </dl>
+            <div class="relative">
+                <div class="absolute -top-12 -left-12 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
+                <div class="bg-surface rounded-2xl p-4 shadow-xl border border-outline-variant/10 relative z-10">
+                    <img alt="MetaTask Security Settings" class="rounded-xl shadow-inner w-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOnZ-Vrwj6lJO1Qmeg0D-7BU52NjPjUowGGmmcDgxQiI3GbMciDzCLB2RMeKdN-5xMLv75tKc9aUj19mwWsagEqAX3esRjMJ5GuXa197Bl3Nxc6r3yXcgFU_VXZKs9aov95mhx4r3zwOp7gr_E-T3aHVXUyc2TIGv44JxINBEP-ibwgRResa7lTB9Dakry7bVtvuSUVlnoLCqBtfOJrzpo2QuxTrw2C656AKlVOMjw8oAFUFcArdNEyhb9lg026QjS_D7r1pA9xNY"/>
+                </div>
             </div>
         </div>
-    </div>
-</div>
+    </section>
+
+    <!-- Use Cases -->
+    <section class="py-24 max-w-7xl mx-auto px-8">
+        <h2 class="text-3xl font-bold text-center mb-16">Optimized for Your Industry</h2>
+        <div class="grid md:grid-cols-3 gap-10">
+            <div class="text-center group">
+                <div class="w-16 h-16 mx-auto rounded-full bg-surface-container flex items-center justify-center text-primary mb-6 group-hover:bg-primary group-hover:text-white transition-colors">
+                    <span class="material-symbols-outlined text-3xl">support_agent</span>
+                </div>
+                <h3 class="text-xl font-bold mb-4">Service Delivery</h3>
+                <p class="text-on-surface-variant text-sm leading-relaxed">Automate client onboarding, ticket escalation, and SLA tracking to provide world-class service consistently.</p>
+            </div>
+            <div class="text-center group">
+                <div class="w-16 h-16 mx-auto rounded-full bg-surface-container flex items-center justify-center text-primary mb-6 group-hover:bg-primary group-hover:text-white transition-colors">
+                    <span class="material-symbols-outlined text-3xl">fact_check</span>
+                </div>
+                <h3 class="text-xl font-bold mb-4">Quality Assurance</h3>
+                <p class="text-on-surface-variant text-sm leading-relaxed">Standardize inspection protocols and defect reporting with rigid audit trails and automated compliance checks.</p>
+            </div>
+            <div class="text-center group">
+                <div class="w-16 h-16 mx-auto rounded-full bg-surface-container flex items-center justify-center text-primary mb-6 group-hover:bg-primary group-hover:text-white transition-colors">
+                    <span class="material-symbols-outlined text-3xl">precision_manufacturing</span>
+                </div>
+                <h3 class="text-xl font-bold mb-4">Manufacturing</h3>
+                <p class="text-on-surface-variant text-sm leading-relaxed">Coordinate complex supply chains and production floor tasks with real-time status and bottleneck detection.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why Choose MetaTask -->
+    <section class="py-24 bg-on-surface text-surface">
+        <div class="max-w-7xl mx-auto px-8 grid lg:grid-cols-2 gap-20 items-center">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-white/5 p-6 rounded-2xl border border-white/10">
+                    <h4 class="text-3xl font-bold text-secondary-fixed mb-2">99.9%</h4>
+                    <p class="text-xs uppercase font-bold tracking-widest opacity-60">Uptime SLA</p>
+                </div>
+                <div class="bg-white/5 p-6 rounded-2xl border border-white/10">
+                    <h4 class="text-3xl font-bold text-secondary-fixed mb-2">256-bit</h4>
+                    <p class="text-xs uppercase font-bold tracking-widest opacity-60">AES Encryption</p>
+                </div>
+                <div class="bg-white/5 p-6 rounded-2xl border border-white/10">
+                    <h4 class="text-3xl font-bold text-secondary-fixed mb-2">10k+</h4>
+                    <p class="text-xs uppercase font-bold tracking-widest opacity-60">Daily Tasks</p>
+                </div>
+                <div class="bg-white/5 p-6 rounded-2xl border border-white/10">
+                    <h4 class="text-3xl font-bold text-secondary-fixed mb-2">24/7</h4>
+                    <p class="text-xs uppercase font-bold tracking-widest opacity-60">Global Support</p>
+                </div>
+            </div>
+            <div>
+                <h2 class="text-4xl font-bold mb-8">Uncompromising Performance and Security</h2>
+                <ul class="space-y-6">
+                    <li class="flex items-start gap-4">
+                        <span class="material-symbols-outlined text-secondary-fixed">security</span>
+                        <div>
+                            <span class="font-bold block mb-1">Bank-Grade Security</span>
+                            <p class="text-sm opacity-70">We employ the same security protocols as leading financial institutions to keep your data safe.</p>
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-4">
+                        <span class="material-symbols-outlined text-secondary-fixed">bolt</span>
+                        <div>
+                            <span class="font-bold block mb-1">Hyper-Scalability</span>
+                            <p class="text-sm opacity-70">Our cloud-native infrastructure grows with you, from a small team to a global enterprise.</p>
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-4">
+                        <span class="material-symbols-outlined text-secondary-fixed">person_search</span>
+                        <div>
+                            <span class="font-bold block mb-1">Dedicated Success Manager</span>
+                            <p class="text-sm opacity-70">Enterprise plans include a dedicated expert to help optimize your workflows for peak ROI.</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="py-24 max-w-7xl mx-auto px-8" id="pricing">
+        <div class="text-center mb-16">
+            <h2 class="text-4xl font-bold mb-4">Plans for Every Scale</h2>
+            <p class="text-on-surface-variant">Choose the package that fits your current mission.</p>
+        </div>
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Personal -->
+            <div class="bg-surface p-8 rounded-2xl border border-outline-variant/20 flex flex-col">
+                <h3 class="font-bold text-lg mb-2">Personal</h3>
+                <div class="flex items-baseline gap-1 mb-6">
+                    <span class="text-3xl font-black">$0</span>
+                    <span class="text-on-surface-variant text-sm">/mo</span>
+                </div>
+                <ul class="space-y-4 mb-10 flex-grow text-sm text-on-surface-variant">
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">check</span> 5 Active Workflows</li>
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">check</span> 2 Team Members</li>
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">check</span> Basic Templates</li>
+                </ul>
+                <a href="{% url 'accounts:register' %}" class="w-full py-3 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary-fixed transition-colors text-center">Get Started</a>
+            </div>
+            <!-- Basic Team -->
+            <div class="bg-surface p-8 rounded-2xl border border-outline-variant/20 flex flex-col">
+                <h3 class="font-bold text-lg mb-2">Basic Team</h3>
+                <div class="flex items-baseline gap-1 mb-6">
+                    <span class="text-3xl font-black">$49</span>
+                    <span class="text-on-surface-variant text-sm">/mo</span>
+                </div>
+                <ul class="space-y-4 mb-10 flex-grow text-sm text-on-surface-variant">
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">check</span> 20 Active Workflows</li>
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">check</span> 10 Team Members</li>
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">check</span> Custom Fields</li>
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">check</span> Email Support</li>
+                </ul>
+                <a href="{% url 'accounts:register' %}" class="w-full py-3 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary-fixed transition-colors text-center">Start Trial</a>
+            </div>
+            <!-- Professional -->
+            <div class="bg-white p-8 rounded-2xl border-2 border-primary shadow-xl shadow-primary/10 flex flex-col relative scale-105 z-10">
+                <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-white text-[10px] font-black uppercase tracking-widest px-4 py-1 rounded-full">Most Popular</div>
+                <h3 class="font-bold text-lg mb-2">Professional</h3>
+                <div class="flex items-baseline gap-1 mb-6">
+                    <span class="text-3xl font-black text-primary">$149</span>
+                    <span class="text-on-surface-variant text-sm">/mo</span>
+                </div>
+                <ul class="space-y-4 mb-10 flex-grow text-sm text-on-surface-variant">
+                    <li class="flex items-center gap-2 font-semibold text-on-surface"><span class="material-symbols-outlined text-primary text-lg">check</span> Unlimited Workflows</li>
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">check</span> 50 Team Members</li>
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">check</span> Advanced CFlows</li>
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">check</span> API Access</li>
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">check</span> Priority Support</li>
+                </ul>
+                <a href="{% url 'accounts:register' %}" class="w-full py-3 rounded-xl premium-gradient text-white font-bold hover:opacity-90 transition-opacity text-center">Start Trial</a>
+            </div>
+            <!-- Enterprise -->
+            <div class="bg-surface p-8 rounded-2xl border border-outline-variant/20 flex flex-col">
+                <h3 class="font-bold text-lg mb-2">Enterprise</h3>
+                <div class="flex items-baseline gap-1 mb-6">
+                    <span class="text-3xl font-black">Custom</span>
+                </div>
+                <ul class="space-y-4 mb-10 flex-grow text-sm text-on-surface-variant">
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">check</span> Unlimited Everything</li>
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">check</span> SSO &amp; SAML</li>
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">check</span> White-Labeling</li>
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-lg">check</span> Dedicated Manager</li>
+                </ul>
+                <a href="{% url 'homepage:contact' %}" class="w-full py-3 rounded-xl border-2 border-on-surface text-on-surface font-bold hover:bg-surface-container-highest transition-colors text-center">Contact Sales</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="py-24 bg-surface-container-low">
+        <div class="max-w-3xl mx-auto px-8">
+            <h2 class="text-3xl font-bold text-center mb-12">Frequently Asked Questions</h2>
+            <div class="space-y-4">
+                <div class="bg-surface p-6 rounded-xl border border-outline-variant/20">
+                    <button onclick="this.nextElementSibling.classList.toggle('hidden')" class="w-full text-left font-bold flex justify-between items-center group">
+                        How difficult is it to migrate from our current BPM?
+                        <span class="material-symbols-outlined transition-transform">expand_more</span>
+                    </button>
+                    <p class="hidden mt-4 text-sm text-on-surface-variant leading-relaxed">MetaTask includes a powerful data importer that supports CSV and JSON formats. Our technical team also assists Enterprise clients with white-glove migration services to ensure zero downtime.</p>
+                </div>
+                <div class="bg-surface p-6 rounded-xl border border-outline-variant/20">
+                    <button onclick="this.nextElementSibling.classList.toggle('hidden')" class="w-full text-left font-bold flex justify-between items-center group">
+                        Is my data isolated in the cloud?
+                        <span class="material-symbols-outlined">expand_more</span>
+                    </button>
+                    <p class="hidden mt-4 text-sm text-on-surface-variant">Yes, we utilize a strict multi-tenant architecture with logical database isolation, ensuring your organization's data is never accessible by others.</p>
+                </div>
+                <div class="bg-surface p-6 rounded-xl border border-outline-variant/20">
+                    <button onclick="this.nextElementSibling.classList.toggle('hidden')" class="w-full text-left font-bold flex justify-between items-center group">
+                        Can we customize the workflow interface?
+                        <span class="material-symbols-outlined">expand_more</span>
+                    </button>
+                    <p class="hidden mt-4 text-sm text-on-surface-variant">Absolutely. Our form builder and dashboard widgets are fully configurable to match your specific operational terminology and branding.</p>
+                </div>
+                <div class="bg-surface p-6 rounded-xl border border-outline-variant/20">
+                    <button onclick="this.nextElementSibling.classList.toggle('hidden')" class="w-full text-left font-bold flex justify-between items-center group">
+                        Do you offer on-premise deployment?
+                        <span class="material-symbols-outlined">expand_more</span>
+                    </button>
+                    <p class="hidden mt-4 text-sm text-on-surface-variant">On-premise deployment is available exclusively for our Platinum Enterprise partners with custom compliance requirements.</p>
+                </div>
+                <div class="bg-surface p-6 rounded-xl border border-outline-variant/20">
+                    <button onclick="this.nextElementSibling.classList.toggle('hidden')" class="w-full text-left font-bold flex justify-between items-center group">
+                        What kind of training is provided?
+                        <span class="material-symbols-outlined">expand_more</span>
+                    </button>
+                    <p class="hidden mt-4 text-sm text-on-surface-variant">We offer a comprehensive Documentation library, video tutorials, and live webinar sessions for all new customers.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Security/Compliance Section -->
+    <section class="py-16 bg-surface">
+        <div class="max-w-7xl mx-auto px-8 text-center">
+            <p class="text-[10px] font-black uppercase tracking-[0.3em] text-on-surface-variant/50 mb-8">Trusted by Security-Conscious Teams</p>
+            <div class="flex flex-wrap justify-center gap-12 opacity-40 grayscale hover:grayscale-0 transition-all duration-700">
+                <div class="flex items-center gap-2 font-black text-xl"><span class="material-symbols-outlined">verified_user</span> GDPR</div>
+                <!-- <div class="flex items-center gap-2 font-black text-xl"><span class="material-symbols-outlined">security</span> ISO 27001</div> -->
+                <!-- <div class="flex items-center gap-2 font-black text-xl"><span class="material-symbols-outlined">lock</span> SOC2 TYPE II</div> -->
+                <!-- <div class="flex items-center gap-2 font-black text-xl"><span class="material-symbols-outlined">cloud_done</span> HIPAA</div> -->
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-24">
+        <div class="max-w-7xl mx-auto px-8">
+            <div class="premium-gradient rounded-[2rem] p-12 md:p-20 text-center text-white shadow-2xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
+                <h2 class="text-4xl md:text-5xl font-black mb-6 relative z-10">Ready to Transform Your Workflows?</h2>
+                <p class="text-white/80 max-w-2xl mx-auto mb-10 text-lg relative z-10">Join over 2,500 forward-thinking companies using MetaTask to power their daily operations.</p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center relative z-10">
+                    <a href="{% url 'accounts:register' %}" class="bg-white text-primary px-10 py-4 rounded-xl font-black text-lg hover:bg-primary-fixed transition-colors">Start Your Free Trial</a>
+                    <a href="{% url 'homepage:contact' %}" class="bg-transparent border-2 border-white/40 text-white px-10 py-4 rounded-xl font-bold text-lg hover:bg-white/10 transition-colors">Contact Sales</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
 {% endblock %}

@@ -5,7 +5,8 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
+from django.urls import reverse
 from django.core.paginator import Paginator
 from django.db.models import Count, Q, Avg
 from django.utils import timezone
@@ -14,9 +15,11 @@ from core.models import Organization, UserProfile, Team, AuditLog, SystemConfigu
 from core.permissions import Role, Permission, UserRoleAssignment, RolePermission
 from core.views import require_organization_access
 from core.decorators import require_permission
+from .forms import OrganizationSettingsForm
 from licensing.models import Service, License, CustomLicense, UserLicenseAssignment, LicenseAuditLog, LicenseType
 from licensing.services import LicensingService
 from datetime import timedelta, datetime
+import csv
 import json
 
 
@@ -65,6 +68,34 @@ def log_audit_action(user, action, content_type, object_id=None, object_repr=Non
         })
     
     AuditLog.objects.create(**audit_data)
+
+
+def _organization_locations(organization):
+    """Return sorted unique organization locations from member profiles."""
+    return list(
+        UserProfile.objects.filter(organization=organization)
+        .exclude(location='')
+        .values_list('location', flat=True)
+        .distinct()
+        .order_by('location')
+    )
+
+
+def _activity_icon(action):
+    """Return a Font Awesome icon class for audit actions."""
+    icon_map = {
+        'create': 'fa-plus-circle',
+        'update': 'fa-edit',
+        'delete': 'fa-trash-alt',
+        'login': 'fa-sign-in-alt',
+        'logout': 'fa-sign-out-alt',
+        'assign_role': 'fa-user-tag',
+        'remove_role': 'fa-user-minus',
+        'assign_license': 'fa-id-badge',
+        'revoke_license': 'fa-id-card',
+        'export': 'fa-file-export',
+    }
+    return icon_map.get(action, 'fa-history')
 
 
 @login_required
@@ -186,9 +217,125 @@ def staff_panel_dashboard(request):
         'department_stats': department_stats[:5],  # Top 5 departments
         'active_tasks': active_tasks,
         'system_health': system_health,
+        'available_locations': _organization_locations(organization),
+        'available_roles': Role.objects.filter(
+            organization=organization,
+            is_active=True
+        ).order_by('name'),
     }
     
     return render(request, 'staff_panel/dashboard.html', context)
+
+
+@login_required
+@require_organization_access
+@require_staff_access
+def create_staff_user(request):
+    """Create a user from the staff panel dashboard modal."""
+    if request.method != 'POST':
+        return redirect('staff_panel:dashboard')
+
+    profile = request.user.mediap_profile
+    organization = profile.organization
+
+    if not (profile.is_organization_admin or profile.has_role_permission('user.create')):
+        messages.error(request, 'You do not have permission to create users.')
+        return redirect('staff_panel:dashboard')
+
+    first_name = (request.POST.get('first_name') or '').strip()
+    last_name = (request.POST.get('last_name') or '').strip()
+    email = (request.POST.get('email') or '').strip()
+    raw_username = (request.POST.get('username') or '').strip()
+    password1 = request.POST.get('password1') or ''
+    password2 = request.POST.get('password2') or ''
+    title = (request.POST.get('title') or '').strip()
+    department = (request.POST.get('department') or '').strip()
+    location = (request.POST.get('location') or '').strip()
+    custom_location = (request.POST.get('custom_location') or '').strip()
+    phone = (request.POST.get('phone') or '').strip()
+    mobile = (request.POST.get('mobile') or '').strip()
+    role_id = (request.POST.get('role_id') or '').strip()
+
+    if location == '__custom__':
+        location = custom_location
+
+    if not all([first_name, last_name, email, raw_username, password1, password2, location]):
+        messages.error(request, 'First name, last name, email, username, passwords, and location are required.')
+        return redirect('staff_panel:dashboard')
+
+    if password1 != password2:
+        messages.error(request, 'Passwords do not match.')
+        return redirect('staff_panel:dashboard')
+
+    if User.objects.filter(username__iexact=raw_username).exists():
+        messages.error(request, 'A user with that username already exists.')
+        return redirect('staff_panel:dashboard')
+
+    if User.objects.filter(email__iexact=email).exists():
+        messages.error(request, 'A user with that email already exists.')
+        return redirect('staff_panel:dashboard')
+
+    normalized_username = raw_username.lower()
+
+    try:
+        with transaction.atomic():
+            user_fields = {
+                'username': normalized_username,
+                'email': email,
+                'first_name': first_name,
+                'last_name': last_name,
+                'password': password1,
+            }
+            user_model_field_names = {field.name for field in User._meta.fields}
+            if 'display_username' in user_model_field_names:
+                user_fields['display_username'] = raw_username
+
+            user = User.objects.create_user(**user_fields)
+
+            user_profile = UserProfile.objects.create(
+                user=user,
+                organization=organization,
+                title=title,
+                department=department,
+                location=location,
+                phone=phone,
+                mobile=mobile,
+            )
+
+            if role_id:
+                role = Role.objects.filter(
+                    id=role_id,
+                    organization=organization,
+                    is_active=True
+                ).first()
+                if role:
+                    UserRoleAssignment.objects.create(
+                        user_profile=user_profile,
+                        role=role,
+                        assigned_by=profile,
+                        is_active=True
+                    )
+
+            log_audit_action(
+                user=request.user,
+                action='create',
+                content_type='UserProfile',
+                object_id=user_profile.id,
+                object_repr=user.get_full_name() or user.username,
+                changes={
+                    'username': user.username,
+                    'email': user.email,
+                    'department': user_profile.department,
+                    'location': user_profile.location,
+                },
+                request=request,
+            )
+
+        messages.success(request, f'User {user.get_full_name() or user.username} created successfully.')
+    except Exception as exc:
+        messages.error(request, f'Unable to create user: {exc}')
+
+    return redirect('staff_panel:dashboard')
 
 
 @login_required
@@ -198,76 +345,66 @@ def organization_settings(request):
     """Organization settings and configuration"""
     profile = request.user.mediap_profile
     organization = profile.organization
-    
+    old_values = {
+        'name': organization.name,
+        'description': organization.description or '',
+        'website': organization.website or '',
+        'email': organization.email or '',
+        'phone': organization.phone or '',
+        'address': organization.address or '',
+        'organization_type': organization.organization_type,
+        'timezone': organization.timezone,
+        'time_format_24h': organization.time_format_24h,
+    }
+
     if request.method == 'POST':
-        # Store old values for audit log
-        old_values = {
-            'name': organization.name,
-            'description': organization.description or '',
-            'website': organization.website or '',
-            'email': organization.email or '',
-            'phone': organization.phone or '',
-            'address': organization.address or '',
-            'timezone': organization.timezone,
-            'time_format_24h': organization.time_format_24h,
-        }
-        
-        # Update organization fields
-        organization.name = request.POST.get('name', organization.name).strip()
-        organization.description = request.POST.get('description', organization.description or '').strip()
-        organization.website = request.POST.get('website', organization.website or '').strip()
-        organization.email = request.POST.get('email', organization.email or '').strip()
-        organization.phone = request.POST.get('phone', organization.phone or '').strip()
-        organization.address = request.POST.get('address', organization.address or '').strip()
-        organization.timezone = request.POST.get('timezone', organization.timezone)
-        organization.time_format_24h = request.POST.get('time_format_24h') == 'on'
-        
-        try:
-            with transaction.atomic():
-                organization.save()
-                
-                # Track changes for audit log
-                changes = {}
-                for field, old_value in old_values.items():
-                    new_value = getattr(organization, field)
-                    if str(old_value) != str(new_value):
-                        changes[field] = {'old': old_value, 'new': new_value}
-                
-                if changes:
-                    log_audit_action(
-                        user=request.user,
-                        action='update',
-                        content_type='Organization',
-                        object_id=organization.id,
-                        object_repr=organization.name,
-                        changes=changes,
-                        request=request
+        form = OrganizationSettingsForm(request.POST, instance=organization)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    updated_org = form.save()
+
+                    changes = {}
+                    tracked_fields = (
+                        'name',
+                        'description',
+                        'website',
+                        'email',
+                        'phone',
+                        'address',
+                        'organization_type',
+                        'timezone',
+                        'time_format_24h',
                     )
-                
-                messages.success(request, 'Organization settings updated successfully.')
-                
-        except Exception as e:
-            messages.error(request, f'Error updating settings: {str(e)}')
-        
-        return redirect('staff_panel:organization_settings')
-    
-    # Get timezone choices (simplified list)
-    timezone_choices = [
-        ('UTC', 'UTC'),
-        ('America/New_York', 'Eastern Time'),
-        ('America/Chicago', 'Central Time'),
-        ('America/Denver', 'Mountain Time'),
-        ('America/Los_Angeles', 'Pacific Time'),
-        ('Europe/London', 'GMT'),
-        ('Europe/Paris', 'Central European Time'),
-        ('Asia/Tokyo', 'Japan Standard Time'),
-        ('Australia/Sydney', 'Australian Eastern Time'),
-    ]
-    
+                    for field in tracked_fields:
+                        new_value = getattr(updated_org, field)
+                        if str(old_values[field]) != str(new_value):
+                            changes[field] = {'old': old_values[field], 'new': new_value}
+
+                    if changes:
+                        log_audit_action(
+                            user=request.user,
+                            action='update',
+                            content_type='Organization',
+                            object_id=updated_org.id,
+                            object_repr=updated_org.name,
+                            changes=changes,
+                            request=request,
+                        )
+
+                    messages.success(request, 'Organization settings updated successfully.')
+                return redirect('staff_panel:organization_settings')
+            except Exception as e:
+                messages.error(request, f'Error updating settings: {str(e)}')
+        else:
+            messages.error(request, 'Please correct the highlighted fields and try again.')
+    else:
+        form = OrganizationSettingsForm(instance=organization)
+
     context = {
         'organization': organization,
         'profile': profile,
-        'timezone_choices': timezone_choices,
+        'form': form,
     }
     
     return render(request, 'staff_panel/organization_settings.html', context)
@@ -1940,9 +2077,13 @@ def license_management(request):
 @require_staff_access
 def assign_user_license(request):
     """Assign a license to a user"""
+    next_url = (request.POST.get('next') or '').strip()
+    fallback_url = reverse('staff_panel:license_management')
+    redirect_url = next_url if next_url.startswith('/') else fallback_url
+
     if request.method != 'POST':
         messages.error(request, 'Invalid request method.')
-        return redirect('staff_panel:license_management')
+        return redirect(redirect_url)
     
     profile = get_user_profile(request)
     organization = profile.organization
@@ -1980,7 +2121,7 @@ def assign_user_license(request):
     except Exception as e:
         messages.error(request, f'Error assigning license: {str(e)}')
     
-    return redirect('staff_panel:license_management')
+    return redirect(redirect_url)
 
 
 @login_required
@@ -1988,9 +2129,13 @@ def assign_user_license(request):
 @require_staff_access
 def revoke_user_license(request):
     """Revoke a license from a user"""
+    next_url = (request.POST.get('next') or '').strip()
+    fallback_url = reverse('staff_panel:license_management')
+    redirect_url = next_url if next_url.startswith('/') else fallback_url
+
     if request.method != 'POST':
         messages.error(request, 'Invalid request method.')
-        return redirect('staff_panel:license_management')
+        return redirect(redirect_url)
     
     profile = get_user_profile(request)
     organization = profile.organization
@@ -2026,7 +2171,7 @@ def revoke_user_license(request):
     except Exception as e:
         messages.error(request, f'Error revoking license: {str(e)}')
     
-    return redirect('staff_panel:license_management')
+    return redirect(redirect_url)
 
 
 @login_required
@@ -2555,3 +2700,488 @@ def remove_user_from_role(request, role_id, user_id):
         return JsonResponse({'error': 'User is not assigned to this role'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+# ============================================================================
+# USER MANAGEMENT & PROFILE VIEWS
+# ============================================================================
+
+@login_required
+@require_organization_access
+@require_staff_access
+def user_management(request):
+    """User management dashboard - list all users with search and filtering"""
+    profile = request.user.mediap_profile
+    organization = profile.organization
+    
+    # Check permission
+    if not (profile.is_organization_admin or profile.has_role_permission('user.view')):
+        messages.error(request, 'You do not have permission to view users.')
+        return redirect('staff_panel:dashboard')
+    
+    # Get search and filter parameters
+    search_query = (request.GET.get('search', '') or '').strip()
+    filter_status = (request.GET.get('status', '') or '').strip()
+    filter_department = (request.GET.get('department', '') or '').strip()
+    filter_location = (request.GET.get('location', '') or '').strip()
+    filter_role = (request.GET.get('role', '') or '').strip()
+    
+    # Start with all users in organization
+    users_query = UserProfile.objects.filter(
+        organization=organization
+    ).select_related('user')
+    
+    # Apply search filter
+    if search_query:
+        users_query = users_query.filter(
+            Q(user__first_name__icontains=search_query) |
+            Q(user__last_name__icontains=search_query) |
+            Q(user__username__icontains=search_query) |
+            Q(user__email__icontains=search_query) |
+            Q(title__icontains=search_query)
+        )
+    
+    # Apply status filter
+    if filter_status == 'active':
+        users_query = users_query.filter(user__is_active=True)
+    elif filter_status == 'inactive':
+        users_query = users_query.filter(user__is_active=False)
+    
+    # Apply department filter
+    if filter_department:
+        users_query = users_query.filter(department=filter_department)
+    
+    # Apply location filter
+    if filter_location:
+        users_query = users_query.filter(location=filter_location)
+    
+    # Apply role filter
+    if filter_role:
+        role = Role.objects.filter(id=filter_role, organization=organization).first()
+        if role:
+            role_user_ids = UserRoleAssignment.objects.filter(
+                role=role
+            ).values_list('user_profile_id', flat=True)
+            users_query = users_query.filter(id__in=role_user_ids)
+    
+    # Order by last/first name
+    users_query = users_query.order_by('user__last_name', 'user__first_name')
+    
+    # Get unique departments and locations for filters
+    departments = organization.members.exclude(department='').values_list(
+        'department', flat=True
+    ).distinct().order_by('department')
+    
+    locations = organization.members.exclude(location='').values_list(
+        'location', flat=True
+    ).distinct().order_by('location')
+    
+    available_roles = Role.objects.filter(
+        organization=organization,
+        is_active=True
+    ).order_by('name')
+    
+    # Pagination
+    paginator = Paginator(users_query, 25)
+    page_number = request.GET.get('page', 1)
+    users_page = paginator.get_page(page_number)
+    
+    # Build user list with their roles and status
+    users_with_roles = []
+    for user_profile in users_page:
+        role_assignments = UserRoleAssignment.objects.filter(
+            user_profile=user_profile,
+            is_active=True
+        ).select_related('role')
+        
+        user_data = {
+            'id': user_profile.id,
+            'user': user_profile.user,
+            'profile': user_profile,
+            'title': user_profile.title,
+            'department': user_profile.department,
+            'location': user_profile.location,
+            'roles': [a.role for a in role_assignments],
+            'status': 'Active' if user_profile.user.is_active else 'Inactive',
+            'last_login': user_profile.user.last_login,
+            'date_joined': user_profile.user.date_joined,
+        }
+        users_with_roles.append(user_data)
+    
+    context = {
+        'profile': profile,
+        'users': users_with_roles,
+        'page_obj': users_page,
+        'departments': departments,
+        'locations': locations,
+        'available_roles': available_roles,
+        'search_query': search_query,
+        'filters': {
+            'status': filter_status,
+            'department': filter_department,
+            'location': filter_location,
+            'role': filter_role,
+        },
+        'total_users': organization.members.count(),
+        'total_active': organization.members.filter(user__is_active=True).count(),
+        'total_inactive': organization.members.filter(user__is_active=False).count(),
+    }
+    
+    return render(request, 'staff_panel/user_management.html', context)
+
+
+@login_required
+@require_organization_access
+@require_staff_access
+def user_detail(request, user_id):
+    """Display detailed user profile"""
+    profile = request.user.mediap_profile
+    organization = profile.organization
+    
+    # Permission check
+    if not (profile.is_organization_admin or profile.has_role_permission('user.view')):
+        messages.error(request, 'You do not have permission to view users.')
+        return redirect('staff_panel:user_management')
+    
+    # Get user
+    user_profile = get_object_or_404(
+        UserProfile,
+        id=user_id,
+        organization=organization
+    )
+    
+    # Get user roles
+    role_assignments = UserRoleAssignment.objects.filter(
+        user_profile=user_profile
+    ).select_related('role').order_by('-assigned_at')
+    
+    # Get user licenses
+    user_licenses = UserLicenseAssignment.objects.filter(
+        user_profile=user_profile,
+        is_active=True
+    ).select_related(
+        'license__license_type__service',
+        'license__custom_license__service'
+    ).order_by('-assigned_at')
+
+    assigned_license_ids = list(user_licenses.values_list('license_id', flat=True))
+    available_licenses = License.objects.filter(
+        organization=organization,
+        status__in=['active', 'trial']
+    ).select_related(
+        'license_type__service',
+        'custom_license__service'
+    ).order_by('license_type__service__name', 'license_type__display_name')
+    if assigned_license_ids:
+        available_licenses = available_licenses.exclude(id__in=assigned_license_ids)
+    
+    # Get recent audit logs for this user
+    user_audit_logs = AuditLog.objects.filter(
+        user=user_profile.user
+    ).order_by('-timestamp')[:20]
+    
+    # Get user activity from their profile
+    activity_list = []
+    for log in user_audit_logs:
+        activity_list.append({
+            'action': log.action,
+            'icon': _activity_icon(log.action),
+            'description': f"{log.get_action_display()} {log.content_type} {log.object_repr}",
+            'timestamp': log.timestamp,
+        })
+    
+    # Calculate user statistics
+    login_count = AuditLog.objects.filter(
+        user=user_profile.user,
+        action='login'
+    ).count()
+    
+    # Get team memberships
+    team_memberships = user_profile.user_teams.all() if hasattr(user_profile, 'user_teams') else []
+    
+    context = {
+        'profile': profile,
+        'user_profile': user_profile,
+        'user': user_profile.user,
+        'role_assignments': role_assignments,
+        'user_licenses': user_licenses,
+        'activity_list': activity_list,
+        'login_count': login_count,
+        'team_memberships': team_memberships,
+        'available_roles': Role.objects.filter(organization=organization, is_active=True),
+        'available_licenses': available_licenses,
+        'can_manage_licenses': profile.is_organization_admin or profile.has_staff_panel_access,
+    }
+    
+    return render(request, 'staff_panel/user_detail.html', context)
+
+
+@login_required
+@require_organization_access
+@require_staff_access
+def user_edit(request, user_id):
+    """Edit user profile information"""
+    profile = request.user.mediap_profile
+    organization = profile.organization
+    
+    # Permission check
+    if not (profile.is_organization_admin or profile.has_role_permission('user.edit')):
+        messages.error(request, 'You do not have permission to edit users.')
+        return redirect('staff_panel:user_management')
+    
+    user_profile = get_object_or_404(
+        UserProfile,
+        id=user_id,
+        organization=organization
+    )
+    
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                # Track changes for audit log
+                old_values = {
+                    'first_name': user_profile.user.first_name,
+                    'last_name': user_profile.user.last_name,
+                    'email': user_profile.user.email,
+                    'title': user_profile.title,
+                    'department': user_profile.department,
+                    'location': user_profile.location,
+                    'phone': user_profile.phone,
+                    'mobile': user_profile.mobile,
+                    'bio': user_profile.bio,
+                    'is_active': user_profile.user.is_active,
+                }
+                
+                # Update user fields
+                user_profile.user.first_name = (request.POST.get('first_name') or '').strip()
+                user_profile.user.last_name = (request.POST.get('last_name') or '').strip()
+                user_profile.user.email = (request.POST.get('email') or '').strip()
+                user_profile.user.save()
+                
+                # Update profile fields
+                user_profile.title = (request.POST.get('title') or '').strip()
+                user_profile.department = (request.POST.get('department') or '').strip()
+                user_profile.location = (request.POST.get('location') or '').strip()
+                user_profile.phone = (request.POST.get('phone') or '').strip()
+                user_profile.mobile = (request.POST.get('mobile') or '').strip()
+                user_profile.bio = (request.POST.get('bio') or '').strip()
+                user_profile.save()
+                
+                # Handle status change
+                new_status = request.POST.get('status') == 'active'
+                if new_status != user_profile.user.is_active:
+                    user_profile.user.is_active = new_status
+                    user_profile.user.save()
+                
+                # Log the changes
+                changes = {}
+                for key, old_value in old_values.items():
+                    if key == 'is_active':
+                        new_value = user_profile.user.is_active
+                    elif key in ['first_name', 'last_name', 'email']:
+                        new_value = getattr(user_profile.user, key)
+                    else:
+                        new_value = getattr(user_profile, key)
+                    
+                    if new_value != old_value:
+                        changes[key] = {'old': old_value, 'new': new_value}
+                
+                if changes:
+                    log_audit_action(
+                        user=request.user,
+                        action='update',
+                        content_type='UserProfile',
+                        object_id=user_profile.id,
+                        object_repr=user_profile.user.get_full_name(),
+                        changes=changes,
+                        request=request,
+                    )
+                
+                messages.success(request, f'User {user_profile.user.get_full_name()} updated successfully.')
+                return redirect('staff_panel:user_detail', user_id=user_profile.id)
+        
+        except Exception as e:
+            messages.error(request, f'Error updating user: {str(e)}')
+    
+    context = {
+        'profile': profile,
+        'user_profile': user_profile,
+        'user': user_profile.user,
+        'locations': _organization_locations(organization),
+    }
+    
+    return render(request, 'staff_panel/user_edit.html', context)
+
+
+@login_required
+@require_organization_access
+@require_staff_access
+def user_activity(request, user_id):
+    """View user activity and audit history"""
+    profile = request.user.mediap_profile
+    organization = profile.organization
+    
+    # Permission check
+    if not (profile.is_organization_admin or profile.has_role_permission('user.view')):
+        messages.error(request, 'You do not have permission to view user activity.')
+        return redirect('staff_panel:user_management')
+    
+    user_profile = get_object_or_404(
+        UserProfile,
+        id=user_id,
+        organization=organization
+    )
+    
+    # Get activity filters
+    action_filter = (request.GET.get('action', '') or '').strip()
+    
+    # Get audit logs for this user
+    audit_logs = AuditLog.objects.filter(
+        user=user_profile.user
+    )
+    
+    if action_filter:
+        audit_logs = audit_logs.filter(action=action_filter)
+    
+    audit_logs = audit_logs.order_by('-timestamp')
+    
+    # Get distinct actions for filter
+    available_actions = AuditLog.objects.filter(
+        user=user_profile.user
+    ).values_list('action', flat=True).distinct()
+    
+    # Format activity list
+    activities = []
+    for log in audit_logs:
+        activities.append({
+            'action': log.action,
+            'icon': _activity_icon(log.action),
+            'description': f"{log.get_action_display()} {log.content_type} {log.object_repr}",
+            'timestamp': log.timestamp,
+            'content_type': log.content_type,
+            'changes': log.changes,
+        })
+    
+    # Pagination
+    paginator = Paginator(activities, 50)
+    page_number = request.GET.get('page', 1)
+    activities_page = paginator.get_page(page_number)
+    
+    context = {
+        'profile': profile,
+        'user_profile': user_profile,
+        'user': user_profile.user,
+        'page_obj': activities_page,
+        'available_actions': available_actions,
+        'action_filter': action_filter,
+        'total_activities': len(activities),
+    }
+    
+    return render(request, 'staff_panel/user_activity.html', context)
+
+
+@login_required
+@require_organization_access
+@require_staff_access
+def toggle_user_status(request, user_id):
+    """Activate or deactivate a user"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=400)
+    
+    profile = request.user.mediap_profile
+    organization = profile.organization
+    
+    # Permission check
+    if not (profile.is_organization_admin or profile.has_role_permission('user.edit')):
+        return JsonResponse({'error': 'You do not have permission to edit users.'}, status=403)
+    
+    try:
+        user_profile = UserProfile.objects.get(
+            id=user_id,
+            organization=organization
+        )
+        
+        old_status = user_profile.user.is_active
+        user_profile.user.is_active = not user_profile.user.is_active
+        user_profile.user.save()
+        
+        # Log the action
+        log_audit_action(
+            user=request.user,
+            action='update',
+            content_type='UserProfile',
+            object_id=user_profile.id,
+            object_repr=user_profile.user.get_full_name(),
+            changes={
+                'is_active': {'old': old_status, 'new': user_profile.user.is_active}
+            },
+            request=request,
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'new_status': 'Active' if user_profile.user.is_active else 'Inactive',
+            'message': f'User {user_profile.user.get_full_name()} has been {"activated" if user_profile.user.is_active else "deactivated"}.'
+        })
+    
+    except UserProfile.DoesNotExist:
+        return JsonResponse({'error': 'User not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_organization_access
+@require_staff_access
+def export_users(request):
+    """Export user list as CSV"""
+    profile = request.user.mediap_profile
+    organization = profile.organization
+    
+    # Permission check
+    if not (profile.is_organization_admin or profile.has_role_permission('user.view')):
+        messages.error(request, 'You do not have permission to export users.')
+        return redirect('staff_panel:user_management')
+    
+    # Get all users
+    users = UserProfile.objects.filter(
+        organization=organization
+    ).select_related('user').order_by('user__last_name', 'user__first_name')
+    
+    # Create CSV response
+    response = HttpResponse(content_type='text/csv')
+    timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+    response['Content-Disposition'] = f'attachment; filename="users_export_{timestamp}.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow([
+        'Username', 'Email', 'First Name', 'Last Name', 'Title',
+        'Department', 'Location', 'Phone', 'Status', 'Date Joined', 'Last Login'
+    ])
+    
+    for user_profile in users:
+        writer.writerow([
+            user_profile.user.username,
+            user_profile.user.email,
+            user_profile.user.first_name,
+            user_profile.user.last_name,
+            user_profile.title,
+            user_profile.department,
+            user_profile.location,
+            user_profile.phone,
+            'Active' if user_profile.user.is_active else 'Inactive',
+            user_profile.user.date_joined.strftime('%Y-%m-%d %H:%M'),
+            user_profile.user.last_login.strftime('%Y-%m-%d %H:%M') if user_profile.user.last_login else 'Never',
+        ])
+    
+    # Log the export action
+    log_audit_action(
+        user=request.user,
+        action='export',
+        content_type='UserProfile',
+        object_repr='User List Export',
+        changes={'exported_count': users.count()},
+        request=request,
+    )
+    
+    return response

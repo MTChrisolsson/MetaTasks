@@ -4,339 +4,154 @@
 
 {% block staff_panel_content %}
 <div class="space-y-6">
-    <!-- Header -->
     <div class="border-b border-gray-200 pb-4">
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900">
                     <i class="fas fa-file-alt mr-2"></i>System Logs
                 </h1>
-                <p class="mt-1 text-sm text-gray-500">
-                    Monitor system activity and audit trails
-                </p>
+                <p class="mt-1 text-sm text-gray-500">Monitor organization audit activity and export filtered logs.</p>
             </div>
             <div class="flex space-x-3">
-                <button type="button" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                    <i class="fas fa-download mr-2"></i>
-                    Export Logs
-                </button>
-                <button type="button" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                    <i class="fas fa-sync mr-2"></i>
-                    Refresh
-                </button>
+                <a href="?{% if request.GET %}{{ request.GET.urlencode }}&{% endif %}export=csv" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                    <i class="fas fa-file-csv mr-2"></i>Export CSV
+                </a>
+                <a href="?{% if request.GET %}{{ request.GET.urlencode }}&{% endif %}export=json" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                    <i class="fas fa-code mr-2"></i>Export JSON
+                </a>
             </div>
         </div>
     </div>
 
-    <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="stat-card bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-file-alt text-white"></i>
-                        </div>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Total Logs</dt>
-                            <dd class="text-lg font-medium text-gray-900">{{ total_logs|default:1247 }}</dd>
-                        </dl>
-                    </div>
+        <div class="bg-white overflow-hidden shadow rounded-lg p-5">
+            <div class="flex items-center">
+                <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center text-white"><i class="fas fa-file-alt"></i></div>
+                <div class="ml-4">
+                    <dt class="text-sm font-medium text-gray-500">Filtered Logs</dt>
+                    <dd class="text-lg font-medium text-gray-900">{{ filtered_count }}</dd>
                 </div>
             </div>
         </div>
-
-        <div class="stat-card bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-check-circle text-white"></i>
-                        </div>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Info</dt>
-                            <dd class="text-lg font-medium text-gray-900">{{ info_logs|default:1124 }}</dd>
-                        </dl>
-                    </div>
+        <div class="bg-white overflow-hidden shadow rounded-lg p-5">
+            <div class="flex items-center">
+                <div class="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center text-white"><i class="fas fa-info-circle"></i></div>
+                <div class="ml-4">
+                    <dt class="text-sm font-medium text-gray-500">Info</dt>
+                    <dd class="text-lg font-medium text-gray-900">{{ info_logs }}</dd>
                 </div>
             </div>
         </div>
-
-        <div class="stat-card bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-exclamation-triangle text-white"></i>
-                        </div>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Warnings</dt>
-                            <dd class="text-lg font-medium text-gray-900">{{ warning_logs|default:89 }}</dd>
-                        </dl>
-                    </div>
+        <div class="bg-white overflow-hidden shadow rounded-lg p-5">
+            <div class="flex items-center">
+                <div class="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center text-white"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="ml-4">
+                    <dt class="text-sm font-medium text-gray-500">Warnings</dt>
+                    <dd class="text-lg font-medium text-gray-900">{{ warning_logs }}</dd>
                 </div>
             </div>
         </div>
-
-        <div class="stat-card bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-times-circle text-white"></i>
-                        </div>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Errors</dt>
-                            <dd class="text-lg font-medium text-gray-900">{{ error_logs|default:34 }}</dd>
-                        </dl>
-                    </div>
+        <div class="bg-white overflow-hidden shadow rounded-lg p-5">
+            <div class="flex items-center">
+                <div class="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center text-white"><i class="fas fa-times-circle"></i></div>
+                <div class="ml-4">
+                    <dt class="text-sm font-medium text-gray-500">Errors</dt>
+                    <dd class="text-lg font-medium text-gray-900">{{ error_logs }}</dd>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Filters -->
-    <div class="bg-white shadow rounded-lg">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">
-                <i class="fas fa-filter mr-2"></i>Filter Logs
-            </h3>
-        </div>
-        <div class="p-6">
-            <form class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                    <label for="log_level" class="block text-sm font-medium text-gray-700">Log Level</label>
-                    <select id="log_level" name="log_level" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                        <option value="">All Levels</option>
-                        <option value="DEBUG">Debug</option>
-                        <option value="INFO">Info</option>
-                        <option value="WARNING">Warning</option>
-                        <option value="ERROR">Error</option>
-                        <option value="CRITICAL">Critical</option>
-                    </select>
-                </div>
-                
-                <div>
-                    <label for="source" class="block text-sm font-medium text-gray-700">Source</label>
-                    <select id="source" name="source" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                        <option value="">All Sources</option>
-                        <option value="auth">Authentication</option>
-                        <option value="workflow">Workflow</option>
-                        <option value="integration">Integrations</option>
-                        <option value="api">API</option>
-                        <option value="database">Database</option>
-                        <option value="system">System</option>
-                    </select>
-                </div>
-                
-                <div>
-                    <label for="date_from" class="block text-sm font-medium text-gray-700">From Date</label>
-                    <input type="date" id="date_from" name="date_from" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                </div>
-                
-                <div>
-                    <label for="date_to" class="block text-sm font-medium text-gray-700">To Date</label>
-                    <input type="date" id="date_to" name="date_to" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                </div>
-                
-                <div class="md:col-span-2">
-                    <label for="search" class="block text-sm font-medium text-gray-700">Search Message</label>
-                    <input type="text" id="search" name="search" placeholder="Search in log messages..." class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                </div>
-                
-                <div class="md:col-span-2 flex items-end space-x-3">
-                    <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
-                        <i class="fas fa-search mr-2"></i>Apply Filters
-                    </button>
-                    <button type="button" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                        <i class="fas fa-times mr-2"></i>Clear Filters
-                    </button>
-                    <button type="button" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                        <i class="fas fa-file-excel mr-2"></i>Export Filtered
-                    </button>
-                </div>
-            </form>
-        </div>
+    <div class="bg-white shadow rounded-lg p-6">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Action</label>
+                <select name="action" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <option value="">All actions</option>
+                    {% for action_name in available_actions %}
+                    <option value="{{ action_name }}" {% if filters.action == action_name %}selected{% endif %}>{{ action_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Content Type</label>
+                <select name="content_type" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <option value="">All types</option>
+                    {% for ct in available_content_types %}
+                    <option value="{{ ct }}" {% if filters.content_type == ct %}selected{% endif %}>{{ ct }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Date Range</label>
+                <select name="date_range" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    {% for value, label in date_range_options %}
+                    <option value="{{ value }}" {% if filters.date_range == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">User</label>
+                <input type="text" name="user" value="{{ filters.user }}" placeholder="username/email" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Search</label>
+                <input type="text" name="search" value="{{ filters.search }}" placeholder="object or changes" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            </div>
+            <div class="md:col-span-2 lg:col-span-5 flex gap-3">
+                <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                    <i class="fas fa-search mr-2"></i>Apply Filters
+                </button>
+                <a href="{% url 'staff_panel:system_logs' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    <i class="fas fa-times mr-2"></i>Clear
+                </a>
+            </div>
+        </form>
     </div>
 
-    <!-- Logs Table -->
-    <div class="bg-white shadow rounded-lg">
-        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">Recent Activity</h3>
-            <div class="flex items-center space-x-3">
-                <label class="flex items-center">
-                    <input type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                    <span class="ml-2 text-sm text-gray-600">Auto-refresh</span>
-                </label>
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Object</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for log in logs %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ log.action }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ log.content_type }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{% if log.user %}{{ log.user.username }}{% else %}System{% endif %}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600">{{ log.object_repr|default:'-' }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="px-6 py-8 text-center text-gray-500">No audit logs found for the selected filters.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if logs.has_other_pages %}
+        <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+            <div class="text-sm text-gray-600">
+                Page {{ logs.number }} of {{ logs.paginator.num_pages }}
+            </div>
+            <div class="flex gap-2">
+                {% if logs.has_previous %}
+                <a href="?page={{ logs.previous_page_number }}&action={{ filters.action }}&user={{ filters.user }}&content_type={{ filters.content_type }}&date_range={{ filters.date_range }}&search={{ filters.search }}" class="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 bg-white hover:bg-gray-50">Previous</a>
+                {% endif %}
+                {% if logs.has_next %}
+                <a href="?page={{ logs.next_page_number }}&action={{ filters.action }}&user={{ filters.user }}&content_type={{ filters.content_type }}&date_range={{ filters.date_range }}&search={{ filters.search }}" class="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 bg-white hover:bg-gray-50">Next</a>
+                {% endif %}
             </div>
         </div>
-        
-        <div class="overflow-hidden">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Level</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Message</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    <!-- Sample log entries -->
-                    <tr class="hover:bg-gray-50 border-l-4 border-green-400">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            Sep 09, 19:45:23
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">INFO</span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">auth</span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center">
-                                <span class="h-6 w-6 rounded-full bg-indigo-500 flex items-center justify-center text-white text-xs">JD</span>
-                                <span class="ml-2 text-sm text-gray-900">john.doe</span>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="text-sm text-gray-900 font-mono">User logged in successfully from 192.168.1.100</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button type="button" class="text-indigo-600 hover:text-indigo-900">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    
-                    <tr class="hover:bg-gray-50 border-l-4 border-yellow-400">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            Sep 09, 19:42:15
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">WARNING</span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">integration</span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="text-sm text-gray-500">System</span>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="text-sm text-gray-900 font-mono">Slack integration rate limit reached, retrying in 60 seconds</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <div class="flex space-x-2">
-                                <button type="button" class="text-indigo-600 hover:text-indigo-900">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <button type="button" class="text-yellow-600 hover:text-yellow-900">
-                                    <i class="fas fa-bug"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    
-                    <tr class="hover:bg-gray-50 border-l-4 border-red-400">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            Sep 09, 19:38:47
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">ERROR</span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">database</span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="text-sm text-gray-500">System</span>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="text-sm text-gray-900 font-mono">Database connection timeout after 30 seconds</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <div class="flex space-x-2">
-                                <button type="button" class="text-indigo-600 hover:text-indigo-900">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <button type="button" class="text-red-600 hover:text-red-900">
-                                    <i class="fas fa-bug"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    
-                    <tr class="hover:bg-gray-50 border-l-4 border-green-400">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            Sep 09, 19:35:12
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">INFO</span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">workflow</span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center">
-                                <span class="h-6 w-6 rounded-full bg-green-500 flex items-center justify-center text-white text-xs">AS</span>
-                                <span class="ml-2 text-sm text-gray-900">admin.staff</span>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="text-sm text-gray-900 font-mono">Workflow "Customer Onboarding" completed successfully</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button type="button" class="text-indigo-600 hover:text-indigo-900">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        
-        <!-- Pagination -->
-        <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-            <div class="flex-1 flex justify-between sm:hidden">
-                <button type="button" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                    Previous
-                </button>
-                <button type="button" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                    Next
-                </button>
-            </div>
-            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <div>
-                    <p class="text-sm text-gray-700">
-                        Showing <span class="font-medium">1</span> to <span class="font-medium">10</span> of <span class="font-medium">97</span> results
-                    </p>
-                </div>
-                <div>
-                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                        <button type="button" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                            <span class="sr-only">Previous</span>
-                            <i class="fas fa-chevron-left"></i>
-                        </button>
-                        <button type="button" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">1</button>
-                        <button type="button" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-gray-50 text-sm font-medium text-gray-500">2</button>
-                        <button type="button" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">3</button>
-                        <button type="button" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                            <span class="sr-only">Next</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                    </nav>
-                </div>
-            </div>
-        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

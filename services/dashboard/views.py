@@ -15,6 +15,7 @@ from django.views.decorators.http import require_GET, require_POST
 from core.models import CalendarEvent, Notification, Team, UserProfile
 from core.services.permission_service import PermissionService
 from core.views import require_organization_access
+from licensing.models import Service, License
 from services.scheduling.models import BookingRequest, SchedulableResource
 
 from .models import Conversation, ConversationParticipant, DashboardPreference, Message
@@ -226,6 +227,64 @@ def overview(request):
             status__in=ACTIVE_BOOKING_STATUSES,
         ).select_related("resource", "requested_by__user").order_by("requested_start")[:5]
 
+    # Get all services and licensed services
+    available_services = Service.objects.filter(is_active=True).order_by('sort_order', 'name')
+    
+    # Get user's licenses through their organization
+    licenses = License.objects.filter(
+        organization=profile.organization,
+        status__in=['active', 'trial']
+    ).select_related('license_type', 'license_type__service')
+    
+    # Build service access map
+    licensed_services = {}
+    licensed_slugs = set()
+    for license in licenses:
+        service = license.license_type.service
+        licensed_services[service.slug] = {
+            'service': service,
+            'license': license,
+            'usage': {
+                'users': license.usage_percentage('users'),
+                'workflows': license.usage_percentage('workflows'),
+                'projects': license.usage_percentage('projects'),
+                'storage_gb': license.usage_percentage('storage_gb'),
+            }
+        }
+        licensed_slugs.add(service.slug)
+
+    # Build quick actions based on user's permissions and services
+    quick_actions = []
+    is_org_admin = profile.is_organization_admin
+    
+    # Add service-specific actions if user has staff panel access
+    if 'staff-panel' in licensed_slugs and profile.has_staff_panel_access:
+        quick_actions.append({
+            'title': 'Staff Panel',
+            'description': 'Manage operations and system settings',
+            'url': '/services/staff-panel/',
+            'icon': 'fas fa-gears',
+            'color': 'purple'
+        })
+    
+    if 'cflows' in licensed_slugs:
+        quick_actions.append({
+            'title': 'Create Workflow',
+            'description': 'Set up a new workflow process',
+            'url': '/services/cflows/workflows/create/',
+            'icon': 'fas fa-plus-circle',
+            'color': 'blue'
+        })
+    
+    if 'scheduling' in licensed_slugs:
+        quick_actions.append({
+            'title': 'New Booking',
+            'description': 'Schedule a resource or event',
+            'url': '/services/scheduling/',
+            'icon': 'fas fa-calendar-plus',
+            'color': 'green'
+        })
+
     context = {
         **shell_context,
         "preferences": preferences,
@@ -239,6 +298,10 @@ def overview(request):
         "recent_notifications": recent_notifications,
         "upcoming_events": upcoming_events,
         "upcoming_bookings": upcoming_bookings,
+        "available_services": available_services,
+        "licensed_services": licensed_services,
+        "quick_actions": quick_actions,
+        "is_org_admin": is_org_admin,
     }
     return render(request, "service_dashboard/overview.html", context)
 

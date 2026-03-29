@@ -1,129 +1,53 @@
-{% extends 'base.html' %}
+{% extends 'base_public.html' %}
 
 {% block title %}Choose Account Type - MetaTask{% endblock %}
+{% block main_classes %}pt-28 pb-20{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-    <div class="sm:mx-auto sm:w-full sm:max-w-2xl">
-        <div class="flex justify-center">
-            <h1 class="text-3xl font-extrabold text-gray-900">MetaTask</h1>
-        </div>
-        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Choose Your Account Type
-        </h2>
-        <p class="mt-2 text-center text-sm text-gray-600">
-            Select the option that best describes how you'll use MetaTask
-        </p>
-    </div>
-
-    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-4xl">
-        <!-- Account Type Selection Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 px-4">
-            <!-- Personal Account -->
-            <div class="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
-                <div class="p-8">
-                    <div class="text-center">
-                        <div class="text-5xl mb-4">👤</div>
-                        <h3 class="text-2xl font-bold text-gray-900 mb-4">Personal Account</h3>
-                        <p class="text-gray-600 mb-6">Perfect for individual users managing personal projects and tasks</p>
-                        
-                        <div class="text-left space-y-3 mb-8">
-                            <div class="flex items-center">
-                                <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                                </svg>
-                                <span class="text-sm">Personal workspace</span>
-                            </div>
-                            <div class="flex items-center">
-                                <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                                </svg>
-                                <span class="text-sm">Project management tools</span>
-                            </div>
-                            <div class="flex items-center">
-                                <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                                </svg>
-                                <span class="text-sm">Basic analytics</span>
-                            </div>
-                            <div class="flex items-center">
-                                <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                                </svg>
-                                <span class="text-sm">Free forever</span>
-                            </div>
-                        </div>
-                        
-                        <a href="{% url 'accounts:personal_register' %}" 
-                           class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 inline-block">
-                            Create Personal Account
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Business Account -->
-            <div class="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 border-2 border-blue-500">
-                <div class="bg-blue-500 text-white text-center py-2 text-sm font-medium">
-                    RECOMMENDED FOR TEAMS
-                </div>
-                <div class="p-8">
-                    <div class="text-center">
-                        <div class="text-5xl mb-4">🏢</div>
-                        <h3 class="text-2xl font-bold text-gray-900 mb-4">Business Account</h3>
-                        <p class="text-gray-600 mb-6">Designed for teams, organizations, and businesses of all sizes</p>
-                        
-                        <div class="text-left space-y-3 mb-8">
-                            <div class="flex items-center">
-                                <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                                </svg>
-                                <span class="text-sm">Team collaboration tools</span>
-                            </div>
-                            <div class="flex items-center">
-                                <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                                </svg>
-                                <span class="text-sm">Advanced project management</span>
-                            </div>
-                            <div class="flex items-center">
-                                <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                                </svg>
-                                <span class="text-sm">Team member invitations</span>
-                            </div>
-                            <div class="flex items-center">
-                                <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                                </svg>
-                                <span class="text-sm">Advanced analytics & reporting</span>
-                            </div>
-                            <div class="flex items-center">
-                                <svg class="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                                </svg>
-                                <span class="text-sm">Role-based access control</span>
-                            </div>
-                        </div>
-                        
-                        <a href="{% url 'accounts:business_register' %}" 
-                           class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 inline-block">
-                            Create Business Account
-                        </a>
-                    </div>
-                </div>
-            </div>
+<section class="px-6 py-10 lg:px-8">
+    <div class="mx-auto max-w-6xl">
+        <div class="mx-auto max-w-3xl text-center">
+            <span class="inline-flex rounded-full bg-secondary-container px-4 py-1.5 text-xs font-black uppercase tracking-[0.2em] text-on-secondary-container">Registration</span>
+            <h1 class="mt-6 text-4xl font-black tracking-tight text-on-surface md:text-5xl">Choose your account type</h1>
+            <p class="mt-3 text-sm text-on-surface-variant">Select the onboarding path that matches how you plan to use MetaTask.</p>
         </div>
 
-        <!-- Already have an account -->
-        <div class="text-center mt-8">
-            <p class="text-gray-600">
-                Already have an account? 
-                <a href="{% url 'accounts:login' %}" class="font-medium text-blue-600 hover:text-blue-500">
-                    Sign in here
-                </a>
-            </p>
+        <div class="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2">
+            <article class="public-card p-8">
+                <div class="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-fixed text-on-primary-fixed-variant">
+                    <span class="material-symbols-outlined">person</span>
+                </div>
+                <h2 class="mt-6 text-2xl font-black text-on-surface">Personal Account</h2>
+                <p class="mt-3 text-sm text-on-surface-variant">For individual users managing personal projects and tasks.</p>
+                <ul class="mt-6 space-y-3 text-sm text-on-surface-variant">
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-secondary text-base">check_circle</span> Personal workspace</li>
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-secondary text-base">check_circle</span> Project management tools</li>
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-secondary text-base">check_circle</span> Basic analytics</li>
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-secondary text-base">check_circle</span> Free forever</li>
+                </ul>
+                <a href="{% url 'accounts:personal_register' %}" class="public-button-secondary mt-8 w-full">Create Personal Account</a>
+            </article>
+
+            <article class="public-card border-2 border-primary p-8 shadow-float">
+                <div class="inline-flex rounded-full bg-primary px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white">
+                    Recommended For Teams
+                </div>
+                <h2 class="mt-6 text-2xl font-black text-on-surface">Business Account</h2>
+                <p class="mt-3 text-sm text-on-surface-variant">For teams and organizations that need collaborative workflows and role governance.</p>
+                <ul class="mt-6 space-y-3 text-sm text-on-surface-variant">
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-secondary text-base">check_circle</span> Team collaboration tools</li>
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-secondary text-base">check_circle</span> Advanced project management</li>
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-secondary text-base">check_circle</span> Team invitations and roles</li>
+                    <li class="flex items-center gap-2"><span class="material-symbols-outlined text-secondary text-base">check_circle</span> Expanded analytics and reporting</li>
+                </ul>
+                <a href="{% url 'accounts:business_register' %}" class="public-button-primary mt-8 w-full">Create Business Account</a>
+            </article>
+        </div>
+
+        <div class="mt-8 text-center text-sm text-on-surface-variant">
+            Already have an account?
+            <a href="{% url 'accounts:login' %}" class="public-link">Sign in here</a>
         </div>
     </div>
-</div>
+</section>
 {% endblock %}

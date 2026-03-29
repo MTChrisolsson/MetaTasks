@@ -73,9 +73,7 @@
                     </div>
                     {% if license_info.max_users %}
                     <div class="usage-bar h-2">
-                        {% with percentage=license_info.assigned_users|mul:100|div:license_info.max_users %}
-                        <div class="usage-fill bg-blue-600" style="width: {{ percentage }}%"></div>
-                        {% endwith %}
+                        <div class="usage-fill bg-blue-600" style="width: {% widthratio license_info.assigned_users license_info.max_users 100 %}%"></div>
                     </div>
                     {% endif %}
                 </div>
@@ -119,9 +117,7 @@
                         </span>
                     </div>
                     <div class="usage-bar h-2">
-                        {% with percentage=license_info.assigned_users|mul:100|div:license_info.max_users %}
-                        <div class="usage-fill bg-indigo-600" style="width: {{ percentage }}%"></div>
-                        {% endwith %}
+                        <div class="usage-fill bg-indigo-600" style="width: {% widthratio license_info.assigned_users license_info.max_users 100 %}%"></div>
                     </div>
                 </div>
                 

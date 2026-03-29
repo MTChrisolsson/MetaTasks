@@ -19,29 +19,6 @@
     </div>
 </div>
 
-{% if messages %}
-    {% for message in messages %}
-        <div class="mb-6 p-4 rounded-xl {% if message.tags == 'error' %}bg-gradient-to-r from-red-50 to-red-100 border border-red-200 text-red-800{% elif message.tags == 'success' %}bg-gradient-to-r from-green-50 to-green-100 border border-green-200 text-green-800{% else %}bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 text-blue-800{% endif %} shadow-sm">
-            <div class="flex items-center">
-                {% if message.tags == 'error' %}
-                    <div class="flex-shrink-0 w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center mr-3">
-                        <i class="fas fa-exclamation-triangle text-white text-sm"></i>
-                    </div>
-                {% elif message.tags == 'success' %}
-                    <div class="flex-shrink-0 w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center mr-3">
-                        <i class="fas fa-check text-white text-sm"></i>
-                    </div>
-                {% else %}
-                    <div class="flex-shrink-0 w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center mr-3">
-                        <i class="fas fa-info text-white text-sm"></i>
-                    </div>
-                {% endif %}
-                <span class="font-medium">{{ message }}</span>
-            </div>
-        </div>
-    {% endfor %}
-{% endif %}
-
 <form method="post" enctype="multipart/form-data" class="space-y-8">
     {% csrf_token %}
     
@@ -151,57 +128,27 @@
         </div>
     </div>
 
-    <!-- Organization Branding -->
+    <!-- Organization Profile -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div class="flex items-center mb-6">
             <div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center mr-4">
-                <i class="fas fa-palette text-white"></i>
+                <i class="fas fa-sitemap text-white"></i>
             </div>
             <div>
-                <h3 class="text-xl font-semibold text-gray-900">Organization Branding</h3>
-                <p class="text-sm text-gray-600">Customize your organization's visual identity</p>
+                <h3 class="text-xl font-semibold text-gray-900">Organization Profile</h3>
+                <p class="text-sm text-gray-600">Set organization type and classification</p>
             </div>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 gap-6">
             <div>
-                <label for="{{ form.logo.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                    Organization Logo
+                <label for="{{ form.organization_type.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    Organization Type
                 </label>
-                <div class="flex items-center space-x-4">
-                    {% if organization.logo %}
-                        <img src="{{ organization.logo.url }}" alt="Current logo" class="w-16 h-16 object-cover rounded-lg border border-gray-300">
-                    {% else %}
-                        <div class="w-16 h-16 bg-gray-100 rounded-lg border border-gray-300 flex items-center justify-center">
-                            <i class="fas fa-image text-gray-400"></i>
-                        </div>
-                    {% endif %}
-                    <div class="flex-1">
-                        {{ form.logo }}
-                        <p class="mt-1 text-xs text-gray-500">Upload a new logo (recommended: 200x200px, PNG/JPG)</p>
-                    </div>
-                </div>
-                {% if form.logo.errors %}
+                {{ form.organization_type }}
+                {% if form.organization_type.errors %}
                     <p class="mt-1 text-sm text-red-600 flex items-center">
                         <i class="fas fa-exclamation-circle mr-1"></i>
-                        {{ form.logo.errors.0 }}
-                    </p>
-                {% endif %}
-            </div>
-            
-            <div>
-                <label for="{{ form.primary_color.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                    Primary Color
-                </label>
-                <div class="flex items-center space-x-3">
-                    {{ form.primary_color }}
-                    <div class="w-10 h-10 rounded-lg border border-gray-300" 
-                         style="background-color: {{ form.primary_color.value|default:'#6366f1' }}"></div>
-                </div>
-                <p class="mt-1 text-xs text-gray-500">Choose your organization's primary brand color</p>
-                {% if form.primary_color.errors %}
-                    <p class="mt-1 text-sm text-red-600 flex items-center">
-                        <i class="fas fa-exclamation-circle mr-1"></i>
-                        {{ form.primary_color.errors.0 }}
+                        {{ form.organization_type.errors.0 }}
                     </p>
                 {% endif %}
             </div>
@@ -233,31 +180,18 @@
                 {% endif %}
             </div>
             
-            <div>
-                <label for="{{ form.language.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                    Default Language
-                </label>
-                {{ form.language }}
-                {% if form.language.errors %}
-                    <p class="mt-1 text-sm text-red-600 flex items-center">
-                        <i class="fas fa-exclamation-circle mr-1"></i>
-                        {{ form.language.errors.0 }}
-                    </p>
-                {% endif %}
-            </div>
-            
             <div class="md:col-span-2">
                 <div class="flex items-center space-x-3">
-                    {{ form.allow_public_registration }}
-                    <label for="{{ form.allow_public_registration.id_for_label }}" class="text-sm font-medium text-gray-700">
-                        Allow Public Registration
+                    {{ form.time_format_24h }}
+                    <label for="{{ form.time_format_24h.id_for_label }}" class="text-sm font-medium text-gray-700">
+                        Use 24-hour Time Format
                     </label>
                 </div>
-                <p class="mt-1 text-xs text-gray-500">Enable users to register for your organization without an invitation</p>
-                {% if form.allow_public_registration.errors %}
+                <p class="mt-1 text-xs text-gray-500">Switch between 24-hour and 12-hour display for organization times</p>
+                {% if form.time_format_24h.errors %}
                     <p class="mt-1 text-sm text-red-600 flex items-center">
                         <i class="fas fa-exclamation-circle mr-1"></i>
-                        {{ form.allow_public_registration.errors.0 }}
+                        {{ form.time_format_24h.errors.0 }}
                     </p>
                 {% endif %}
             </div>
@@ -278,17 +212,4 @@
     </div>
 </form>
 
-<script>
-// Color picker preview
-document.addEventListener('DOMContentLoaded', function() {
-    const colorInput = document.querySelector('input[type="color"]');
-    const colorPreview = document.querySelector('.w-10.h-10');
-    
-    if (colorInput && colorPreview) {
-        colorInput.addEventListener('input', function() {
-            colorPreview.style.backgroundColor = this.value;
-        });
-    }
-});
-</script>
 {% endblock %}

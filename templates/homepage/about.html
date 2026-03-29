@@ -1,39 +1,40 @@
-{% extends 'base.html' %}
+{% extends 'base_public.html' %}
+
+{% block title %}About MetaTask{% endblock %}
 
 {% block content %}
-<div class="px-4 py-6 sm:px-0">
-    <div class="text-center py-16">
-        <h1 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
-            About MetaTask
-        </h1>
-        <p class="mt-6 text-lg leading-8 text-gray-600 max-w-3xl mx-auto">
-            MetaTask is a comprehensive service application designed to streamline workflows for organizations, 
-            small teams, companies, and individuals. Our platform integrates multiple services including 
-            workflow management and job planning functionality.
-        </p>
+<section class="px-6 py-16 lg:px-8">
+    <div class="mx-auto max-w-6xl">
+        <div class="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+            <div>
+                <span class="mb-5 inline-flex rounded-full bg-primary-fixed px-4 py-1.5 text-xs font-black uppercase tracking-[0.2em] text-on-primary-fixed-variant">About MetaTask</span>
+                <h1 class="text-4xl font-black tracking-tight text-on-surface md:text-6xl">A workflow platform built for teams that need clarity under pressure.</h1>
+                <p class="mt-6 max-w-2xl text-lg leading-8 text-on-surface-variant">MetaTask was designed to unify process execution, scheduling, and organizational control into one operating surface, without forcing teams to stitch together disconnected tools.</p>
+            </div>
+            <div class="public-card-muted p-8">
+                <p class="text-xs font-black uppercase tracking-[0.2em] text-secondary">Core stance</p>
+                <ul class="mt-6 space-y-4 text-sm leading-7 text-on-surface-variant">
+                    <li>Process visibility should be native, not bolted on.</li>
+                    <li>Security and privacy cannot be afterthoughts in operational software.</li>
+                    <li>Growth should not force a platform rewrite.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="mt-12 grid gap-6 md:grid-cols-3">
+            <article class="public-card p-8">
+                <h2 class="text-xl font-black text-on-surface">Mission</h2>
+                <p class="mt-4 text-sm leading-7 text-on-surface-variant">Provide organizations with a platform that simplifies complex work while preserving privacy, accountability, and control.</p>
+            </article>
+            <article class="public-card p-8">
+                <h2 class="text-xl font-black text-on-surface">Foundation</h2>
+                <p class="mt-4 text-sm leading-7 text-on-surface-variant">Built on Django, PostgreSQL, Redis, and modern web technologies for a robust, scalable service architecture.</p>
+            </article>
+            <article class="public-card p-8">
+                <h2 class="text-xl font-black text-on-surface">Principles</h2>
+                <p class="mt-4 text-sm leading-7 text-on-surface-variant">GDPR-aware by design, role-based access control, modular services, and a system built to evolve with team complexity.</p>
+            </article>
+        </div>
     </div>
-
-    <div class="prose prose-lg max-w-4xl mx-auto">
-        <h2>Our Mission</h2>
-        <p>
-            To provide organizations with a unified platform that simplifies complex business processes 
-            while maintaining the highest standards of privacy and data protection.
-        </p>
-
-        <h2>Key Features</h2>
-        <ul>
-            <li>GDPR compliant by design</li>
-            <li>Multi-service integration</li>
-            <li>Role-based access control</li>
-            <li>Scalable architecture</li>
-            <li>Open-source foundation</li>
-        </ul>
-
-        <h2>Technical Foundation</h2>
-        <p>
-            Built with Django, PostgreSQL, Redis, and modern web technologies, MetaTask provides 
-            a robust and secure platform for your organization's needs.
-        </p>
-    </div>
-</div>
+</section>
 {% endblock %}

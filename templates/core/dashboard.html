@@ -8,23 +8,30 @@
     <div class="bg-white shadow-sm border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="py-6">
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between flex-col sm:flex-row gap-4">
                     <div>
-                        <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
-                        <p class="mt-2 text-lg text-gray-600">Welcome back, {{ request.user.get_full_name|default:request.user.username }}</p>
-                        <p class="text-sm text-gray-500">{{ organization.name }} {% if organization.organization_type == 'business' %}<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 ml-2">Business</span>{% else %}<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 ml-2">Personal</span>{% endif %}</p>
+                        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard</h1>
+                        <p class="mt-1 text-sm sm:text-base text-gray-600">Welcome back, {{ request.user.get_full_name|default:request.user.username }}</p>
+                        <p class="text-xs sm:text-sm text-gray-500 mt-1">
+                            {{ organization.name }} 
+                            {% if organization.organization_type == 'business' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 ml-2">Business</span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 ml-2">Personal</span>
+                            {% endif %}
+                        </p>
                     </div>
                     <!-- Grouped buttons container -->
-                    <div class="flex space-x-3">
-                        {% if is_org_admin %}
-                        <a href="/admin/core/organization/{{ organization.id }}/change/" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    <div class="flex flex-wrap gap-2 sm:gap-3">
+                        {% if request.user.is_staff or request.user.is_superuser %}
+                        <a href="/admin/core/organization/{{ organization.id }}/change/" class="inline-flex items-center px-3 sm:px-4 py-2 border border-gray-300 shadow-sm text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                             <i class="fas fa-cog mr-2"></i>
-                            Admin Panel
+                            <span class="hidden sm:inline">Admin</span>
                         </a>
                         {% endif %}
                         {% if profile.has_staff_panel_access or profile.is_organization_admin %}
                         <a href="/services/staff-panel/" 
-                           class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                           class="inline-flex items-center px-3 sm:px-4 py-2 border border-gray-300 shadow-sm text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
                            title="Staff Panel">
                             <i class="fas fa-cog mr-2"></i>
                             <span class="hidden sm:inline">Staff Panel</span>
@@ -36,150 +43,170 @@
         </div>
     </div>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="space-y-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div class="space-y-6 sm:space-y-8">
             
-            <!-- Organization Overview Stats -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div class="bg-white rounded-lg shadow p-6">
+            <!-- Organization Overview Stats (Mobile: 2x2, Desktop: 4 cols) -->
+            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+                <div class="bg-white rounded-lg shadow p-4 sm:p-6">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
                             <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
                                 <i class="fas fa-users text-white"></i>
                             </div>
                         </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500">Team Members</p>
-                            <p class="text-2xl font-semibold text-gray-900">{{ org_stats.total_users }}</p>
+                        <div class="ml-3 sm:ml-4">
+                            <p class="text-xs sm:text-sm font-medium text-gray-500">Team Members</p>
+                            <p class="text-lg sm:text-2xl font-semibold text-gray-900">{{ org_stats.total_users }}</p>
                         </div>
                     </div>
                 </div>
                 
-                <div class="bg-white rounded-lg shadow p-6">
+                <div class="bg-white rounded-lg shadow p-4 sm:p-6">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
                             <div class="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
                                 <i class="fas fa-layer-group text-white"></i>
                             </div>
                         </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500">Active Teams</p>
-                            <p class="text-2xl font-semibold text-gray-900">{{ org_stats.active_teams }}</p>
+                        <div class="ml-3 sm:ml-4">
+                            <p class="text-xs sm:text-sm font-medium text-gray-500">Active Teams</p>
+                            <p class="text-lg sm:text-2xl font-semibold text-gray-900">{{ org_stats.active_teams }}</p>
                         </div>
                     </div>
                 </div>
                 
                 {% if cflows_stats %}
-                <div class="bg-white rounded-lg shadow p-6">
+                <div class="bg-white rounded-lg shadow p-4 sm:p-6">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
                             <div class="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center">
                                 <i class="fas fa-project-diagram text-white"></i>
                             </div>
                         </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500">Active Workflows</p>
-                            <p class="text-2xl font-semibold text-gray-900">{{ cflows_stats.total_workflows }}</p>
+                        <div class="ml-3 sm:ml-4">
+                            <p class="text-xs sm:text-sm font-medium text-gray-500">Active Workflows</p>
+                            <p class="text-lg sm:text-2xl font-semibold text-gray-900">{{ cflows_stats.total_workflows }}</p>
                         </div>
                     </div>
                 </div>
                 
-                <div class="bg-white rounded-lg shadow p-6">
+                <div class="bg-white rounded-lg shadow p-4 sm:p-6">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
                             <div class="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
                                 <i class="fas fa-tasks text-white"></i>
                             </div>
                         </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500">My Work Items</p>
-                            <p class="text-2xl font-semibold text-gray-900">{{ cflows_stats.my_assigned_items }}</p>
+                        <div class="ml-3 sm:ml-4">
+                            <p class="text-xs sm:text-sm font-medium text-gray-500">My Work Items</p>
+                            <p class="text-lg sm:text-2xl font-semibold text-gray-900">{{ cflows_stats.my_assigned_items }}</p>
                         </div>
                     </div>
                 </div>
                 {% else %}
-                <div class="bg-white rounded-lg shadow p-6">
+                <div class="bg-white rounded-lg shadow p-4 sm:p-6">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
                             <div class="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center">
                                 <i class="fas fa-calendar text-white"></i>
                             </div>
                         </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500">Events This Month</p>
-                            <p class="text-2xl font-semibold text-gray-900">{{ org_stats.events_this_month }}</p>
+                        <div class="ml-3 sm:ml-4">
+                            <p class="text-xs sm:text-sm font-medium text-gray-500">Events This Month</p>
+                            <p class="text-lg sm:text-2xl font-semibold text-gray-900">{{ org_stats.events_this_month }}</p>
                         </div>
                     </div>
                 </div>
                 
-                <div class="bg-white rounded-lg shadow p-6">
+                <div class="bg-white rounded-lg shadow p-4 sm:p-6">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
                             <div class="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
                                 <i class="fas fa-chart-line text-white"></i>
                             </div>
                         </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500">Total Events</p>
-                            <p class="text-2xl font-semibold text-gray-900">{{ org_stats.total_events }}</p>
+                        <div class="ml-3 sm:ml-4">
+                            <p class="text-xs sm:text-sm font-medium text-gray-500">Total Events</p>
+                            <p class="text-lg sm:text-2xl font-semibold text-gray-900">{{ org_stats.total_events }}</p>
                         </div>
                     </div>
                 </div>
                 {% endif %}
             </div>
 
-            <!-- Services Overview -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Quick Actions -->
+            {% if quick_actions %}
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-base sm:text-lg font-semibold text-gray-900">Quick Actions</h2>
+                </div>
+                <div class="p-4 sm:p-6">
+                    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                        {% for action in quick_actions %}
+                        <a href="{{ action.url }}" class="flex flex-col items-center justify-center p-3 sm:p-4 rounded-lg border border-gray-200 bg-white hover:shadow-md transition-shadow text-center">
+                            <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center mb-2 bg-{{ action.color }}-100">
+                                <i class="{{ action.icon }} text-base sm:text-lg text-{{ action.color }}-600"></i>
+                            </div>
+                            <p class="text-xs sm:text-sm font-medium text-gray-900">{{ action.title }}</p>
+                            <p class="text-xs text-gray-500 mt-1">{{ action.description }}</p>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Services Section (Licensed + Available) -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
                 <!-- Licensed Services -->
                 <div class="bg-white rounded-lg shadow">
-                    <div class="px-6 py-4 border-b border-gray-200">
-                        <h2 class="text-lg font-semibold text-gray-900">Your Services</h2>
-                        <p class="text-sm text-gray-600">Services you have access to</p>
+                    <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
+                        <h2 class="text-base sm:text-lg font-semibold text-gray-900">Your Services</h2>
+                        <p class="text-xs sm:text-sm text-gray-600 mt-1">Services you have access to</p>
                     </div>
-                    <div class="p-6">
+                    <div class="p-4 sm:p-6">
                         {% if licensed_services %}
-                            <div class="space-y-4">
+                            <div class="space-y-3 sm:space-y-4">
                                 {% for slug, service_data in licensed_services.items %}
-                                <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <div class="w-10 h-10 rounded-lg flex items-center justify-center mr-3" style="background-color: {{ service_data.service.color }}20;">
-                                                <i class="{{ service_data.service.icon|default:'fas fa-cube' }} text-lg" style="color: {{ service_data.service.color }};"></i>
+                                <div class="border border-gray-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow">
+                                    <div class="flex items-start justify-between">
+                                        <div class="flex items-start gap-3 flex-1 min-w-0">
+                                            <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style="background-color: {{ service_data.service.color }}20;">
+                                                <i class="{{ service_data.service.icon|default:'fas fa-cube' }} text-base sm:text-lg" style="color: {{ service_data.service.color }};"></i>
                                             </div>
-                                            <div>
-                                                <h3 class="font-semibold text-gray-900">{{ service_data.service.name }}</h3>
-                                                <p class="text-sm text-gray-600">{{ service_data.service.description }}</p>
-                                                <div class="flex items-center mt-1">
-                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <div class="min-w-0 flex-1">
+                                                <h3 class="text-sm sm:text-base font-semibold text-gray-900">{{ service_data.service.name }}</h3>
+                                                <p class="text-xs text-gray-600 mt-1 line-clamp-2">{{ service_data.service.description }}</p>
+                                                <div class="flex items-center mt-2 gap-1 flex-wrap">
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                                         {{ service_data.license.license_type.display_name }}
                                                     </span>
                                                     {% if service_data.license.status == 'trial' %}
-                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 ml-2">
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                                                         Trial
                                                     </span>
                                                     {% endif %}
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="flex flex-col space-y-2">
-                                            <a href="/services/{{ slug }}/" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                                                Open <i class="fas fa-arrow-right ml-1"></i>
-                                            </a>
-                                        </div>
+                                        <a href="/services/{{ slug }}/" class="flex-shrink-0 ml-2 inline-flex items-center justify-center px-2 sm:px-3 py-2 border border-transparent text-xs sm:text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors">
+                                            <i class="fas fa-arrow-right"></i>
+                                        </a>
                                     </div>
                                     
                                     <!-- Usage Indicators -->
                                     {% if service_data.usage %}
-                                    <div class="mt-4 grid grid-cols-2 gap-4 text-sm">
+                                    <div class="mt-3 grid grid-cols-2 gap-2 sm:gap-3 text-xs">
                                         {% for resource, percentage in service_data.usage.items %}
                                         {% if percentage > 0 %}
                                         <div>
                                             <div class="flex justify-between items-center mb-1">
-                                                <span class="text-gray-600 capitalize">{{ resource|title }}</span>
-                                                <span class="font-medium">{{ percentage|floatformat:1 }}%</span>
+                                                <span class="text-gray-600 capitalize">{{ resource|truncatewords:1 }}</span>
+                                                <span class="font-medium">{{ percentage|floatformat:0 }}%</span>
                                             </div>
-                                            <div class="w-full bg-gray-200 rounded-full h-2">
-                                                <div class="h-2 rounded-full {% if percentage >= 90 %}bg-red-500{% elif percentage >= 75 %}bg-yellow-500{% else %}bg-green-500{% endif %}" style="width: {{ percentage }}%"></div>
+                                            <div class="w-full bg-gray-200 rounded-full h-1.5">
+                                                <div class="h-1.5 rounded-full {% if percentage >= 90 %}bg-red-500{% elif percentage >= 75 %}bg-yellow-500{% else %}bg-green-500{% endif %}" style="width: {{ percentage }}%"></div>
                                             </div>
                                         </div>
                                         {% endif %}
@@ -191,9 +218,9 @@
                             </div>
                         {% else %}
                             <div class="text-center py-8">
-                                <i class="fas fa-cube text-4xl text-gray-300 mb-4"></i>
-                                <p class="text-gray-500">No services activated yet</p>
-                                <p class="text-sm text-gray-400 mt-1">Contact your organization admin to get started</p>
+                                <i class="fas fa-cube text-3xl sm:text-4xl text-gray-300 mb-3 sm:mb-4"></i>
+                                <p class="text-sm text-gray-500">No services activated yet</p>
+                                <p class="text-xs text-gray-400 mt-1">Contact your organization admin to get started</p>
                             </div>
                         {% endif %}
                     </div>
@@ -201,36 +228,36 @@
 
                 <!-- Available Services -->
                 <div class="bg-white rounded-lg shadow">
-                    <div class="px-6 py-4 border-b border-gray-200">
-                        <h2 class="text-lg font-semibold text-gray-900">Available Services</h2>
-                        <p class="text-sm text-gray-600">Expand your capabilities</p>
+                    <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
+                        <h2 class="text-base sm:text-lg font-semibold text-gray-900">Available Services</h2>
+                        <p class="text-xs sm:text-sm text-gray-600 mt-1">Expand your capabilities</p>
                     </div>
-                    <div class="p-6">
-                        <div class="space-y-4">
+                    <div class="p-4 sm:p-6">
+                        <div class="space-y-3 sm:space-y-4">
                             {% for service in available_services %}
                             {% if service.slug not in licensed_services %}
-                            <div class="border border-gray-200 rounded-lg p-4">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center">
-                                        <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mr-3">
-                                            <i class="{{ service.icon|default:'fas fa-cube' }} text-lg text-gray-400"></i>
+                            <div class="border border-gray-200 rounded-lg p-3 sm:p-4">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="flex items-start gap-3 flex-1 min-w-0">
+                                        <div class="w-8 h-8 sm:w-10 sm:h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                                            <i class="{{ service.icon|default:'fas fa-cube' }} text-base sm:text-lg text-gray-400"></i>
                                         </div>
-                                        <div>
-                                            <h3 class="font-semibold text-gray-900">{{ service.name }}</h3>
-                                            <p class="text-sm text-gray-600">{{ service.description }}</p>
+                                        <div class="min-w-0 flex-1">
+                                            <h3 class="text-sm sm:text-base font-semibold text-gray-900">{{ service.name }}</h3>
+                                            <p class="text-xs text-gray-600 mt-1 line-clamp-2">{{ service.description }}</p>
                                         </div>
                                     </div>
-                                    <div class="flex flex-col space-y-2">
-                                        {% if is_org_admin %}
-                                        <a href="/admin/licensing/license/add/?organization={{ organization.id }}&service={{ service.id }}" class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                                            Get License
-                                        </a>
-                                        {% else %}
-                                        <span class="inline-flex items-center px-3 py-2 text-sm leading-4 font-medium rounded-md text-gray-500 bg-gray-100">
-                                            Contact Admin
-                                        </span>
-                                        {% endif %}
-                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    {% if is_org_admin and request.user.is_staff or is_org_admin and request.user.is_superuser %}
+                                    <a href="/admin/licensing/license/add/?organization={{ organization.id }}&service={{ service.id }}" class="inline-flex items-center justify-center w-full px-3 py-2 border border-gray-300 text-xs sm:text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                                        Get License
+                                    </a>
+                                    {% else %}
+                                    <span class="inline-flex items-center justify-center w-full px-3 py-2 text-xs sm:text-sm leading-4 font-medium rounded-md text-gray-500 bg-gray-100">
+                                        Contact Admin
+                                    </span>
+                                    {% endif %}
                                 </div>
                             </div>
                             {% endif %}
@@ -240,157 +267,69 @@
                 </div>
             </div>
 
-            <!-- Quick Actions & Recent Activity -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <!-- Quick Actions -->
-                <div class="bg-white rounded-lg shadow">
-                    <div class="px-6 py-4 border-b border-gray-200">
-                        <h2 class="text-lg font-semibold text-gray-900">Quick Actions</h2>
-                    </div>
-                    <div class="p-6">
-                        {% if quick_actions %}
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {% for action in quick_actions %}
-                            <a href="{{ action.url }}" class="flex items-center p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow hover:border-{{ action.color }}-200">
-                                <div class="flex-shrink-0">
-                                    <div class="w-10 h-10 bg-{{ action.color }}-100 rounded-lg flex items-center justify-center">
-                                        <i class="{{ action.icon }} text-{{ action.color }}-600"></i>
-                                    </div>
-                                </div>
-                                <div class="ml-4">
-                                    <h3 class="text-sm font-medium text-gray-900">{{ action.title }}</h3>
-                                    <p class="text-xs text-gray-600">{{ action.description }}</p>
-                                </div>
-                            </a>
-                            {% endfor %}
-                        </div>
-                        {% else %}
-                        <div class="text-center py-8">
-                            <i class="fas fa-rocket text-4xl text-gray-300 mb-4"></i>
-                            <p class="text-gray-500">No quick actions available</p>
-                            <p class="text-sm text-gray-400 mt-1">Actions will appear based on your access level</p>
-                        </div>
-                        {% endif %}
-                    </div>
+            <!-- Upcoming Events -->
+            {% if upcoming_events %}
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-4 sm:px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h2 class="text-base sm:text-lg font-semibold text-gray-900">Upcoming Events</h2>
+                    <a href="/core/calendar/" class="text-xs sm:text-sm text-blue-600 hover:text-blue-800">View all</a>
                 </div>
-
-                <!-- Recent Activity / Upcoming Events -->
-                <div class="bg-white rounded-lg shadow">
-                    <div class="px-6 py-4 border-b border-gray-200">
-                        <div class="flex items-center justify-between">
-                            <h2 class="text-lg font-semibold text-gray-900">Upcoming Events</h2>
-                            <a href="/core/calendar/" class="text-sm text-blue-600 hover:text-blue-800">View all</a>
-                        </div>
-                    </div>
-                    <div class="p-6">
-                        {% if upcoming_events %}
-                        <div class="space-y-4">
-                            {% for event in upcoming_events %}
-                            <div class="flex items-center p-3 border border-gray-200 rounded-lg">
-                                <div class="flex-shrink-0">
-                                    <div class="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                                        <i class="fas fa-calendar text-indigo-600"></i>
-                                    </div>
-                                </div>
-                                <div class="ml-4 flex-1">
-                                    <h3 class="text-sm font-medium text-gray-900">{{ event.title }}</h3>
-                                    <p class="text-xs text-gray-600">{{ event.start_time|date:"M d, Y \a\t g:i A" }}</p>
-                                    {% if event.description %}
-                                    <p class="text-xs text-gray-500 mt-1">{{ event.description|truncatechars:50 }}</p>
-                                    {% endif %}
+                <div class="p-4 sm:p-6">
+                    <div class="space-y-2 sm:space-y-3">
+                        {% for event in upcoming_events %}
+                        <div class="flex items-center p-3 border border-gray-200 rounded-lg">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-calendar text-indigo-600"></i>
                                 </div>
                             </div>
-                            {% endfor %}
-                        </div>
-                        {% else %}
-                        <div class="text-center py-8">
-                            <i class="fas fa-calendar text-4xl text-gray-300 mb-4"></i>
-                            <p class="text-gray-500">No upcoming events</p>
-                            <a href="/core/calendar/create/" class="text-sm text-blue-600 hover:text-blue-800 mt-1 inline-block">
-                                Create your first event
-                            </a>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- My Teams -->
-            {% if user_teams %}
-            <div class="bg-white rounded-lg shadow">
-                <div class="px-6 py-4 border-b border-gray-200">
-                    <h2 class="text-lg font-semibold text-gray-900">My Teams</h2>
-                    <p class="text-sm text-gray-600">Teams you're a member of</p>
-                </div>
-                <div class="p-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {% for team in user_teams %}
-                        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <h3 class="font-semibold text-gray-900">{{ team.name }}</h3>
-                                    {% if team.description %}
-                                    <p class="text-sm text-gray-600 mt-1">{{ team.description|truncatechars:60 }}</p>
-                                    {% endif %}
-                                    <div class="flex items-center mt-2">
-                                        <i class="fas fa-users text-gray-400 text-xs mr-1"></i>
-                                        <span class="text-xs text-gray-500">{{ team.members.count }} member{{ team.members.count|pluralize }}</span>
-                                    </div>
-                                </div>
+                            <div class="ml-3 sm:ml-4 flex-1 min-w-0">
+                                <h3 class="text-xs sm:text-sm font-medium text-gray-900">{{ event.title }}</h3>
+                                <p class="text-xs text-gray-600">{{ event.start_time|date:"M d, Y \a\t g:i A" }}</p>
+                                {% if event.description %}
+                                <p class="text-xs text-gray-500 mt-1 line-clamp-2">{{ event.description }}</p>
+                                {% endif %}
                             </div>
                         </div>
                         {% endfor %}
                     </div>
                 </div>
             </div>
+            {% else %}
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-base sm:text-lg font-semibold text-gray-900">Upcoming Events</h2>
+                </div>
+                <div class="p-6 sm:p-8 text-center">
+                    <i class="fas fa-calendar text-3xl sm:text-4xl text-gray-300 mb-3 sm:mb-4"></i>
+                    <p class="text-sm text-gray-500">No upcoming events</p>
+                    <a href="/core/calendar/create/" class="text-xs sm:text-sm text-blue-600 hover:text-blue-800 mt-2 inline-block">
+                        Create your first event
+                    </a>
+                </div>
+            </div>
             {% endif %}
 
-            <!-- License Information for Admins -->
-            {% if is_org_admin and licenses %}
+            <!-- My Teams -->
+            {% if user_teams %}
             <div class="bg-white rounded-lg shadow">
-                <div class="px-6 py-4 border-b border-gray-200">
-                    <div class="flex items-center justify-between">
-                        <h2 class="text-lg font-semibold text-gray-900">License Overview</h2>
-                        <a href="/admin/licensing/license/" class="text-sm text-blue-600 hover:text-blue-800">Manage licenses</a>
-                    </div>
+                <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-base sm:text-lg font-semibold text-gray-900">My Teams</h2>
                 </div>
-                <div class="p-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {% for license in licenses %}
-                        <div class="border border-gray-200 rounded-lg p-4">
-                            <div class="flex items-center justify-between mb-3">
-                                <div>
-                                    <h3 class="font-semibold text-gray-900">{{ license.license_type.service.name }}</h3>
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                        {{ license.license_type.display_name }}
-                                    </span>
-                                    {% if license.status == 'trial' %}
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 ml-2">
-                                        Trial {% if license.trial_end_date %}until {{ license.trial_end_date|date:"M d" }}{% endif %}
-                                    </span>
-                                    {% endif %}
+                <div class="p-4 sm:p-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                        {% for team in user_teams %}
+                        <a href="#" class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-users text-teal-600"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-900">{{ team.name }}</p>
+                                    <p class="text-xs text-gray-500">{{ team.members.count }} members</p>
                                 </div>
                             </div>
-                            
-                            <div class="space-y-2 text-sm">
-                                <div class="flex justify-between">
-                                    <span class="text-gray-600">Users:</span>
-                                    <span>{{ license.current_users }}/{% if license.license_type.max_users %}{{ license.license_type.max_users }}{% else %}∞{% endif %}</span>
-                                </div>
-                                {% if license.license_type.max_workflows %}
-                                <div class="flex justify-between">
-                                    <span class="text-gray-600">Workflows:</span>
-                                    <span>{{ license.current_workflows }}/{{ license.license_type.max_workflows }}</span>
-                                </div>
-                                {% endif %}
-                                {% if license.license_type.max_projects %}
-                                <div class="flex justify-between">
-                                    <span class="text-gray-600">Projects:</span>
-                                    <span>{{ license.current_projects }}/{{ license.license_type.max_projects }}</span>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
+                        </a>
                         {% endfor %}
                     </div>
                 </div>

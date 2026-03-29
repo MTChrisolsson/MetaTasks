@@ -186,10 +186,12 @@
                                 <i class="fas fa-sitemap text-4xl"></i>
                             </div>
                             <p class="text-gray-500">No steps defined for this workflow yet.</p>
+                            {% if request.user.is_staff or request.user.is_superuser %}
                             <a href="/admin/cflows/workflowstep/add/?workflow={{ workflow.id }}" 
                                class="mt-2 text-purple-600 hover:text-purple-700 text-sm font-medium">
                                 Add steps in admin panel
                             </a>
+                            {% endif %}
                         </div>
                     {% endif %}
                 </div>

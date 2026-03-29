@@ -118,19 +118,6 @@
         </div>
     </header>
 
-    <!-- Messages -->
-    {% if messages %}
-        <div class="bg-white border-b border-gray-200 px-4 py-3">
-            {% for message in messages %}
-                <div class="max-w-7xl mx-auto">
-                    <div class="bg-{{ message.tags }}-100 border border-{{ message.tags }}-400 text-{{ message.tags }}-700 px-4 py-3 rounded mb-2">
-                        {{ message }}
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-
     <!-- Main Layout -->
     <div class="flex min-h-screen bg-gray-50">
         <!-- Sidebar -->
@@ -164,6 +151,16 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                 </svg>
                                 <span>Organization</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'staff_panel:user_management' %}" 
+                               class="nav-item flex items-center space-x-3 text-white hover:bg-white hover:bg-opacity-10 px-4 py-3 rounded-lg transition-colors
+                                      {% if request.resolver_match.url_name == 'user_management' or request.resolver_match.url_name == 'user_detail' or request.resolver_match.url_name == 'user_edit' or request.resolver_match.url_name == 'user_activity' %}active{% endif %}">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                                <span>Users</span>
                             </a>
                         </li>
                         <li>

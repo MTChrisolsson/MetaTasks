@@ -1,40 +1,39 @@
-{% extends 'base.html' %}
+{% extends 'base_public.html' %}
+
+{% block title %}Privacy Policy - MetaTask{% endblock %}
 
 {% block content %}
-<div class="px-4 py-6 sm:px-0">
-    <div class="max-w-4xl mx-auto">
-        <h1 class="text-3xl font-bold text-gray-900 mb-8">Privacy Policy</h1>
-        
-        <div class="prose prose-lg">
-            <p><strong>Last updated:</strong> September 2, 2025</p>
-            
-            <h2>Data Protection</h2>
-            <p>
-                MetaTask is committed to protecting your privacy and ensuring compliance with GDPR and other applicable data protection regulations.
-            </p>
-            
-            <h2>Data We Collect</h2>
-            <ul>
-                <li>Account information (username, email, profile data)</li>
-                <li>Usage analytics (with your consent)</li>
-                <li>System logs for security and maintenance</li>
-            </ul>
-            
-            <h2>Your Rights</h2>
-            <ul>
-                <li>Right to access your data</li>
-                <li>Right to rectification</li>
-                <li>Right to erasure ("right to be forgotten")</li>
-                <li>Right to data portability</li>
-                <li>Right to object to processing</li>
-            </ul>
-            
-            <h2>Contact</h2>
-            <p>
-                For any privacy-related questions, contact our Data Protection Officer at: 
-                <a href="mailto:dpo@mediap.local">dpo@mediap.local</a>
-            </p>
+<section class="px-6 py-16 lg:px-8">
+    <div class="mx-auto max-w-4xl">
+        <div class="public-card p-8 md:p-12">
+            <span class="inline-flex rounded-full bg-primary-fixed px-4 py-1.5 text-xs font-black uppercase tracking-[0.2em] text-on-primary-fixed-variant">Privacy Policy</span>
+            <h1 class="mt-6 text-4xl font-black tracking-tight text-on-surface md:text-5xl">How MetaTask handles data, consent, and user rights.</h1>
+            <p class="mt-4 text-sm font-semibold uppercase tracking-[0.16em] text-on-surface-variant">Last updated: September 2, 2025</p>
+
+            <div class="public-prose mt-10">
+                <h2>Data Protection</h2>
+                <p>MetaTask is committed to protecting your privacy and ensuring compliance with GDPR and other applicable data protection regulations.</p>
+
+                <h2>Data We Collect</h2>
+                <ul>
+                    <li>Account information including username, email address, and profile data.</li>
+                    <li>Usage analytics where consent applies.</li>
+                    <li>System logs used for security, maintenance, and operational integrity.</li>
+                </ul>
+
+                <h2>Your Rights</h2>
+                <ul>
+                    <li>Right to access your data.</li>
+                    <li>Right to rectification.</li>
+                    <li>Right to erasure.</li>
+                    <li>Right to data portability.</li>
+                    <li>Right to object to processing.</li>
+                </ul>
+
+                <h2>Contact</h2>
+                <p>For privacy-related questions, contact our Data Protection Officer at <a href="mailto:dpo@mediap.local">dpo@mediap.local</a>.</p>
+            </div>
         </div>
     </div>
-</div>
+</section>
 {% endblock %}

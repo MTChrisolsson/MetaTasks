@@ -5,6 +5,14 @@ app_name = 'staff_panel'
 
 urlpatterns = [
     path('', views.staff_panel_dashboard, name='dashboard'),
+    path('users/create/', views.create_staff_user, name='create_staff_user'),
+    # User Management
+    path('users/', views.user_management, name='user_management'),
+    path('users/<int:user_id>/', views.user_detail, name='user_detail'),
+    path('users/<int:user_id>/edit/', views.user_edit, name='user_edit'),
+    path('users/<int:user_id>/activity/', views.user_activity, name='user_activity'),
+    path('users/<int:user_id>/toggle-status/', views.toggle_user_status, name='toggle_user_status'),
+    path('users/export/', views.export_users, name='export_users'),
     path('organization/', views.organization_settings, name='organization_settings'),
     path('analytics/', views.user_analytics, name='user_analytics'),
     path('teams/', views.team_management, name='team_management'),

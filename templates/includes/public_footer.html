@@ -1,0 +1,44 @@
+<footer class="border-t border-outline-variant/30 bg-white/70 px-8 py-16 backdrop-blur-sm">
+    <div class="mx-auto grid max-w-7xl gap-12 md:grid-cols-4 lg:grid-cols-5">
+        <div class="lg:col-span-2">
+            <a href="{% url 'homepage:index' %}" class="mb-5 inline-flex items-center gap-3">
+                <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-container text-lg font-black tracking-tight text-on-primary-container">M</span>
+                <span class="text-xl font-black tracking-tight text-on-surface">MetaTask</span>
+            </a>
+            <p class="max-w-md text-sm leading-7 text-on-surface-variant">
+                Unifying business processes through architectural flow, operational clarity, and intelligent automation.
+            </p>
+        </div>
+        <div>
+            <h4 class="mb-4 text-sm font-black uppercase tracking-[0.2em] text-on-surface">Product</h4>
+            <div class="space-y-3 text-sm text-on-surface-variant">
+                <a class="block transition-colors hover:text-primary" href="{% url 'homepage:services' %}">Services</a>
+                <a class="block transition-colors hover:text-primary" href="#pricing">Pricing</a>
+                <a class="block transition-colors hover:text-primary" href="{% url 'accounts:register' %}">Start Trial</a>
+            </div>
+        </div>
+        <div>
+            <h4 class="mb-4 text-sm font-black uppercase tracking-[0.2em] text-on-surface">Company</h4>
+            <div class="space-y-3 text-sm text-on-surface-variant">
+                <a class="block transition-colors hover:text-primary" href="{% url 'homepage:about' %}">About</a>
+                <a class="block transition-colors hover:text-primary" href="{% url 'homepage:contact' %}">Contact</a>
+                <a class="block transition-colors hover:text-primary" href="{% url 'accounts:login' %}">Sign In</a>
+            </div>
+        </div>
+        <div>
+            <h4 class="mb-4 text-sm font-black uppercase tracking-[0.2em] text-on-surface">Legal</h4>
+            <div class="space-y-3 text-sm text-on-surface-variant">
+                <a class="block transition-colors hover:text-primary" href="{% url 'homepage:privacy' %}">Privacy Policy</a>
+                <a class="block transition-colors hover:text-primary" href="{% url 'homepage:terms' %}">Terms of Service</a>
+            </div>
+        </div>
+    </div>
+    <div class="mx-auto mt-12 flex max-w-7xl flex-col gap-4 border-t border-outline-variant/30 pt-8 text-sm text-on-surface-variant md:flex-row md:items-center md:justify-between">
+        <p>&copy; 2026 MetaTask. All rights reserved.</p>
+        <div class="flex items-center gap-4 text-on-surface-variant">
+            <span class="material-symbols-outlined">public</span>
+            <span class="material-symbols-outlined">chat</span>
+            <span class="material-symbols-outlined">alternate_email</span>
+        </div>
+    </div>
+</footer>

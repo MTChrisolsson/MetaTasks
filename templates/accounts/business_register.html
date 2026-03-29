@@ -1,228 +1,52 @@
-{% extends 'base.html' %}
+{% extends 'base_public.html' %}
 
 {% block title %}Create Business Account - MetaTask{% endblock %}
+{% block main_classes %}pt-28 pb-20{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-    <div class="sm:mx-auto sm:w-full sm:max-w-md">
-        <!-- Progress indicator -->
-        <div class="mb-8">
-            <div class="flex items-center justify-center">
-                <div class="flex items-center">
-                    <div class="flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-full text-sm font-medium">
-                        1
-                    </div>
-                    <span class="ml-2 text-sm font-medium text-blue-600">Your Details</span>
-                </div>
-                <div class="flex items-center ml-4">
-                    <div class="w-8 border-t border-gray-300"></div>
-                    <div class="flex items-center justify-center w-8 h-8 bg-gray-300 text-gray-600 rounded-full text-sm font-medium ml-2">
-                        2
-                    </div>
-                    <span class="ml-2 text-sm text-gray-500">Organization</span>
-                </div>
-                <div class="flex items-center ml-4">
-                    <div class="w-8 border-t border-gray-300"></div>
-                    <div class="flex items-center justify-center w-8 h-8 bg-gray-300 text-gray-600 rounded-full text-sm font-medium ml-2">
-                        3
-                    </div>
-                    <span class="ml-2 text-sm text-gray-500">Team</span>
-                </div>
-            </div>
+<section class="px-6 py-10 lg:px-8">
+    <div class="mx-auto max-w-xl">
+        <div class="mb-8 flex items-center justify-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-on-surface-variant">
+            <span class="progress-step-current">1</span><span>Your Details</span>
+            <span class="progress-line"></span>
+            <span class="progress-step-upcoming">2</span><span>Organization</span>
+            <span class="progress-line"></span>
+            <span class="progress-step-upcoming">3</span><span>Team</span>
         </div>
 
-        <div class="flex justify-center">
-            <h1 class="text-3xl font-extrabold text-gray-900">MetaTask</h1>
+        <div class="text-center">
+            <h1 class="text-4xl font-black tracking-tight text-on-surface">Create your business account</h1>
+            <p class="mt-3 text-sm text-on-surface-variant">Step 1 of 3: tell us about the account owner.</p>
         </div>
-        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create Your Business Account
-        </h2>
-        <p class="mt-2 text-center text-sm text-gray-600">
-            First, tell us about yourself as the account owner
-        </p>
-    </div>
 
-    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-            <!-- Messages -->
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="mb-4 rounded-md {% if message.tags == 'error' %}bg-red-50 border border-red-200 text-red-800{% elif message.tags == 'success' %}bg-green-50 border border-green-200 text-green-800{% else %}bg-blue-50 border border-blue-200 text-blue-800{% endif %} px-4 py-3">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-
-            <form method="post" class="space-y-6">
+        <div class="public-card mt-8 px-6 py-8 sm:px-8">
+            <form method="post" class="public-form space-y-5">
                 {% csrf_token %}
-                
-                <!-- Account Type (hidden) -->
                 <input type="hidden" name="account_type" value="business">
-                
-                <!-- First Name -->
-                <div>
-                    <label for="{{ form.first_name.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                        First Name *
-                    </label>
-                    <div class="mt-1">
-                        {{ form.first_name }}
-                        {% if form.first_name.errors %}
-                            <div class="mt-2 text-sm text-red-600">{{ form.first_name.errors.0 }}</div>
-                        {% endif %}
-                    </div>
+
+                <div><label for="{{ form.first_name.id_for_label }}" class="mb-2 block text-sm font-semibold text-on-surface">First Name *</label>{{ form.first_name }}{% if form.first_name.errors %}<div class="mt-2 text-sm text-error">{{ form.first_name.errors.0 }}</div>{% endif %}</div>
+                <div><label for="{{ form.last_name.id_for_label }}" class="mb-2 block text-sm font-semibold text-on-surface">Last Name *</label>{{ form.last_name }}{% if form.last_name.errors %}<div class="mt-2 text-sm text-error">{{ form.last_name.errors.0 }}</div>{% endif %}</div>
+                <div><label for="{{ form.email.id_for_label }}" class="mb-2 block text-sm font-semibold text-on-surface">Work Email Address *</label>{{ form.email }}{% if form.email.errors %}<div class="mt-2 text-sm text-error">{{ form.email.errors.0 }}</div>{% endif %}</div>
+                <div><label for="{{ form.phone_number.id_for_label }}" class="mb-2 block text-sm font-semibold text-on-surface">Phone Number</label>{{ form.phone_number }}{% if form.phone_number.errors %}<div class="mt-2 text-sm text-error">{{ form.phone_number.errors.0 }}</div>{% endif %}</div>
+                <div><label for="{{ form.job_title.id_for_label }}" class="mb-2 block text-sm font-semibold text-on-surface">Job Title *</label>{{ form.job_title }}{% if form.job_title.errors %}<div class="mt-2 text-sm text-error">{{ form.job_title.errors.0 }}</div>{% endif %}</div>
+                <div><label for="{{ form.team_size.id_for_label }}" class="mb-2 block text-sm font-semibold text-on-surface">Current Team Size *</label>{{ form.team_size }}{% if form.team_size.errors %}<div class="mt-2 text-sm text-error">{{ form.team_size.errors.0 }}</div>{% endif %}</div>
+                <div><label for="{{ form.username.id_for_label }}" class="mb-2 block text-sm font-semibold text-on-surface">Username *</label>{{ form.username }}{% if form.username.errors %}<div class="mt-2 text-sm text-error">{{ form.username.errors.0 }}</div>{% endif %}</div>
+                <div><label for="{{ form.password1.id_for_label }}" class="mb-2 block text-sm font-semibold text-on-surface">Password *</label>{{ form.password1 }}{% if form.password1.errors %}<div class="mt-2 text-sm text-error">{{ form.password1.errors.0 }}</div>{% endif %}</div>
+                <div><label for="{{ form.password2.id_for_label }}" class="mb-2 block text-sm font-semibold text-on-surface">Confirm Password *</label>{{ form.password2 }}{% if form.password2.errors %}<div class="mt-2 text-sm text-error">{{ form.password2.errors.0 }}</div>{% endif %}</div>
+                <div><label for="{{ form.referral_source.id_for_label }}" class="mb-2 block text-sm font-semibold text-on-surface">How did you hear about us?</label>{{ form.referral_source }}{% if form.referral_source.errors %}<div class="mt-2 text-sm text-error">{{ form.referral_source.errors.0 }}</div>{% endif %}</div>
+
+                <div class="space-y-3 rounded-2xl bg-surface-container-low p-4">
+                    <label class="inline-flex items-start text-sm text-on-surface-variant"><input type="checkbox" name="privacy_policy_accepted" required class="public-checkbox mr-3"><span>I agree to the <a href="{% url 'homepage:privacy' %}" class="public-link" target="_blank">Privacy Policy</a> *</span></label>
+                    <label class="inline-flex items-start text-sm text-on-surface-variant"><input type="checkbox" name="terms_accepted" required class="public-checkbox mr-3"><span>I agree to the <a href="{% url 'homepage:terms' %}" class="public-link" target="_blank">Terms of Service</a> *</span></label>
                 </div>
 
-                <!-- Last Name -->
-                <div>
-                    <label for="{{ form.last_name.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                        Last Name *
-                    </label>
-                    <div class="mt-1">
-                        {{ form.last_name }}
-                        {% if form.last_name.errors %}
-                            <div class="mt-2 text-sm text-red-600">{{ form.last_name.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Email -->
-                <div>
-                    <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                        Work Email Address *
-                    </label>
-                    <div class="mt-1">
-                        {{ form.email }}
-                        {% if form.email.errors %}
-                            <div class="mt-2 text-sm text-red-600">{{ form.email.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Phone Number -->
-                <div>
-                    <label for="{{ form.phone_number.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                        Phone Number
-                    </label>
-                    <div class="mt-1">
-                        {{ form.phone_number }}
-                        {% if form.phone_number.errors %}
-                            <div class="mt-2 text-sm text-red-600">{{ form.phone_number.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Job Title -->
-                <div>
-                    <label for="{{ form.job_title.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                        Job Title *
-                    </label>
-                    <div class="mt-1">
-                        {{ form.job_title }}
-                        {% if form.job_title.errors %}
-                            <div class="mt-2 text-sm text-red-600">{{ form.job_title.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Team Size -->
-                <div>
-                    <label for="{{ form.team_size.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                        Current Team Size *
-                    </label>
-                    <div class="mt-1">
-                        {{ form.team_size }}
-                        {% if form.team_size.errors %}
-                            <div class="mt-2 text-sm text-red-600">{{ form.team_size.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Username -->
-                <div>
-                    <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                        Username *
-                    </label>
-                    <div class="mt-1">
-                        {{ form.username }}
-                        {% if form.username.errors %}
-                            <div class="mt-2 text-sm text-red-600">{{ form.username.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Password -->
-                <div>
-                    <label for="{{ form.password1.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                        Password *
-                    </label>
-                    <div class="mt-1">
-                        {{ form.password1 }}
-                        {% if form.password1.errors %}
-                            <div class="mt-2 text-sm text-red-600">{{ form.password1.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Confirm Password -->
-                <div>
-                    <label for="{{ form.password2.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                        Confirm Password *
-                    </label>
-                    <div class="mt-1">
-                        {{ form.password2 }}
-                        {% if form.password2.errors %}
-                            <div class="mt-2 text-sm text-red-600">{{ form.password2.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- How did you hear about us -->
-                <div>
-                    <label for="{{ form.referral_source.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                        How did you hear about us?
-                    </label>
-                    <div class="mt-1">
-                        {{ form.referral_source }}
-                        {% if form.referral_source.errors %}
-                            <div class="mt-2 text-sm text-red-600">{{ form.referral_source.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Terms and Privacy -->
-                <div class="space-y-3">
-                    <div class="flex items-start">
-                        <input type="checkbox" name="privacy_policy_accepted" required 
-                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-0.5">
-                        <label class="ml-2 block text-sm text-gray-900">
-                            I agree to the <a href="{% url 'homepage:privacy' %}" class="text-blue-600 hover:text-blue-500" target="_blank">Privacy Policy</a> *
-                        </label>
-                    </div>
-                    <div class="flex items-start">
-                        <input type="checkbox" name="terms_accepted" required 
-                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-0.5">
-                        <label class="ml-2 block text-sm text-gray-900">
-                            I agree to the <a href="{% url 'homepage:terms' %}" class="text-blue-600 hover:text-blue-500" target="_blank">Terms of Service</a> *
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Submit Button -->
-                <div>
-                    <button type="submit" 
-                            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
-                        Continue to Organization Setup
-                    </button>
-                </div>
+                <button type="submit" class="public-button-primary w-full">Continue to Organization Setup</button>
             </form>
 
-            <!-- Back to account selection -->
             <div class="mt-6 text-center">
-                <a href="{% url 'accounts:register' %}" class="text-sm text-gray-600 hover:text-gray-900">
-                    ← Back to account type selection
-                </a>
+                <a href="{% url 'accounts:register' %}" class="text-sm font-semibold text-on-surface-variant hover:text-primary">Back to account type selection</a>
             </div>
         </div>
     </div>
-</div>
+</section>
 {% endblock %}

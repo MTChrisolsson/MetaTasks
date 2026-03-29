@@ -36,7 +36,7 @@
                             Back to Dashboard
                         </a>
                         
-                        {% if organization.owner == request.user %}
+                        {% if organization.owner == request.user and request.user.is_staff or organization.owner == request.user and request.user.is_superuser %}
                         <a href="/admin/licensing/license/add/?organization={{ organization.id }}&service={{ service.id }}" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
                             <i class="fas fa-plus mr-2"></i>
                             Get License (Admin)

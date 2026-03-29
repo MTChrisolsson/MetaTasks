@@ -3,11 +3,26 @@ from django.contrib.auth.forms import UserCreationForm
 from core.models import Organization, UserProfile
 from .models import CustomUser
 
+
+PUBLIC_INPUT_CLASS = 'public-input'
+PUBLIC_SELECT_CLASS = 'public-select'
+PUBLIC_TEXTAREA_CLASS = 'public-textarea'
+PUBLIC_CHECKBOX_CLASS = 'public-checkbox'
+
+
+def widget_attrs(css_class, placeholder=None, extra_attrs=None):
+    attrs = {'class': css_class}
+    if placeholder:
+        attrs['placeholder'] = placeholder
+    if extra_attrs:
+        attrs.update(extra_attrs)
+    return attrs
+
 class RegistrationForm(UserCreationForm):
     email = forms.EmailField(
         required=True,
         widget=forms.EmailInput(attrs={
-            'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6',
+            'class': PUBLIC_INPUT_CLASS,
             'placeholder': 'Enter your email address'
         })
     )
@@ -16,7 +31,7 @@ class RegistrationForm(UserCreationForm):
         max_length=30,
         required=True,
         widget=forms.TextInput(attrs={
-            'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6',
+            'class': PUBLIC_INPUT_CLASS,
             'placeholder': 'First name'
         })
     )
@@ -25,7 +40,7 @@ class RegistrationForm(UserCreationForm):
         max_length=30,
         required=True,
         widget=forms.TextInput(attrs={
-            'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6',
+            'class': PUBLIC_INPUT_CLASS,
             'placeholder': 'Last name'
         })
     )
@@ -34,7 +49,7 @@ class RegistrationForm(UserCreationForm):
         choices=CustomUser.REFERRAL_SOURCES,
         required=False,
         widget=forms.Select(attrs={
-            'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6'
+            'class': PUBLIC_SELECT_CLASS
         }),
         label="How did you hear about us?"
     )
@@ -43,7 +58,7 @@ class RegistrationForm(UserCreationForm):
         choices=CustomUser.TEAM_SIZES,
         required=False,
         widget=forms.Select(attrs={
-            'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6'
+            'class': PUBLIC_SELECT_CLASS
         }),
         label="What's the size of your team?"
     )
@@ -52,7 +67,7 @@ class RegistrationForm(UserCreationForm):
         max_length=100,
         required=True,
         widget=forms.TextInput(attrs={
-            'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6',
+            'class': PUBLIC_INPUT_CLASS,
             'placeholder': 'Your job title'
         })
     )
@@ -65,18 +80,9 @@ class RegistrationForm(UserCreationForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Style the default fields
-        self.fields['username'].widget.attrs.update({
-            'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6',
-            'placeholder': 'Choose a username'
-        })
-        self.fields['password1'].widget.attrs.update({
-            'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6',
-            'placeholder': 'Create a password'
-        })
-        self.fields['password2'].widget.attrs.update({
-            'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6',
-            'placeholder': 'Confirm your password'
-        })
+        self.fields['username'].widget.attrs.update(widget_attrs(PUBLIC_INPUT_CLASS, 'Choose a username'))
+        self.fields['password1'].widget.attrs.update(widget_attrs(PUBLIC_INPUT_CLASS, 'Create a password'))
+        self.fields['password2'].widget.attrs.update(widget_attrs(PUBLIC_INPUT_CLASS, 'Confirm your password'))
 
 
     def save(self, commit=True):
@@ -124,16 +130,16 @@ class OrganizationCreationForm(forms.ModelForm):
         fields = ['name', 'description', 'organization_type']
         widgets = {
             'name': forms.TextInput(attrs={
-                'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6',
+                'class': PUBLIC_INPUT_CLASS,
                 'placeholder': 'Your organization name'
             }),
             'description': forms.Textarea(attrs={
-                'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6',
+                'class': PUBLIC_TEXTAREA_CLASS,
                 'placeholder': 'Brief description of your organization (optional)',
                 'rows': 3
             }),
             'organization_type': forms.Select(attrs={
-                'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6'
+                'class': PUBLIC_SELECT_CLASS
             }),
         }
         labels = {
@@ -162,7 +168,7 @@ class InviteMemberForm(forms.Form):
     email = forms.EmailField(
         label="Email of the person to invite",
         widget=forms.EmailInput(attrs={
-            'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6',
+            'class': PUBLIC_INPUT_CLASS,
             'placeholder': 'Enter email address'
         })
     )
@@ -175,7 +181,7 @@ class InviteMemberForm(forms.Form):
         ],
         initial='team_member',
         widget=forms.Select(attrs={
-            'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6'
+            'class': PUBLIC_SELECT_CLASS
         }),
         label="Role"
     )
@@ -200,7 +206,7 @@ class UserProfileSetupForm(forms.ModelForm):
         max_length=100,
         required=False,
         widget=forms.TextInput(attrs={
-            'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6',
+            'class': PUBLIC_INPUT_CLASS,
             'placeholder': 'Enter organization name'
         }),
         label="Organization Name"
@@ -214,7 +220,7 @@ class UserProfileSetupForm(forms.ModelForm):
         initial='business',
         required=False,
         widget=forms.Select(attrs={
-            'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6'
+            'class': PUBLIC_SELECT_CLASS
         }),
         label="Organization Type"
     )
@@ -225,7 +231,7 @@ class UserProfileSetupForm(forms.ModelForm):
         required=False,
         empty_label="Select an organization",
         widget=forms.Select(attrs={
-            'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6'
+            'class': PUBLIC_SELECT_CLASS
         }),
         label="Select Organization"
     )
@@ -235,31 +241,31 @@ class UserProfileSetupForm(forms.ModelForm):
         fields = ['title', 'department', 'location', 'timezone', 'bio', 'phone', 'email_notifications']
         widgets = {
             'title': forms.TextInput(attrs={
-                'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6',
+                'class': PUBLIC_INPUT_CLASS,
                 'placeholder': 'e.g. Software Engineer, Project Manager'
             }),
             'department': forms.TextInput(attrs={
-                'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6',
+                'class': PUBLIC_INPUT_CLASS,
                 'placeholder': 'e.g. Engineering, Marketing, Sales'
             }),
             'location': forms.TextInput(attrs={
-                'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6',
+                'class': PUBLIC_INPUT_CLASS,
                 'placeholder': 'e.g. New York, NY or Remote'
             }),
             'timezone': forms.Select(attrs={
-                'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6'
+                'class': PUBLIC_SELECT_CLASS
             }),
             'bio': forms.Textarea(attrs={
-                'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6',
+                'class': PUBLIC_TEXTAREA_CLASS,
                 'placeholder': 'Tell us a bit about yourself...',
                 'rows': 3
             }),
             'phone': forms.TextInput(attrs={
-                'class': 'block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6',
+                'class': PUBLIC_INPUT_CLASS,
                 'placeholder': 'e.g. +1 (555) 123-4567'
             }),
             'email_notifications': forms.CheckboxInput(attrs={
-                'class': 'h-4 w-4 text-blue-600 focus:ring-blue-600 border-gray-300 rounded'
+                'class': PUBLIC_CHECKBOX_CLASS
             }),
         }
         labels = {
