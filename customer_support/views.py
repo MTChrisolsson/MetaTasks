@@ -63,7 +63,7 @@ def _log_support_audit(user, action, content_type, object_id='', object_repr='',
 
 
 def _has_customer_support_access(user):
-    return get_user_support_tier(user) != 'none'
+    return get_user_support_tier(user) in {'superuser', 'staff', 'support_agent'}
 
 
 def get_user_support_tier(user):
@@ -742,7 +742,7 @@ def ticket_list(request):
 
 
 @login_required
-@require_customer_access
+@require_support_staff_access
 def ticket_detail(request, ticket_id):
     ticket = get_object_or_404(_get_ticket_queryset(request.user), ticket_id=ticket_id)
     tier = get_user_support_tier(request.user)
@@ -761,7 +761,7 @@ def ticket_detail(request, ticket_id):
 
 
 @login_required
-@require_customer_access
+@require_support_staff_access
 def ticket_create(request):
     profile = _get_user_profile(request.user)
     if not profile:
@@ -833,7 +833,7 @@ def ticket_update(request, ticket_id):
 
 
 @login_required
-@require_customer_access
+@require_support_staff_access
 def ticket_add_comment(request, ticket_id):
     ticket = get_object_or_404(_get_ticket_queryset(request.user), ticket_id=ticket_id)
     tier = get_user_support_tier(request.user)
@@ -873,7 +873,7 @@ def ticket_add_comment(request, ticket_id):
 
 
 @login_required
-@require_customer_access
+@require_support_staff_access
 def ticket_close(request, ticket_id):
     ticket = get_object_or_404(_get_ticket_queryset(request.user), ticket_id=ticket_id)
 
@@ -1029,7 +1029,7 @@ def _get_kb_queryset(user, include_drafts=False):
 
 
 @login_required
-@require_customer_access
+@require_support_staff_access
 def kb_list(request):
     profile = _get_user_profile(request.user)
     tier = get_user_support_tier(request.user)
@@ -1065,7 +1065,7 @@ def kb_list(request):
 
 
 @login_required
-@require_customer_access
+@require_support_staff_access
 def kb_article_detail(request, slug):
     profile = _get_user_profile(request.user)
     qs = KBArticle.objects.select_related('category', 'authored_by').filter(
@@ -1127,7 +1127,7 @@ def kb_article_edit(request, slug):
 
 
 @login_required
-@require_customer_access
+@require_support_staff_access
 def kb_article_helpful(request, slug):
     """AJAX endpoint: POST with `{"helpful": true/false}`."""
     if request.method != 'POST':

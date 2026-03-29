@@ -125,3 +125,43 @@ class SupportTaskTests(TestCase):
         old_resolved.refresh_from_db()
         self.assertEqual(old_resolved.status, 'closed')
         self.assertIsNotNone(old_resolved.closed_at)
+
+
+class SupportAccessControlTests(TestCase):
+    def setUp(self):
+        self.user_model = get_user_model()
+        self.organization = Organization.objects.create(
+            name='Access Test Org',
+            organization_type='business',
+        )
+
+        self.customer = self.user_model.objects.create_user(
+            username='access_customer',
+            email='access_customer@example.com',
+            password='ComplexPass123!',
+        )
+        UserProfile.objects.create(user=self.customer, organization=self.organization)
+
+        self.agent = self.user_model.objects.create_user(
+            username='access_agent',
+            email='access_agent@example.com',
+            password='ComplexPass123!',
+        )
+        UserProfile.objects.create(user=self.agent, organization=self.organization)
+        support_agent_group, _ = Group.objects.get_or_create(name='support_agent')
+        self.agent.groups.add(support_agent_group)
+
+    def test_customer_cannot_access_support_dashboard_root(self):
+        self.client.force_login(self.customer)
+        response = self.client.get('/customer-support/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_support_agent_can_access_support_dashboard_root(self):
+        self.client.force_login(self.agent)
+        response = self.client.get('/customer-support/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_customer_can_still_access_self_service_portal(self):
+        self.client.force_login(self.customer)
+        response = self.client.get('/customer-support/portal/')
+        self.assertEqual(response.status_code, 200)

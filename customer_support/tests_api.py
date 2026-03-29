@@ -45,10 +45,10 @@ class SupportTicketAPITests(TestCase):
         )
         UserProfile.objects.create(user=self.admin, organization=self.org_a)
 
-    def test_create_ticket_api(self):
+    def test_create_ticket_api_requires_support_tier(self):
         self.client.force_login(self.customer_a)
 
-        response = self.client.post(
+        forbidden = self.client.post(
             '/api/support/tickets/',
             data={
                 'title': 'API-created ticket',
@@ -59,8 +59,22 @@ class SupportTicketAPITests(TestCase):
             },
             content_type='application/json',
         )
+        self.assertEqual(forbidden.status_code, 403)
 
-        self.assertEqual(response.status_code, 201)
+        self.client.force_login(self.agent)
+        allowed = self.client.post(
+            '/api/support/tickets/',
+            data={
+                'title': 'API-created ticket',
+                'description': 'Support issue from API',
+                'category': 'technical_support',
+                'priority': 'medium',
+                'severity': 'low',
+            },
+            content_type='application/json',
+        )
+
+        self.assertEqual(allowed.status_code, 201)
         self.assertEqual(SupportTicket.objects.filter(organization=self.org_a).count(), 1)
 
     def test_list_is_organization_scoped(self):
@@ -83,7 +97,7 @@ class SupportTicketAPITests(TestCase):
             severity='low',
         )
 
-        self.client.force_login(self.customer_a)
+        self.client.force_login(self.agent)
         response = self.client.get('/api/support/tickets/')
 
         self.assertEqual(response.status_code, 200)

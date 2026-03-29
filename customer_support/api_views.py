@@ -68,7 +68,9 @@ def log_ticket_audit(ticket, action, user, old_value=None, new_value=None):
 
 class SupportAccessPermission(permissions.IsAuthenticated):
     def has_permission(self, request, view):
-        return super().has_permission(request, view) and get_user_support_tier(request.user) != 'none'
+        if not super().has_permission(request, view):
+            return False
+        return get_user_support_tier(request.user) in {'superuser', 'staff', 'support_agent'}
 
 
 class SupportStaffPermission(permissions.IsAuthenticated):
