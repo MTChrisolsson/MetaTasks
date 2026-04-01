@@ -37,20 +37,21 @@
         <div class="mt-4 overflow-x-auto">
             <table class="min-w-full text-sm">
                 <thead class="bg-amber-50/60 text-left text-gray-600">
-                    <tr><th class="px-4 py-2">Key</th><th class="px-4 py-2">Name</th><th class="px-4 py-2">Type</th><th class="px-4 py-2">Required</th><th class="px-4 py-2">Active</th><th class="px-4 py-2"></th></tr>
+                    <tr><th class="px-4 py-2">Key</th><th class="px-4 py-2">Name</th><th class="px-4 py-2">Scope</th><th class="px-4 py-2">Type</th><th class="px-4 py-2">Required</th><th class="px-4 py-2">Active</th><th class="px-4 py-2"></th></tr>
                 </thead>
                 <tbody class="divide-y divide-amber-100">
                     {% for field in field_definitions %}
                     <tr>
                         <td class="px-4 py-2">{{ field.key }}</td>
                         <td class="px-4 py-2">{{ field.name }}</td>
+                        <td class="px-4 py-2">{% if field.location %}{{ field.location.name }}{% else %}All locations{% endif %}</td>
                         <td class="px-4 py-2">{{ field.get_field_type_display }}</td>
                         <td class="px-4 py-2">{{ field.is_required|yesno:'Yes,No' }}</td>
                         <td class="px-4 py-2">{{ field.is_active|yesno:'Yes,No' }}</td>
                         <td class="px-4 py-2 text-right"><a class="text-amber-700 hover:text-amber-800" href="{% url 'inventory:field-definition-edit' field.id %}">Edit</a></td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="6" class="px-4 py-6 text-center text-gray-500">No custom fields defined.</td></tr>
+                    <tr><td colspan="7" class="px-4 py-6 text-center text-gray-500">No custom fields defined.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

@@ -60,6 +60,21 @@ LOCATION_DEFAULT_COLUMNS = [
 LOCATION_DEFAULT_COLUMN_MAP = {key: label for key, label in LOCATION_DEFAULT_COLUMNS}
 
 
+def _get_selected_location(organization, request):
+    location_id = request.POST.get('location') if request.method == 'POST' else request.GET.get('location')
+    if not location_id:
+        return None
+
+    try:
+        return InventoryLocation.objects.get(
+            id=location_id,
+            organization=organization,
+            is_active=True,
+        )
+    except (InventoryLocation.DoesNotExist, ValueError, TypeError):
+        return None
+
+
 def _get_user_profile(user):
     try:
         return user.mediap_profile
@@ -234,18 +249,23 @@ def item_detail(request, item_id):
 @inventory_page_access_required('inventory.create')
 def item_create(request):
     profile = request.inventory_profile
+    selected_location = _get_selected_location(profile.organization, request)
 
     if request.method == 'POST':
-        form = InventoryItemForm(request.POST)
+        form = InventoryItemForm(request.POST, organization=profile.organization)
         if form.is_valid():
             item = form.save(commit=False)
             item.organization = profile.organization
             item.created_by = request.user
             item.save()
+            form.save_custom_fields(item)
             messages.success(request, f'Item "{item.name}" created successfully.')
             return redirect('inventory:item-detail', item_id=item.id)
     else:
-        form = InventoryItemForm()
+        initial = {}
+        if selected_location:
+            initial['location'] = selected_location.id
+        form = InventoryItemForm(organization=profile.organization, initial=initial)
 
     return render(
         request,
@@ -253,6 +273,9 @@ def item_create(request):
         {
             'profile': profile,
             'form': form,
+            'selected_location': selected_location,
+            'standard_fields': form.get_standard_fields(),
+            'custom_fields': form.get_custom_fields(),
             'page_title': 'Create Item',
             'form_title': 'Create Inventory Item',
             'submit_label': 'Create Item',
@@ -264,15 +287,20 @@ def item_create(request):
 def item_edit(request, item_id):
     profile = request.inventory_profile
     item = get_object_or_404(InventoryItem, id=item_id, organization=profile.organization)
+    selected_location = _get_selected_location(profile.organization, request)
 
     if request.method == 'POST':
-        form = InventoryItemForm(request.POST, instance=item)
+        form = InventoryItemForm(request.POST, instance=item, organization=profile.organization)
         if form.is_valid():
             form.save()
+            form.save_custom_fields(item)
             messages.success(request, f'Item "{item.name}" updated successfully.')
             return redirect('inventory:item-detail', item_id=item.id)
     else:
-        form = InventoryItemForm(instance=item)
+        initial = {}
+        if selected_location:
+            initial['location'] = selected_location.id
+        form = InventoryItemForm(instance=item, organization=profile.organization, initial=initial)
 
     return render(
         request,
@@ -281,6 +309,9 @@ def item_edit(request, item_id):
             'profile': profile,
             'form': form,
             'item': item,
+            'selected_location': selected_location,
+            'standard_fields': form.get_standard_fields(),
+            'custom_fields': form.get_custom_fields(),
             'page_title': f'Edit {item.sku}',
             'form_title': f'Edit {item.name}',
             'submit_label': 'Save Changes',
@@ -291,14 +322,30 @@ def item_edit(request, item_id):
 @inventory_page_access_required('inventory.view')
 def locations_list(request):
     profile = request.inventory_profile
+    search = request.GET.get('search', '').strip()
+    status = request.GET.get('status', '').strip()
 
     queryset = InventoryLocation.objects.filter(organization=profile.organization).order_by('name')
+    if search:
+        queryset = queryset.filter(
+            Q(name__icontains=search)
+            | Q(code__icontains=search)
+            | Q(description__icontains=search)
+        )
+
+    if status == 'active':
+        queryset = queryset.filter(is_active=True)
+    elif status == 'inactive':
+        queryset = queryset.filter(is_active=False)
+
     paginator = Paginator(queryset, 20)
     page_obj = paginator.get_page(request.GET.get('page'))
 
     context = {
         'profile': profile,
         'locations': page_obj,
+        'search_query': search,
+        'status_filter': status,
         'page_title': 'Inventory Locations',
     }
     return render(request, 'inventory/locations_list.html', context)
@@ -315,7 +362,9 @@ def location_detail(request, location_id):
     ).filter(Q(source_location=location) | Q(target_location=location)).select_related('item').order_by('-created_at')[:15]
 
     view_settings = location.view_settings or {}
-    selected_default_columns = view_settings.get('default_columns') or ['sku', 'name', 'quantity']
+    selected_default_columns = view_settings.get('default_columns')
+    if selected_default_columns is None:
+        selected_default_columns = ['sku', 'name', 'quantity']
     selected_default_columns = [
         key for key in selected_default_columns if key in LOCATION_DEFAULT_COLUMN_MAP
     ]
@@ -326,6 +375,8 @@ def location_detail(request, location_id):
             organization=profile.organization,
             is_active=True,
             key__in=selected_custom_columns,
+        ).filter(
+            Q(location__isnull=True) | Q(location=location)
         )
     )
     custom_field_map = {field.key: field for field in active_custom_fields}
@@ -339,10 +390,10 @@ def location_detail(request, location_id):
     custom_values = InventoryFieldValue.objects.filter(
         organization=profile.organization,
         item_id__in=item_ids,
-        definition__key__in=[field.key for field in ordered_custom_fields],
+        definition_id__in=[field.id for field in ordered_custom_fields],
     ).select_related('definition')
     custom_values_map = {
-        (field_value.item_id, field_value.definition.key): field_value.value
+        (field_value.item_id, field_value.definition_id): field_value.value
         for field_value in custom_values
     }
 
@@ -363,7 +414,7 @@ def location_detail(request, location_id):
 
         custom_data = {}
         for field in ordered_custom_fields:
-            raw_value = custom_values_map.get((stock.item_id, field.key), '-')
+            raw_value = custom_values_map.get((stock.item_id, field.id), '-')
             if isinstance(raw_value, (dict, list)):
                 custom_data[field.key] = json.dumps(raw_value, ensure_ascii=True)
             elif raw_value in (None, ''):
@@ -395,13 +446,19 @@ def location_view_settings(request, location_id):
         InventoryFieldDefinition.objects.filter(
             organization=profile.organization,
             is_active=True,
+        ).filter(
+            Q(location__isnull=True) | Q(location=location)
         ).order_by('name')
     )
 
     initial_settings = location.view_settings or {}
+    initial_default_columns = initial_settings.get('default_columns')
+    if initial_default_columns is None:
+        initial_default_columns = ['sku', 'name', 'quantity']
+
     initial = {
-        'default_columns': initial_settings.get('default_columns') or ['sku', 'name', 'quantity'],
-        'custom_columns': initial_settings.get('custom_columns') or [],
+        'default_columns': initial_default_columns,
+        'custom_columns': initial_settings.get('custom_columns', []),
     }
 
     if request.method == 'POST':
@@ -582,7 +639,7 @@ def configuration(request):
     profile = request.inventory_profile
 
     reasons = MovementReason.objects.filter(organization=profile.organization).order_by('name')
-    field_definitions = InventoryFieldDefinition.objects.filter(organization=profile.organization).order_by('name')
+    field_definitions = InventoryFieldDefinition.objects.filter(organization=profile.organization).select_related('location').order_by('name')
 
     context = {
         'profile': profile,
@@ -654,7 +711,7 @@ def field_definition_create(request):
     profile = request.inventory_profile
 
     if request.method == 'POST':
-        form = InventoryFieldDefinitionForm(request.POST)
+        form = InventoryFieldDefinitionForm(request.POST, organization=profile.organization)
         if form.is_valid():
             field_definition = form.save(commit=False)
             field_definition.organization = profile.organization
@@ -662,7 +719,7 @@ def field_definition_create(request):
             messages.success(request, f'Field definition "{field_definition.name}" created.')
             return redirect('inventory:configuration')
     else:
-        form = InventoryFieldDefinitionForm()
+        form = InventoryFieldDefinitionForm(organization=profile.organization)
 
     return render(
         request,
@@ -687,13 +744,13 @@ def field_definition_edit(request, field_id):
     )
 
     if request.method == 'POST':
-        form = InventoryFieldDefinitionForm(request.POST, instance=field_definition)
+        form = InventoryFieldDefinitionForm(request.POST, instance=field_definition, organization=profile.organization)
         if form.is_valid():
             form.save()
             messages.success(request, f'Field definition "{field_definition.name}" updated.')
             return redirect('inventory:configuration')
     else:
-        form = InventoryFieldDefinitionForm(instance=field_definition)
+        form = InventoryFieldDefinitionForm(instance=field_definition, organization=profile.organization)
 
     return render(
         request,

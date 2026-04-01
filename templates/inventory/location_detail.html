@@ -10,6 +10,7 @@
                 <p class="mt-2 text-sm text-gray-700">{{ location.description|default:'No description.' }}</p>
             </div>
             <div class="flex gap-2">
+                <a href="{% url 'inventory:item-create' %}?location={{ location.id }}" class="rounded-lg border border-emerald-300 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50">Add Item for This Location</a>
                 <a href="{% url 'inventory:location-view-settings' location.id %}" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Visible Fields</a>
                 <a href="{% url 'inventory:location-edit' location.id %}" class="rounded-lg border border-amber-300 px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-50">Edit Location</a>
             </div>
@@ -23,6 +24,7 @@
                 Configure visible data
             </a>
         </div>
+        {% if stock_headers %}
         <div class="overflow-x-auto">
             <table class="min-w-full text-sm">
                 <thead class="bg-amber-50/60 text-left text-gray-600">
@@ -45,6 +47,11 @@
                 </tbody>
             </table>
         </div>
+        {% else %}
+        <div class="px-5 py-8 text-center text-sm text-gray-500">
+            No columns are currently enabled for this location. Update the visible fields settings to choose what appears here.
+        </div>
+        {% endif %}
     </div>
 
     <div class="rounded-xl border border-amber-100 bg-white shadow-sm">

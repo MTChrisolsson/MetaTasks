@@ -135,7 +135,8 @@
                                     </div>
                                     <div class="flex flex-col items-end space-y-2">
                                         <!-- Status Badge -->
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium status-{{ booking.status }}">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium status-{{ booking.status }}"
+                                              data-booking-status="{{ booking.uuid }}">
                                             {{ booking.get_status_display }}
                                         </span>
                                         
@@ -155,10 +156,11 @@
                                 {% endif %}
                             </a>
                             
-                            <div class="ml-5 flex-shrink-0 flex items-center space-x-2">
+                            <div class="ml-5 flex-shrink-0 flex items-center space-x-2" data-booking-actions="{{ booking.uuid }}">
                                 <!-- Complete Button for Active Bookings -->
                                 {% if booking.status == 'confirmed' or booking.status == 'in_progress' %}
-                                    <button onclick="completeBooking('{{ booking.id }}')" 
+                                    <button onclick="completeBooking('{{ booking.uuid }}')"
+                                            data-complete-button="{{ booking.uuid }}"
                                             class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
                                         <i class="fas fa-check-circle mr-1"></i>
                                         Complete
@@ -287,22 +289,36 @@
 </div>
 
 <script>
-let currentBookingId = null;
+let currentBookingUuid = null;
 
-function completeBooking(bookingId) {
-    currentBookingId = bookingId;
+function completeBooking(bookingUuid) {
+    currentBookingUuid = bookingUuid;
     document.getElementById('completeBookingModal').classList.remove('hidden');
 }
 
 function closeModal() {
     document.getElementById('completeBookingModal').classList.add('hidden');
-    currentBookingId = null;
+    currentBookingUuid = null;
+}
+
+function updateBookingCardAfterComplete(bookingUuid) {
+    const statusBadge = document.querySelector(`[data-booking-status="${bookingUuid}"]`);
+    if (statusBadge) {
+        statusBadge.textContent = 'Completed';
+        statusBadge.classList.remove('status-confirmed', 'status-in_progress', 'status-pending');
+        statusBadge.classList.add('status-completed');
+    }
+
+    const completeButton = document.querySelector(`[data-complete-button="${bookingUuid}"]`);
+    if (completeButton) {
+        completeButton.remove();
+    }
 }
 
 document.getElementById('confirmComplete').addEventListener('click', function() {
-    if (currentBookingId) {
+    if (currentBookingUuid) {
         // Check if there's a linked work item first
-        fetch(`/scheduling/booking/${currentBookingId}/complete_booking_workflow_prompt/`, {
+        fetch(`/services/scheduling/bookings/${currentBookingUuid}/complete-workflow/`, {
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
             }
@@ -310,16 +326,16 @@ document.getElementById('confirmComplete').addEventListener('click', function() 
             .then(response => {
                 if (response.ok) {
                     // If we get a successful response, it means there's a workflow prompt
-                    window.location.href = `/scheduling/booking/${currentBookingId}/complete_booking_workflow_prompt/`;
+                    window.location.href = `/services/scheduling/bookings/${currentBookingUuid}/complete-workflow/`;
                 } else {
                     // No workflow, complete directly
-                    return fetch(`/scheduling/booking/${currentBookingId}/complete_booking/`, {
+                    return fetch(`/services/scheduling/bookings/${currentBookingUuid}/complete/`, {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCookie('csrftoken')
+                            'X-CSRFToken': getCookie('csrftoken'),
+                            'X-Requested-With': 'XMLHttpRequest'
                         },
-                        body: JSON.stringify({
+                        body: new URLSearchParams({
                             completion_notes: 'Completed from booking list'
                         })
                     });
@@ -332,7 +348,7 @@ document.getElementById('confirmComplete').addEventListener('click', function() 
             })
             .then(data => {
                 if (data && data.success) {
-                    window.location.reload();
+                    updateBookingCardAfterComplete(currentBookingUuid);
                 }
             })
             .catch(error => {

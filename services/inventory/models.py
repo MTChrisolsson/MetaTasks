@@ -206,6 +206,13 @@ class InventoryFieldDefinition(models.Model):
         on_delete=models.CASCADE,
         related_name='inventory_field_definitions',
     )
+    location = models.ForeignKey(
+        InventoryLocation,
+        on_delete=models.CASCADE,
+        related_name='custom_field_definitions',
+        null=True,
+        blank=True,
+    )
     name = models.CharField(max_length=100)
     key = models.SlugField(max_length=100)
     field_type = models.CharField(
@@ -228,6 +235,8 @@ class InventoryFieldDefinition(models.Model):
         ordering = ['name']
 
     def __str__(self):
+        if self.location_id:
+            return f"{self.name} ({self.location.code})"
         return self.name
 
 

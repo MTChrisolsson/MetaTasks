@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib import messages
 from django.core.paginator import Paginator
+from django.core.exceptions import ValidationError
 from django.db.models import Count, Q
 from datetime import datetime, timedelta, date, time
 from core.views import require_organization_access
@@ -429,7 +430,12 @@ def create_booking(request):
                 return redirect('scheduling:booking_detail', booking_id=booking.id)
                 
             except Exception as e:
-                messages.error(request, f'Failed to create booking: {str(e)}')
+                error_message = str(e)
+                if isinstance(e, ValidationError):
+                    if hasattr(e, 'messages') and e.messages:
+                        error_message = ' '.join(e.messages)
+                form.add_error(None, error_message)
+                messages.error(request, f'Failed to create booking: {error_message}')
     else:
         form = BookingForm(organization=profile.organization)
     
@@ -780,8 +786,17 @@ def complete_booking_workflow_prompt(request, booking_uuid):
     # Check if workflow integration is available
     work_item = BookingWorkflowIntegration.get_linked_work_item(booking)
     if not work_item:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse(
+                {
+                    'prompt_required': False,
+                    'error': 'No workflow integration found for this booking.',
+                },
+                status=404,
+            )
+
         messages.error(request, "No workflow integration found for this booking.")
-        return redirect('scheduling:booking_detail', uuid=booking.uuid)
+        return redirect('scheduling:booking_detail', booking_id=booking.id)
     
     if request.method == 'POST':
         # Handle workflow completion form submission
@@ -814,7 +829,7 @@ def complete_booking_workflow_prompt(request, booking_uuid):
                 return redirect('scheduling:booking_list')
             else:
                 messages.error(request, result.get('error', 'Unknown error occurred'))
-                return redirect('scheduling:booking_detail', uuid=booking.uuid)
+                return redirect('scheduling:booking_detail', booking_id=booking.id)
     
     # GET request - display the form
     completion_options = BookingWorkflowIntegration.get_completion_options(work_item)
