@@ -1335,40 +1335,33 @@ class TeamForm(forms.ModelForm):
             'color': 'Team color for visual identification in calendars and reports',
         }
 
-    def __init__(self, *args, **kwargs):
-        organization = kwargs.pop('organization', None)
-        current_team = kwargs.pop('current_team', None)
+    def __init__(self, *args, organization=None, current_team=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.organization = organization
         
+        # Handle parent_team queryset and hierarchy
         if organization:
-            # Get teams that can be parent teams (exclude current team and its descendants to prevent circular references)
             potential_parents = Team.objects.filter(organization=organization, is_active=True)
             
             if current_team:
-                # Exclude current team and its descendants to prevent circular references
                 excluded_teams = [current_team.id]
                 excluded_teams.extend([team.id for team in current_team.get_all_sub_teams(include_self=False)])
                 potential_parents = potential_parents.exclude(id__in=excluded_teams)
             
-            # Order by hierarchy for better display
             potential_parents = potential_parents.order_by('name')
-            
-            # Create choices with hierarchy indication
             choices = [(team.id, team.full_hierarchy_name) for team in potential_parents]
             self.fields['parent_team'].choices = [('', '--- Top-level team (no parent) ---')] + choices
-        
-        # Set initial value if editing
+
+        # Set initial value for parent_team if editing
         if self.instance and self.instance.pk and self.instance.parent_team:
             self.fields['parent_team'].initial = self.instance.parent_team.id
 
-    def __init__(self, *args, organization=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.organization = organization
-        
-        # Set initial values
+        # Set other default initials
         if not self.instance.pk:
-            self.fields['default_capacity'].initial = 3
-            self.fields['is_active'].initial = True
+            if 'default_capacity' in self.fields:
+                self.fields['default_capacity'].initial = 3
+            if 'is_active' in self.fields:
+                self.fields['is_active'].initial = True
 
     def clean_name(self):
         name = self.cleaned_data.get('name')

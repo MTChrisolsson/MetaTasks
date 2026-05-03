@@ -41,6 +41,13 @@ def license_dashboard(request):
         'services': Service.objects.filter(is_active=True).count(),
     }
     
+    # Actionable metrics for Support
+    now = timezone.now()
+    upcoming_expiry = License.objects.filter(
+        status='active', 
+        end_date__range=[now, now + timezone.timedelta(days=30)]
+    ).select_related('organization', 'license_type__service')
+
     # Recent activity
     recent_logs = LicenseAuditLog.objects.select_related(
         'performed_by', 'affected_user__user', 'license__organization', 
@@ -58,6 +65,7 @@ def license_dashboard(request):
         'stats': stats,
         'recent_logs': recent_logs,
         'top_organizations': top_organizations,
+        'upcoming_expiry': upcoming_expiry,
     }
     
     return render(request, 'licensing/dashboard.html', context)
@@ -73,13 +81,16 @@ def organization_licenses(request, org_id=None):
     else:
         # List all organizations with pagination
         search_query = request.GET.get('search', '')
-        organizations_qs = Organization.objects.filter(is_active=True).order_by('name')
+        organizations_qs = Organization.objects.prefetch_related('members__user').all().order_by('-created_at')
         
         if search_query:
             organizations_qs = organizations_qs.filter(
                 Q(name__icontains=search_query) | 
-                Q(description__icontains=search_query)
-            )
+                Q(description__icontains=search_query) |
+                Q(slug__icontains=search_query) |
+                Q(members__user__email__icontains=search_query) |
+                Q(members__user__username__icontains=search_query)
+            ).distinct()
         
         paginator = Paginator(organizations_qs, 20)
         page_number = request.GET.get('page')

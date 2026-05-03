@@ -320,11 +320,11 @@ class LoginView(TemplateView):
     template_name = 'accounts/login.html'
     
     def post(self, request):
-        username = (request.POST.get('username') or '').strip().lower()
+        email = (request.POST.get('username') or '').strip().lower()
         password = request.POST.get('password')
         
-        if username and password:
-            user = authenticate(request, username=username, password=password)
+        if email and password:
+            user = authenticate(request, username=email, password=password)
             if user is not None:
                 login(request, user, backend='django.contrib.auth.backends.ModelBackend')
 
@@ -332,9 +332,9 @@ class LoginView(TemplateView):
                 next_url = request.GET.get('next', '/')
                 return redirect(next_url)
             else:
-                messages.error(request, 'Invalid username or password.')
+                messages.error(request, 'Invalid email or password.')
         else:
-            messages.error(request, 'Please enter both username and password.')
+            messages.error(request, 'Please enter both email and password.')
         
         return render(request, self.template_name)
 

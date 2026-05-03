@@ -101,6 +101,14 @@ class RegistrationForm(UserCreationForm):
             user.save()
         return user
 
+    def clean_email(self):
+        email = self.cleaned_data.get('email', '').lower().strip()
+        if CustomUser.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError(
+                "A user with this email address already exists."
+            )
+        return email
+
     def clean_username(self):
         raw_username = (self.cleaned_data.get('username') or '').strip()
         if not raw_username:

@@ -105,17 +105,17 @@ def create_user(request):
         try:
             with transaction.atomic():
                 # Create User
+                email = form_data.get('email', '').lower().strip()
                 raw_username = (form_data.get('username') or '').strip()
                 normalized_username = raw_username.lower()
 
-                if User.objects.filter(username__iexact=raw_username).exists():
-                    raise ValueError('A user with that username already exists.')
-
+                if User.objects.filter(email__iexact=email).exists():
+                    raise ValueError('A user with that email address already exists.')
 
                 user = User.objects.create_user(
                     username=normalized_username,
                     display_username=raw_username,
-                    email=form_data['email'],
+                    email=email,
                     first_name=form_data['first_name'],
                     last_name=form_data['last_name'],
                     password=form_data['password1']

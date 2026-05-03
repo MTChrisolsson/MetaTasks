@@ -1,17 +1,19 @@
+name: metatasks-dev  # <--- CRITICAL: Put it here at the very top
+
 services:
   db:
     image: postgres:15
     restart: unless-stopped
     environment:
-      POSTGRES_DB: mediap
-      POSTGRES_USER: mediap
-      POSTGRES_PASSWORD: mediap
+      POSTGRES_DB: metatask
+      POSTGRES_USER: metatask
+      POSTGRES_PASSWORD: super-secure-password
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+      - dev_postgres_data:/var/lib/postgresql/data # <--- RENAME THIS
+    # ports: 
+    #   - "5433:5432" # OPTIONAL: Only expose if you need to connect via DBeaver/pgAdmin
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mediap"]
+      test: ["CMD-SHELL", "pg_isready -U metatask"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -19,10 +21,10 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+    # ports:
+    #   - "6380:6379" # OPTIONAL: Avoids conflict with Prod Redis if exposed
     volumes:
-      - redis_data:/data
+      - dev_redis_data:/data # <--- RENAME THIS
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
@@ -38,21 +40,18 @@ services:
       - USE_SQLITE=False
       - DB_ENGINE=django.db.backends.postgresql
       - DB_HOST=db
-      - DATABASE_URL=postgresql://mediap:mediap@db:5432/mediap
+      - DATABASE_URL=postgresql://metatask:super-secure-password@db:5432/metatask
       - REDIS_URL=redis://redis:6379/0
-      - DB_NAME=mediap
-      - DB_USER=mediap
-      - DB_PASSWORD=mediap
-      - GUNICORN_WORKERS=3
-      - GUNICORN_TIMEOUT=60
-      - COLLECT_STATIC=1
+      - DB_NAME=metatask
+      - DB_USER=metatask
+      - DB_PASSWORD=super-secure-password
     volumes:
       - .:/app
       - ./logs:/app/logs
-      - static_volume:/app/staticfiles
-      - media_volume:/app/media
+      - dev_static_volume:/app/staticfiles # <--- RENAME THIS
+      - dev_media_volume:/app/media   # <--- RENAME THIS
     ports:
-      - "8000:8000"
+      - "8080:8000" # <--- CHANGE THIS: Access Dev at http://vps-ip:8080
     depends_on:
       db:
         condition: service_healthy
@@ -64,7 +63,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
-
+      
   celery:
     build: .
     restart: unless-stopped
@@ -74,11 +73,11 @@ services:
       - USE_SQLITE=False
       - DB_ENGINE=django.db.backends.postgresql
       - DB_HOST=db
-      - DATABASE_URL=postgresql://mediap:mediap@db:5432/mediap
+      - DATABASE_URL=postgresql://metatask:super-secure-password@db:5432/metatask
       - REDIS_URL=redis://redis:6379/0
-      - DB_NAME=mediap
-      - DB_USER=mediap
-      - DB_PASSWORD=mediap
+      - DB_NAME=metatask
+      - DB_USER=metatask
+      - DB_PASSWORD=super-secure-password
     volumes:
       - .:/app
     depends_on:
@@ -97,11 +96,11 @@ services:
       - USE_SQLITE=False
       - DB_ENGINE=django.db.backends.postgresql
       - DB_HOST=db
-      - DATABASE_URL=postgresql://mediap:mediap@db:5432/mediap
+      - DATABASE_URL=postgresql://metatask:super-secure-password@db:5432/metatask
       - REDIS_URL=redis://redis:6379/0
-      - DB_NAME=mediap
-      - DB_USER=mediap
-      - DB_PASSWORD=mediap
+      - DB_NAME=metatask
+      - DB_USER=metatask
+      - DB_PASSWORD=super-secure-password
     volumes:
       - .:/app
     depends_on:
@@ -112,7 +111,7 @@ services:
     command: celery -A mediap beat -l info
 
 volumes:
-  postgres_data:
-  redis_data:
-  static_volume:
-  media_volume:
+  dev_postgres_data: # <--- RENAME ALL THESE
+  dev_redis_data:
+  dev_static_volume:
+  dev_media_volume:
