@@ -18,40 +18,30 @@
     </div>
 
     <div class="rounded-xl border border-amber-100 bg-white shadow-sm">
-        <div class="flex items-center justify-between border-b border-amber-100 px-5 py-4">
-            <h3 class="text-lg font-semibold text-gray-900">Stock at This Location</h3>
-            <a href="{% url 'inventory:location-view-settings' location.id %}" class="text-sm font-medium text-amber-700 hover:text-amber-800">
-                Configure visible data
-            </a>
+        <div class="flex flex-col gap-3 border-b border-amber-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900">Stock at This Location</h3>
+            </div>
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <form id="location-stock-search" class="min-w-[18rem]" hx-get="." hx-trigger="keyup changed delay:250ms" hx-target="#location-stock-table" hx-swap="innerHTML" hx-include="[name=search]">
+                    <label for="stock-search" class="sr-only">Search stock</label>
+                    <input
+                        id="stock-search"
+                        name="search"
+                        type="text"
+                        value="{{ search_query }}"
+                        placeholder="Search stock..."
+                        class="w-full rounded-lg border border-slate-300 bg-slate-50 px-4 py-2 text-sm text-slate-900 focus:border-amber-300 focus:ring-amber-200"
+                    />
+                </form>
+                <a href="{% url 'inventory:location-view-settings' location.id %}" class="text-sm font-medium text-amber-700 hover:text-amber-800">
+                    Configure visible data
+                </a>
+            </div>
         </div>
-        {% if stock_headers %}
-        <div class="overflow-x-auto">
-            <table class="min-w-full text-sm">
-                <thead class="bg-amber-50/60 text-left text-gray-600">
-                    <tr>
-                        {% for header in stock_headers %}
-                        <th class="px-5 py-3">{{ header }}</th>
-                        {% endfor %}
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-amber-100">
-                    {% for row in stock_rows %}
-                    <tr>
-                        {% for value in row.values %}
-                        <td class="px-5 py-3">{{ value }}</td>
-                        {% endfor %}
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="7" class="px-5 py-8 text-center text-gray-500">No stock records yet.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div id="location-stock-table">
+            {% include 'inventory/partials/location_stock_table.html' %}
         </div>
-        {% else %}
-        <div class="px-5 py-8 text-center text-sm text-gray-500">
-            No columns are currently enabled for this location. Update the visible fields settings to choose what appears here.
-        </div>
-        {% endif %}
     </div>
 
     <div class="rounded-xl border border-amber-100 bg-white shadow-sm">

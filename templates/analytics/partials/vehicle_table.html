@@ -1,0 +1,78 @@
+<div id="vehicle-table-container">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm border-collapse bg-white rounded-lg overflow-hidden">
+            <thead class="bg-slate-50 border-b border-slate-200">
+                <tr>
+                    <th class="px-4 py-3 font-semibold text-slate-600">Registration</th>
+                    <th class="px-4 py-3 font-semibold text-slate-600">Make</th>
+                    <th class="px-4 py-3 font-semibold text-slate-600">Model</th>
+                    <th class="px-4 py-3 font-semibold text-slate-600">Station</th>
+                    <th class="px-4 py-3 font-semibold text-slate-600">Published</th>
+                    <th class="px-4 py-3 font-semibold text-slate-600">Photographed</th>
+                    <th class="px-4 py-3 font-semibold text-slate-600">Missing CITK</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for vehicle in vehicles %}
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="px-4 py-3 text-slate-900 font-medium">{{ vehicle.registration }}</td>
+                    <td class="px-4 py-3 text-slate-600">{{ vehicle.make }}</td>
+                    <td class="px-4 py-3 text-slate-600">{{ vehicle.model }}</td>
+                    <td class="px-4 py-3 text-slate-600">{{ vehicle.current_station }}</td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex px-2 py-1 rounded text-xs font-medium {% if vehicle.is_published %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ vehicle.is_published|yesno:'Yes,No' }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex px-2 py-1 rounded text-xs font-medium {% if vehicle.is_photographed %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ vehicle.is_photographed|yesno:'Yes,No' }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex px-2 py-1 rounded text-xs font-medium {% if vehicle.missing_citk %}bg-red-100 text-red-800{% else %}bg-green-100 text-green-800{% endif %}">
+                            {{ vehicle.missing_citk|yesno:'Yes,No' }}
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-4 py-12 text-center text-slate-500">No vehicles found matching your search criteria.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="mt-6 flex justify-center gap-2">
+        {% if page_obj.has_previous %}
+            <a href="?page=1{% if q %}&q={{ q }}{% endif %}{% if station_filter %}&station={{ station_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" 
+               class="px-3 py-2 rounded border border-gray-300 text-sm text-gray-600 hover:bg-gray-50"
+               hx-get="{% url 'analytics:job_detail' job.id %}?page=1{% if q %}&q={{ q }}{% endif %}{% if station_filter %}&station={{ station_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}"
+               hx-target="#vehicle-table-container"
+               hx-swap="outerHTML">First</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if station_filter %}&station={{ station_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" 
+               class="px-3 py-2 rounded border border-gray-300 text-sm text-gray-600 hover:bg-gray-50"
+               hx-get="{% url 'analytics:job_detail' job.id %}?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if station_filter %}&station={{ station_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}"
+               hx-target="#vehicle-table-container"
+               hx-swap="outerHTML">Previous</a>
+        {% endif %}
+
+        <span class="px-3 py-2 text-sm text-gray-600">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if station_filter %}&station={{ station_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" 
+               class="px-3 py-2 rounded border border-gray-300 text-sm text-gray-600 hover:bg-gray-50"
+               hx-get="{% url 'analytics:job_detail' job.id %}?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if station_filter %}&station={{ station_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}"
+               hx-target="#vehicle-table-container"
+               hx-swap="outerHTML">Next</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}{% if station_filter %}&station={{ station_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" 
+               class="px-3 py-2 rounded border border-gray-300 text-sm text-gray-600 hover:bg-gray-50"
+               hx-get="{% url 'analytics:job_detail' job.id %}?page={{ page_obj.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}{% if station_filter %}&station={{ station_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}"
+               hx-target="#vehicle-table-container"
+               hx-swap="outerHTML">Last</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>

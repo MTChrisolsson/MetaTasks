@@ -1,0 +1,63 @@
+<div id="lite-vehicle-table-container">
+    <div class="grid grid-cols-1 gap-4">
+        {% for vehicle in vehicles %}
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border border-gray-200 rounded-lg px-4 py-3 hover:bg-gray-50 transition">
+            <div class="flex-1">
+                <div class="flex items-center gap-3">
+                    <span class="inline-block w-16 px-2 py-1 bg-gray-100 rounded text-xs font-mono font-bold text-gray-900">{{ vehicle.registration }}</span>
+                    <span class="text-gray-600 text-sm">{{ vehicle.model }}</span>
+                </div>
+                <div class="mt-2 text-xs text-gray-500 flex flex-wrap gap-3">
+                    <span><strong>Station:</strong> {{ vehicle.current_station|default:"–" }}</span>
+                    {% if vehicle.notes %}
+                    <span><strong>Notes:</strong> {{ vehicle.notes|truncatewords:10 }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="flex gap-2 sm:justify-end">
+                {% if vehicle.is_published %}
+                <span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded">Published</span>
+                {% else %}
+                <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded">Not Published</span>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-12 text-gray-500">
+            No vehicles found matching your criteria.
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="mt-6 flex justify-center gap-2">
+        {% if page_obj.has_previous %}
+            <a href="?page=1{% if q %}&q={{ q }}{% endif %}{% if station_filter %}&station={{ station_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{% if direction %}&dir={{ direction }}{% endif %}" 
+               class="px-3 py-2 rounded border border-gray-300 text-sm text-gray-600 hover:bg-gray-50"
+               hx-get="{% url 'analytics:lite_job_detail' job.id %}?page=1{% if q %}&q={{ q }}{% endif %}{% if station_filter %}&station={{ station_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{% if direction %}&dir={{ direction }}{% endif %}"
+               hx-target="#lite-vehicle-table-container"
+               hx-swap="outerHTML">First</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if station_filter %}&station={{ station_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{% if direction %}&dir={{ direction }}{% endif %}" 
+               class="px-3 py-2 rounded border border-gray-300 text-sm text-gray-600 hover:bg-gray-50"
+               hx-get="{% url 'analytics:lite_job_detail' job.id %}?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if station_filter %}&station={{ station_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{% if direction %}&dir={{ direction }}{% endif %}"
+               hx-target="#lite-vehicle-table-container"
+               hx-swap="outerHTML">Previous</a>
+        {% endif %}
+
+        <span class="px-3 py-2 text-sm text-gray-600">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if station_filter %}&station={{ station_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{% if direction %}&dir={{ direction }}{% endif %}" 
+               class="px-3 py-2 rounded border border-gray-300 text-sm text-gray-600 hover:bg-gray-50"
+               hx-get="{% url 'analytics:lite_job_detail' job.id %}?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if station_filter %}&station={{ station_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{% if direction %}&dir={{ direction }}{% endif %}"
+               hx-target="#lite-vehicle-table-container"
+               hx-swap="outerHTML">Next</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}{% if station_filter %}&station={{ station_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{% if direction %}&dir={{ direction }}{% endif %}" 
+               class="px-3 py-2 rounded border border-gray-300 text-sm text-gray-600 hover:bg-gray-50"
+               hx-get="{% url 'analytics:lite_job_detail' job.id %}?page={{ page_obj.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}{% if station_filter %}&station={{ station_filter }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{% if direction %}&dir={{ direction }}{% endif %}"
+               hx-target="#lite-vehicle-table-container"
+               hx-swap="outerHTML">Last</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>

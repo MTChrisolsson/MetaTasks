@@ -1,0 +1,29 @@
+{% if page_obj.has_other_pages %}
+<div class="flex items-center justify-between text-sm">
+    <div class="text-gray-500">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</div>
+    <div class="space-x-2">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if job_type %}&job_type={{ job_type }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}"
+           hx-get="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if job_type %}&job_type={{ job_type }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}"
+           hx-target="{{ hx_target }}" hx-swap="outerHTML"
+           class="px-3 py-1 border border-gray-300 rounded text-gray-700 hover:bg-gray-50">Previous</a>
+        {% endif %}
+        {% for i in page_obj.paginator.page_range %}
+            {% if page_obj.number == i %}
+                <span class="px-3 py-1 border border-indigo-600 bg-indigo-600 text-white rounded">{{ i }}</span>
+            {% else %}
+                <a href="?page={{ i }}{% if q %}&q={{ q }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if job_type %}&job_type={{ job_type }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}"
+                   hx-get="?page={{ i }}{% if q %}&q={{ q }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if job_type %}&job_type={{ job_type }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}"
+                   hx-target="{{ hx_target }}" hx-swap="outerHTML"
+                   class="px-3 py-1 border border-gray-300 rounded text-gray-700 hover:bg-gray-50">{{ i }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if job_type %}&job_type={{ job_type }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}"
+           hx-get="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if job_type %}&job_type={{ job_type }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}"
+           hx-target="{{ hx_target }}" hx-swap="outerHTML"
+           class="px-3 py-1 border border-gray-300 rounded text-gray-700 hover:bg-gray-50">Next</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

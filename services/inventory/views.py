@@ -356,6 +356,7 @@ def location_detail(request, location_id):
     profile = request.inventory_profile
     location = get_object_or_404(InventoryLocation, id=location_id, organization=profile.organization)
 
+    search_query = request.GET.get('search', '').strip()
     stock_rows = list(location.stock_levels.select_related('item').order_by('item__name'))
     recent_movements = StockMovement.objects.filter(
         organization=profile.organization,
@@ -426,14 +427,26 @@ def location_detail(request, location_id):
         row_values.extend(custom_data[field.key] for field in ordered_custom_fields)
         table_rows.append({'values': row_values})
 
+    if search_query:
+        search_lower = search_query.lower()
+        table_rows = [
+            row for row in table_rows
+            if any(search_lower in str(value).lower() for value in row['values'])
+        ]
+
     context = {
         'profile': profile,
         'location': location,
         'stock_rows': table_rows,
         'stock_headers': table_headers,
         'recent_movements': recent_movements,
+        'search_query': search_query,
         'page_title': f'Location {location.code}',
     }
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return render(request, 'inventory/partials/location_stock_table.html', context)
+
     return render(request, 'inventory/location_detail.html', context)
 
 

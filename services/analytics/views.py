@@ -12,7 +12,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -152,8 +152,11 @@ def _create_vehicle_valuation(job, vehicle, vehicle_payload, valuation_result):
     )
 
 
-def _save_vehicle_records(job, rows):
+def _save_vehicle_records(job, rows, clear_existing=False):
     """Persist processed rows to VehicleRecord with tolerant parsing."""
+    if clear_existing:
+        job.vehicle_records.all().delete()
+
     vehicle_records = []
     for row in rows:
         vehicle_records.append(
@@ -1155,7 +1158,14 @@ def upload(request):
                         update_fields=['kpis', 'station_stats', 'status', 'processed_at', 'error_message']
                     )
 
-                    _save_vehicle_records(job, result.get('inventory_24', []))
+                    # Combine all processed vehicle lists to ensure everything is searchable in the DB
+                    all_vehicles = (
+                        result.get('inventory_24', []) + 
+                        result.get('sold', []) + 
+                        result.get('not_published', [])
+                    )
+                    
+                    _save_vehicle_records(job, all_vehicles)
 
                 messages.success(request, 'Analytics job completed successfully.')
                 return redirect('analytics:job_detail', job_id=job.id)
@@ -1176,40 +1186,125 @@ def upload(request):
 @analytics_access_required
 def jobs_list(request):
     profile = request.analytics_profile
+    # Comprehensive filtering for the main jobs list
+    request.GET = request.GET.copy()
+    q = request.GET.get('q', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    job_type = request.GET.get('job_type', '').strip()
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
+
     jobs = StatistikJob.objects.filter(organization=profile.organization).order_by('-uploaded_at')
+
+    if q:
+        jobs = jobs.filter(
+            Q(status__icontains=q) |
+            Q(job_type__icontains=q) |
+            Q(error_message__icontains=q) |
+            Q(inventory_file__icontains=q) |
+            Q(wayke_file__icontains=q) |
+            Q(citk_file__icontains=q)
+        )
+
+    if status_filter:
+        jobs = jobs.filter(status=status_filter)
+    if job_type:
+        jobs = jobs.filter(job_type=job_type)
+    if date_from:
+        jobs = jobs.filter(uploaded_at__date__gte=date_from)
+    if date_to:
+        jobs = jobs.filter(uploaded_at__date__lte=date_to)
+
     paginator = Paginator(jobs, 15)
     page_obj = paginator.get_page(request.GET.get('page'))
-    return render(
-        request,
-        'analytics/jobs_list.html',
-        {
-            'profile': profile,
-            'jobs': page_obj,
-            'page_obj': page_obj,
-        },
-    )
+    
+    context = {
+        'profile': profile,
+        'jobs': page_obj,
+        'page_obj': page_obj,
+        'q': q,
+        'status_filter': status_filter,
+        'job_type': job_type,
+        'date_from': date_from,
+        'date_to': date_to,
+        'hx_target': '#jobs-table-container',
+    }
+    
+    # Return partial template for HTMX requests
+    if request.headers.get('HX-Request'):
+        return render(request, 'analytics/partials/jobs_table.html', context)
+    
+    return render(request, 'analytics/jobs_list.html', context)
 
 
 @analytics_access_required
 def job_detail(request, job_id):
     profile = request.analytics_profile
     job = get_object_or_404(StatistikJob, id=job_id, organization=profile.organization)
-    vehicles = job.vehicle_records.all().order_by('registration')
+
+    q = request.GET.get('q', '').strip()
+    station_filter = request.GET.get('station', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    published_filter = request.GET.get('published', '').strip()
+    sort = request.GET.get('sort', 'registration')
+    direction = request.GET.get('dir', 'asc')
+
+    vehicles = job.vehicle_records.all()
+
+    if q:
+        vehicles = vehicles.filter(
+            Q(registration__icontains=q) |
+            Q(make__icontains=q) |
+            Q(model__icontains=q) |
+            Q(current_station__icontains=q) |
+            Q(notes__icontains=q)
+        )
+
+    if station_filter:
+        vehicles = vehicles.filter(current_station=station_filter)
+    if status_filter:
+        vehicles = vehicles.filter(status=status_filter)
+    if published_filter:
+        is_published = published_filter.lower() == 'true'
+        vehicles = vehicles.filter(is_published=is_published)
+
+    # Apply dynamic sorting
+    valid_sort_fields = {'registration', 'make', 'model', 'current_station', 'published_price', 'days_in_stock', 'status'}
+    if sort not in valid_sort_fields:
+        sort = 'registration'
+    
+    order_field = sort if direction == 'asc' else f'-{sort}'
+    vehicles = vehicles.order_by(order_field)
+
+    # For filter dropdowns
+    station_choices = job.vehicle_records.values_list('current_station', flat=True).distinct().order_by('current_station')
+    status_choices = job.vehicle_records.values_list('status', flat=True).distinct().order_by('status')
+
     paginator = Paginator(vehicles, 50)
     page_obj = paginator.get_page(request.GET.get('page'))
 
-    return render(
-        request,
-        'analytics/job_detail.html',
-        {
-            'profile': profile,
-            'job': job,
-            'vehicles': page_obj,
-            'page_obj': page_obj,
-            'kpis': job.kpis or {},
-            'stations': job.station_stats or [],
-        },
-    )
+    context = {
+        'profile': profile,
+        'job': job,
+        'vehicles': page_obj,
+        'page_obj': page_obj,
+        'kpis': job.kpis or {},
+        'stations': job.station_stats or [],
+        'q': q,
+        'station_choices': station_choices,
+        'status_choices': status_choices,
+        'station_filter': station_filter,
+        'status_filter': status_filter,
+        'published_filter': published_filter,
+        'sort': sort,
+        'direction': direction,
+    }
+    
+    # Return partial template for HTMX requests
+    if request.headers.get('HX-Request'):
+        return render(request, 'analytics/partials/vehicle_table.html', context)
+    
+    return render(request, 'analytics/job_detail.html', context)
 
 
 @analytics_access_required
@@ -1244,6 +1339,33 @@ def job_citk_wayke_compare(request, job_id):
 
     raw_rows = result.get('citk_not_in_wayke', []) or []
     rows = [_normalize_citk_wayke_row(row) for row in raw_rows]
+
+    station_choices = sorted(list(set(row['station'] for row in rows if row['station'])))
+
+    q = request.GET.get('q', '').strip().lower()
+    if q:
+        rows = [
+            row for row in rows
+            if q in row['registration'].lower() or
+               q in row['model'].lower() or
+               q in row['station'].lower() or
+               q in row['note'].lower()
+        ]
+
+    station_filter = request.GET.get('station', '').strip()
+    if station_filter:
+        rows = [row for row in rows if row['station'] == station_filter]
+
+    published_filter = request.GET.get('published', '').strip()
+    if published_filter:
+        is_pub = published_filter.lower() == 'true'
+        rows = [row for row in rows if row['published'] == is_pub]
+
+    matched_filter = request.GET.get('matched', '').strip()
+    if matched_filter:
+        is_matched = matched_filter.lower() == 'true'
+        rows = [row for row in rows if row['wayke_matched'] == is_matched]
+
     paginator = Paginator(rows, 100)
     page_obj = paginator.get_page(request.GET.get('page'))
 
@@ -1258,6 +1380,11 @@ def job_citk_wayke_compare(request, job_id):
             'kpis': result.get('kpis', {}) or {},
             'stations': result.get('citk_not_in_wayke_by_station', []) or [],
             'run_meta': result.get('run_meta', {}) or {},
+            'q': q,
+            'station_choices': station_choices,
+            'station_filter': station_filter,
+            'published_filter': published_filter,
+            'matched_filter': matched_filter,
         },
     )
 
@@ -1363,21 +1490,50 @@ def _save_lite_vehicle_records(job, normalized_rows):
 @analytics_access_required
 def lite_jobs_list(request):
     profile = request.analytics_profile
+    q = request.GET.get('q', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
+
     jobs = (
         StatistikJob.objects.filter(organization=profile.organization, job_type='lite')
         .order_by('-uploaded_at')
     )
+
+    if q:
+        jobs = jobs.filter(
+            Q(status__icontains=q) |
+            Q(error_message__icontains=q) |
+            Q(wayke_file__icontains=q) |
+            Q(citk_file__icontains=q)
+        )
+
+    if status_filter:
+        jobs = jobs.filter(status=status_filter)
+    if date_from:
+        jobs = jobs.filter(uploaded_at__date__gte=date_from)
+    if date_to:
+        jobs = jobs.filter(uploaded_at__date__lte=date_to)
+
     paginator = Paginator(jobs, 20)
     page_obj = paginator.get_page(request.GET.get('page'))
-    return render(
-        request,
-        'analytics/lite_jobs_list.html',
-        {
-            'profile': profile,
-            'jobs': page_obj,
-            'page_obj': page_obj,
-        },
-    )
+    
+    context = {
+        'profile': profile,
+        'jobs': page_obj,
+        'page_obj': page_obj,
+        'q': q,
+        'status_filter': status_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'hx_target': '#lite-jobs-table-container',
+    }
+    
+    # Return partial template for HTMX requests
+    if request.headers.get('HX-Request'):
+        return render(request, 'analytics/partials/lite_jobs_table.html', context)
+    
+    return render(request, 'analytics/lite_jobs_list.html', context)
 
 
 _LITE_SORT_FIELDS = {'registration', 'model', 'current_station', 'notes'}
@@ -1400,15 +1556,13 @@ def lite_job_detail(request, job_id):
     if direction not in ('asc', 'desc'):
         direction = 'asc'
 
-    from django.db.models import Q as DQ
-
     qs = job.vehicle_records.all()
     if q:
         qs = qs.filter(
-            DQ(registration__icontains=q)
-            | DQ(model__icontains=q)
-            | DQ(current_station__icontains=q)
-            | DQ(notes__icontains=q)
+            Q(registration__icontains=q)
+            | Q(model__icontains=q)
+            | Q(current_station__icontains=q)
+            | Q(notes__icontains=q)
         )
     if station_filter:
         qs = qs.filter(current_station=station_filter)
@@ -1425,23 +1579,25 @@ def lite_job_detail(request, job_id):
     paginator = Paginator(qs, 100)
     page_obj = paginator.get_page(request.GET.get('page'))
 
-    return render(
-        request,
-        'analytics/lite_job_detail.html',
-        {
-            'profile': profile,
-            'job': job,
-            'vehicles': page_obj,
-            'page_obj': page_obj,
-            'kpis': job.kpis or {},
-            'stations': job.station_stats or [],
-            'station_choices': stations,
-            'q': q,
-            'station_filter': station_filter,
-            'sort': sort,
-            'direction': direction,
-        },
-    )
+    context = {
+        'profile': profile,
+        'job': job,
+        'vehicles': page_obj,
+        'page_obj': page_obj,
+        'kpis': job.kpis or {},
+        'stations': job.station_stats or [],
+        'station_choices': stations,
+        'q': q,
+        'station_filter': station_filter,
+        'sort': sort,
+        'direction': direction,
+    }
+    
+    # Return partial template for HTMX requests
+    if request.headers.get('HX-Request'):
+        return render(request, 'analytics/partials/lite_vehicle_table.html', context)
+    
+    return render(request, 'analytics/lite_job_detail.html', context)
 
 
 @analytics_access_required
@@ -1584,7 +1740,35 @@ class AnalyticsViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filter by organization"""
         profile = self._ensure_access()
-        return StatistikJob.objects.filter(organization=profile.organization)
+        qs = StatistikJob.objects.filter(organization=profile.organization).order_by('-uploaded_at')
+
+        # Search
+        search = self.request.query_params.get('search')
+        if search:
+            qs = qs.filter(
+                Q(status__icontains=search) |
+                Q(job_type__icontains=search) |
+                Q(error_message__icontains=search)
+            )
+
+        # Filters
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+
+        job_type = self.request.query_params.get('job_type')
+        if job_type:
+            qs = qs.filter(job_type=job_type)
+
+        date_from = self.request.query_params.get('date_from')
+        if date_from:
+            qs = qs.filter(uploaded_at__date__gte=date_from)
+
+        date_to = self.request.query_params.get('date_to')
+        if date_to:
+            qs = qs.filter(uploaded_at__date__lte=date_to)
+
+        return qs
     
     def get_serializer_context(self):
         context = super().get_serializer_context()
