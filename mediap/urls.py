@@ -37,6 +37,8 @@ urlpatterns = [
     path('services/staff-panel/', include('services.staff_panel.urls')),
     # Analytics service
     path('services/analytics/', include(('services.analytics.urls', 'analytics'), namespace='analytics')),
+    # Job Planning service
+    path('services/job-planning/', include(('services.job_planning.urls', 'job_planning'), namespace='job_planning')),
     # Inventory service
     path('services/inventory/', include(('services.inventory.urls', 'inventory'), namespace='inventory')),
     path('licensing/', include('licensing.urls')),

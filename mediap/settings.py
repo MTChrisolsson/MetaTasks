@@ -123,6 +123,7 @@ INSTALLED_APPS = [
     'services.analytics',
     'services.inventory',
     'services.dashboard',
+    'services.job_planning',
 ]
 
 MIDDLEWARE = [

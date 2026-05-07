@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Job Planning - Project Management{% endblock %}</title>
+
+    <!-- TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- HTMX for dynamic content -->
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+
+    <!-- Alpine.js for interactive components -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    {% block extra_head %}{% endblock %}
+
+    <style>
+        /* Custom Job Planning theme colors */
+        :root {
+            --job-planning-primary: #10b981;
+            --job-planning-secondary: #059669;
+            --job-planning-success: #10b981;
+            --job-planning-warning: #f59e0b;
+            --job-planning-danger: #ef4444;
+        }
+
+        .job-planning-gradient {
+            background: linear-gradient(135deg, var(--job-planning-primary) 0%, var(--job-planning-secondary) 100%);
+        }
+
+        /* Status colors */
+        .status-planning { background-color: #fef3c7; color: #92400e; }
+        .status-active { background-color: #dbeafe; color: #1e40af; }
+        .status-on_hold { background-color: #fed7d7; color: #9b2c2c; }
+        .status-completed { background-color: #d1fae5; color: #065f46; }
+        .status-cancelled { background-color: #e2e8f0; color: #2d3748; }
+
+        /* Priority colors */
+        .priority-low { background-color: #f7fafc; color: #4a5568; }
+        .priority-medium { background-color: #fefcbf; color: #744210; }
+        .priority-high { background-color: #fed7d7; color: #9b2c2c; }
+        .priority-critical { background-color: #feb2b2; color: #742a2a; }
+
+        /* Task status colors */
+        .task-todo { background-color: #e2e8f0; color: #2d3748; }
+        .task-in_progress { background-color: #bee3f8; color: #2a69ac; }
+        .task-review { background-color: #fef5e7; color: #744210; }
+        .task-done { background-color: #c6f6d5; color: #22543d; }
+
+        /* Hide Alpine-controlled elements before Alpine initialises */
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+
+<body class="bg-gray-50 font-sans">
+    <!-- Top Header Bar -->
+    <header class="job-planning-gradient shadow-lg sticky top-0 z-40">
+        <div class="flex justify-between items-center h-16 px-4">
+            <!-- Logo and Service Name -->
+            <div class="flex items-center space-x-4">
+                <a href="{% url 'dashboard:dashboard' %}" class="text-white hover:text-gray-200 transition-colors">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Back to Dashboard
+                </a>
+                <div class="h-8 w-px bg-white/20"></div>
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-tasks text-white text-xl"></i>
+                    <span class="text-white font-semibold text-lg">Job Planning</span>
+                </div>
+            </div>
+
+            <!-- User Menu -->
+            <div class="flex items-center space-x-4">
+                <span class="text-white text-sm">{{ profile.user.get_full_name|default:profile.user.username }}</span>
+                <a href="{% url 'accounts:logout' %}" class="text-white hover:text-gray-200 transition-colors">
+                    <i class="fas fa-sign-out-alt"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="min-h-screen">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-12">
+        <div class="max-w-7xl mx-auto px-4 py-6">
+            <div class="text-center text-sm text-gray-500">
+                <p>&copy; 2026 MetaTask. Job Planning Service.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Flash Messages -->
+    {% if messages %}
+    <div class="fixed top-20 right-4 z-50 space-y-2">
+        {% for message in messages %}
+        <div class="bg-white shadow-lg rounded-lg p-4 border-l-4
+                    {% if message.tags == 'success' %}border-green-500 bg-green-50
+                    {% elif message.tags == 'error' %}border-red-500 bg-red-50
+                    {% elif message.tags == 'warning' %}border-yellow-500 bg-yellow-50
+                    {% else %}border-blue-500 bg-blue-50{% endif %}">
+            <div class="flex items-center">
+                <i class="fas
+                        {% if message.tags == 'success' %}fa-check-circle text-green-500
+                        {% elif message.tags == 'error' %}fa-exclamation-circle text-red-500
+                        {% elif message.tags == 'warning' %}fa-exclamation-triangle text-yellow-500
+                        {% else %}fa-info-circle text-blue-500{% endif %} mr-3"></i>
+                <span class="text-sm">{{ message }}</span>
+                <button class="ml-auto text-gray-400 hover:text-gray-600" onclick="this.parentElement.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

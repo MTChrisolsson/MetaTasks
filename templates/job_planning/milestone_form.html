@@ -1,0 +1,31 @@
+{% extends 'job_planning/base.html' %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-8">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">{% if milestone %}Edit Milestone{% else %}Create Milestone{% endif %}</h1>
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            <div>
+                <label for="{{ form.title.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                {{ form.title }}
+            </div>
+            <div>
+                <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                {{ form.description }}
+            </div>
+            <div>
+                <label for="{{ form.due_date.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
+                {{ form.due_date }}
+            </div>
+            <div class="flex justify-end gap-4 pt-4 border-t border-gray-200">
+                <a href="{% url 'job_planning:project-detail' project.id %}"
+                   class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md">Cancel</a>
+                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md">
+                    {% if milestone %}Save Changes{% else %}Create Milestone{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

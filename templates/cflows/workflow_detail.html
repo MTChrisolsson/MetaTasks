@@ -214,7 +214,7 @@
                                     <div class="flex items-center justify-between">
                                         <a href="{% url 'cflows:work_item_detail' item.id %}" 
                                            class="font-medium text-gray-900 hover:text-purple-600 transition-colors">
-                                            {{ item.title }}
+                                            {{ item.display_title }}
                                         </a>
                                         <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
                                                    {% if item.priority == 'critical' %}bg-red-100 text-red-800
@@ -250,6 +250,80 @@
                     {% endif %}
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 mt-8">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900">All Work Items</h2>
+                <p class="text-sm text-gray-500">Showing {{ stats.total_items }} work item{{ stats.total_items|pluralize }} for this workflow.</p>
+            </div>
+            <a href="{% url 'cflows:work_items_list' %}?workflow={{ workflow.id }}" 
+               class="text-purple-600 hover:text-purple-700 text-sm font-medium">Open full work item list</a>
+        </div>
+        <div class="p-6">
+            {% if workflow_items %}
+                <div class="grid gap-4">
+                    {% for item in workflow_items %}
+                        <div class="border border-gray-200 rounded-lg p-4 hover:border-purple-300 transition-colors">
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="min-w-0">
+                                    <a href="{% url 'cflows:work_item_detail' item.id %}" 
+                                       class="text-lg font-semibold text-gray-900 hover:text-purple-600 transition-colors">
+                                        {{ item.display_title }}
+                                    </a>
+                                    <div class="mt-2 flex flex-wrap items-center gap-3 text-sm text-gray-500">
+                                        <span>{{ item.current_step.name }}</span>
+                                        {% if item.current_assignee %}
+                                            <span>•</span>
+                                            <span>{% if item.current_assignee.user %}{{ item.current_assignee.user.get_full_name|default:item.current_assignee.user.username }}{% else %}Unassigned User{% endif %}</span>
+                                        {% endif %}
+                                        {% if item.due_date %}
+                                            <span>•</span>
+                                            <span class="{% if item.due_date < now %}text-red-600{% endif %}">
+                                                Due {{ item.due_date|date:"M d, Y" }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+
+                                    {% if item.description %}
+                                        <p class="text-gray-600 mt-3">{{ item.description|truncatewords:18 }}</p>
+                                    {% elif item.custom_field_values.all %}
+                                        <div class="mt-3 text-sm text-gray-600 space-y-1">
+                                            {% for cf_value in item.custom_field_values.all|slice:":2" %}
+                                                <div>
+                                                    <span class="font-medium">{{ cf_value.custom_field.label }}:</span>
+                                                    {{ cf_value.get_display_value }}
+                                                </div>
+                                            {% endfor %}
+                                            {% if item.custom_field_values.all|length > 2 %}
+                                                <div class="text-gray-500">+{{ item.custom_field_values.all|length|add:'-2' }} more fields</div>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                           {% if item.is_completed %}bg-green-100 text-green-800{% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                    {% if item.is_completed %}Completed{% else %}In Progress{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-12">
+                    <div class="text-gray-400 mb-4">
+                        <i class="fas fa-clipboard-list text-5xl"></i>
+                    </div>
+                    <p class="text-gray-500 mb-4">There are no work items in this workflow yet.</p>
+                    <a href="{% url 'cflows:create_work_item' workflow.id %}" 
+                       class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm transition-colors">
+                        Create the first work item
+                    </a>
+                </div>
+            {% endif %}
         </div>
     </div>
 </div>

@@ -89,7 +89,7 @@ def require_any_permission(permission_codenames: List[str], resource_param: str 
         @wraps(view_func)
         @login_required
         def _wrapped_view(request, *args, **kwargs):
-            user_profile = getattr(request.user, 'profile', None)
+            user_profile = getattr(request.user, 'mediap_profile', None)
             if not user_profile:
                 if raise_404:
                     raise Http404()
@@ -135,7 +135,7 @@ def require_all_permissions(permission_codenames: List[str], resource_param: str
         @wraps(view_func)
         @login_required
         def _wrapped_view(request, *args, **kwargs):
-            user_profile = getattr(request.user, 'profile', None)
+            user_profile = getattr(request.user, 'mediap_profile', None)
             if not user_profile:
                 if raise_404:
                     raise Http404()
@@ -173,7 +173,7 @@ def require_organization_access(view_func):
     @wraps(view_func)
     @login_required
     def _wrapped_view(request, *args, **kwargs):
-        user_profile = getattr(request.user, 'profile', None)
+        user_profile = getattr(request.user, 'mediap_profile', None)
         if not user_profile:
             raise PermissionDenied("User profile not found")
         
@@ -194,7 +194,7 @@ def require_organization_admin(view_func):
     @wraps(view_func)
     @login_required
     def _wrapped_view(request, *args, **kwargs):
-        user_profile = getattr(request.user, 'profile', None)
+        user_profile = getattr(request.user, 'mediap_profile', None)
         if not user_profile:
             raise PermissionDenied("User profile not found")
         
@@ -212,7 +212,7 @@ def require_role_management(view_func):
     @wraps(view_func)
     @login_required
     def _wrapped_view(request, *args, **kwargs):
-        user_profile = getattr(request.user, 'profile', None)
+        user_profile = getattr(request.user, 'mediap_profile', None)
         if not user_profile:
             raise PermissionDenied("User profile not found")
         
@@ -239,7 +239,7 @@ class PermissionMixin:
         if not request.user.is_authenticated:
             return self.handle_no_permission()
         
-        user_profile = getattr(request.user, 'profile', None)
+        user_profile = getattr(request.user, 'mediap_profile', None)
         if not user_profile:
             return self.handle_no_permission()
         
@@ -292,18 +292,18 @@ def user_has_permission(user, permission_codename: str, resource=None) -> bool:
     Template-friendly function to check user permissions
     Usage in template: {% if user|user_has_permission:'workflow.create' %}
     """
-    if not hasattr(user, 'profile'):
+    if not hasattr(user, 'mediap_profile'):
         return False
-    return user.profile.has_permission(permission_codename, resource)
+    return user.mediap_profile.has_permission(permission_codename, resource)
 
 
 def user_has_any_permission(user, permission_codenames: List[str], resource=None) -> bool:
     """
     Check if user has any of the specified permissions
     """
-    if not hasattr(user, 'profile'):
+    if not hasattr(user, 'mediap_profile'):
         return False
     return any(
-        user.profile.has_permission(perm, resource) 
+        user.mediap_profile.has_permission(perm, resource) 
         for perm in permission_codenames
     )

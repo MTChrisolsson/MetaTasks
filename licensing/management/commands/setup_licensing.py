@@ -116,7 +116,44 @@ class Command(BaseCommand):
             }
             analytics_service.save()
             self.stdout.write('✓ Updated Analytics service')
-        
+
+        # Create Job Planning service
+        job_planning_service, created = Service.objects.get_or_create(
+            slug='job-planning',
+            defaults={
+                'name': 'Job Planning',
+                'description': 'Project management with task tracking, milestones, and resource allocation',
+                'version': '1.0.0',
+                'is_active': True,
+                'icon': 'fas fa-tasks',
+                'color': '#10b981',
+                'sort_order': 4,
+                'allows_personal_free': True,
+                'personal_free_limits': {
+                    'users': 1,
+                    'projects': 3,
+                    'tasks': 50,
+                    'storage_gb': 1,
+                },
+            }
+        )
+
+        if created:
+            self.stdout.write('✓ Created Job Planning service')
+        else:
+            job_planning_service.icon = 'fas fa-tasks'
+            job_planning_service.color = '#10b981'
+            job_planning_service.sort_order = 4
+            job_planning_service.is_active = True
+            job_planning_service.personal_free_limits = {
+                'users': 1,
+                'projects': 3,
+                'tasks': 50,
+                'storage_gb': 1,
+            }
+            job_planning_service.save()
+            self.stdout.write('✓ Updated Job Planning service')
+
         # Create license types for CFlows
         license_types_data = [
             {
@@ -344,7 +381,83 @@ class Command(BaseCommand):
                 self.stdout.write(f'✓ Created Analytics license type: {lt_data["display_name"]}')
             else:
                 self.stdout.write(f'✓ Analytics license type already exists: {lt_data["display_name"]}')
-        
+
+        # Create license types for Job Planning
+        job_planning_license_types_data = [
+            {
+                'name': 'personal_free',
+                'display_name': 'Personal Free',
+                'price_monthly': Decimal('0.00'),
+                'price_yearly': Decimal('0.00'),
+                'max_users': 1,
+                'max_projects': 3,
+                'max_workflows': 50,  # Using max_workflows for tasks
+                'max_storage_gb': 1,
+                'max_api_calls_per_day': 100,
+                'features': ['Basic project management', 'Task tracking', 'Milestone planning'],
+                'restrictions': ['No team collaboration', 'Limited projects'],
+                'is_personal_only': True,
+                'requires_organization': False,
+            },
+            {
+                'name': 'basic',
+                'display_name': 'Basic Team',
+                'price_monthly': Decimal('15.00'),
+                'price_yearly': Decimal('150.00'),
+                'max_users': 10,
+                'max_projects': 25,
+                'max_workflows': 500,
+                'max_storage_gb': 10,
+                'max_api_calls_per_day': 1000,
+                'features': ['Team project management', 'Task assignment', 'Progress tracking'],
+                'restrictions': ['Limited advanced features'],
+                'is_personal_only': False,
+                'requires_organization': True,
+            },
+            {
+                'name': 'professional',
+                'display_name': 'Professional',
+                'price_monthly': Decimal('45.00'),
+                'price_yearly': Decimal('450.00'),
+                'max_users': 50,
+                'max_projects': 100,
+                'max_workflows': 2000,
+                'max_storage_gb': 100,
+                'max_api_calls_per_day': 10000,
+                'features': ['Advanced project management', 'Gantt charts', 'Resource allocation'],
+                'restrictions': [],
+                'is_personal_only': False,
+                'requires_organization': True,
+            },
+            {
+                'name': 'enterprise',
+                'display_name': 'Enterprise',
+                'price_monthly': Decimal('149.00'),
+                'price_yearly': Decimal('1490.00'),
+                'max_users': None,
+                'max_projects': None,
+                'max_workflows': None,
+                'max_storage_gb': None,
+                'max_api_calls_per_day': None,
+                'features': ['Unlimited projects', 'Custom workflows', 'Advanced reporting'],
+                'restrictions': [],
+                'is_personal_only': False,
+                'requires_organization': True,
+            },
+        ]
+
+        for lt_data in job_planning_license_types_data:
+            license_type, created = LicenseType.objects.get_or_create(
+                service=job_planning_service,
+                name=lt_data['name'],
+                defaults=lt_data,
+            )
+
+            if created:
+                self.stdout.write(f'✓ Created Job Planning license type: {lt_data["display_name"]}')
+            else:
+                self.stdout.write(f'✓ Job Planning license type already exists: {lt_data["display_name"]}')
+
         # Set up personal free licenses for personal organizations
         personal_orgs = Organization.objects.filter(organization_type='personal')
         
@@ -360,12 +473,12 @@ class Command(BaseCommand):
             name='personal_free'
         )
 
-        # Analytics personal free licenses
-        analytics_personal_free_license_type = LicenseType.objects.get(
-            service=analytics_service,
+        # Job Planning personal free licenses
+        job_planning_personal_free_license_type = LicenseType.objects.get(
+            service=job_planning_service,
             name='personal_free'
         )
-        
+
         for org in personal_orgs:
             # Create CFlows license
             cflows_license, created = License.objects.get_or_create(
@@ -417,6 +530,23 @@ class Command(BaseCommand):
 
             if created:
                 self.stdout.write(f'✓ Created Analytics personal free license for: {org.name}')
+
+            # Create Job Planning license
+            job_planning_license, created = License.objects.get_or_create(
+                organization=org,
+                license_type=job_planning_personal_free_license_type,
+                defaults={
+                    'account_type': 'personal',
+                    'is_personal_free': True,
+                    'status': 'active',
+                    'billing_cycle': 'lifetime',
+                    'start_date': timezone.now(),
+                    'current_users': org.members.count(),
+                }
+            )
+
+            if created:
+                self.stdout.write(f'✓ Created Job Planning personal free license for: {org.name}')
         
         # Update existing Demo Car Dealership organization to be business type with basic license
         try:

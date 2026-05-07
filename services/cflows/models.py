@@ -510,8 +510,31 @@ class WorkItem(models.Model):
         ordering = ['-updated_at']
     
     def __str__(self):
-        return f"{self.title} ({self.workflow.name})"
+        return f"{self.display_title} ({self.workflow.name})"
     
+    @property
+    def display_title(self):
+        """Return the best possible display title for this work item."""
+        placeholder_titles = {'New Work Item', 'Work Item', 'Untitled'}
+        if self.title and self.title.strip() and self.title not in placeholder_titles:
+            return self.title.strip()
+
+        replacement_title = self.data.get('replacement_title', {})
+        if replacement_title:
+            replacement_value = replacement_title.get('value')
+            if replacement_value and str(replacement_value).strip():
+                return str(replacement_value).strip()
+
+        first_custom_value = self.custom_field_values.select_related('custom_field').first()
+        if first_custom_value:
+            display_value = first_custom_value.get_display_value()
+            if display_value:
+                return display_value
+            if first_custom_value.custom_field and first_custom_value.custom_field.label:
+                return first_custom_value.custom_field.label
+
+        return 'Untitled Work Item'
+
     @property
     def days_on_current_step(self):
         """Calculate how many days this work item has been on the current step"""

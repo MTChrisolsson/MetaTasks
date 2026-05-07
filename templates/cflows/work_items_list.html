@@ -178,7 +178,7 @@
                                     <div class="flex-1">
                                         <a href="{% url 'cflows:work_item_detail' item.id %}" 
                                            class="text-lg font-medium text-gray-900 hover:text-purple-600 transition-colors">
-                                            {{ item.title }}
+                                            {{ item.display_title }}
                                         </a>
                                         
                                         <div class="flex items-center space-x-4 text-sm text-gray-500 mt-1">
@@ -213,6 +213,18 @@
                                         
                                         {% if item.description %}
                                             <p class="text-gray-600 mt-2 line-clamp-2">{{ item.description|truncatewords:20 }}</p>
+                                        {% elif item.custom_field_values.all %}
+                                            <div class="text-gray-600 mt-2 text-sm space-y-1">
+                                                {% for cf_value in item.custom_field_values.all|slice:":2" %}
+                                                    <div>
+                                                        <span class="font-medium">{{ cf_value.custom_field.label }}:</span>
+                                                        {{ cf_value.get_display_value }}
+                                                    </div>
+                                                {% endfor %}
+                                                {% if item.custom_field_values.all|length > 2 %}
+                                                    <div class="text-gray-500">+{{ item.custom_field_values.all|length|add:'-2' }} more field{{ item.custom_field_values.all|length|add:'-2'|pluralize }}</div>
+                                                {% endif %}
+                                            </div>
                                         {% endif %}
                                         
                                         <!-- Tags -->

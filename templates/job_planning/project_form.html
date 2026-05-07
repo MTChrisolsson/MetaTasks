@@ -1,0 +1,143 @@
+{% extends 'job_planning/base.html' %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-8">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h1 class="text-2xl font-bold text-gray-900">
+                {% if project %}Edit Project{% else %}Create New Project{% endif %}
+            </h1>
+        </div>
+
+        <form method="post" class="p-6">
+            {% csrf_token %}
+
+            <div class="space-y-6">
+                <!-- Name -->
+                <div>
+                    <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        Project Name *
+                    </label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        Description
+                    </label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Status and Priority -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="{{ form.status.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Status
+                        </label>
+                        {{ form.status }}
+                        {% if form.status.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.status.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.priority.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Priority
+                        </label>
+                        {{ form.priority }}
+                        {% if form.priority.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.priority.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Dates -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="{{ form.start_date.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Start Date
+                        </label>
+                        {{ form.start_date }}
+                        {% if form.start_date.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.start_date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.end_date.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            End Date
+                        </label>
+                        {{ form.end_date }}
+                        {% if form.end_date.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.end_date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Budget and Progress -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="{{ form.budget.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Budget
+                        </label>
+                        {{ form.budget }}
+                        {% if form.budget.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.budget.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.progress_percentage.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Progress (%)
+                        </label>
+                        {{ form.progress_percentage }}
+                        {% if form.progress_percentage.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.progress_percentage.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Manager -->
+                <div>
+                    <label for="{{ form.manager.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        Project Manager
+                    </label>
+                    {{ form.manager }}
+                    {% if form.manager.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.manager.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="mt-8 pt-6 border-t border-gray-200 flex justify-end space-x-4">
+                <a href="{% if project %}{% url 'job_planning:project-detail' project.id %}{% else %}{% url 'job_planning:project-list' %}{% endif %}"
+                   class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md font-medium transition-colors">
+                    Cancel
+                </a>
+                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md font-medium transition-colors">
+                    {% if project %}Update Project{% else %}Create Project{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+/* Form styling */
+input[type="text"], input[type="number"], input[type="date"], select, textarea {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500;
+}
+
+textarea {
+    min-height: 100px;
+}
+</style>
+{% endblock %}

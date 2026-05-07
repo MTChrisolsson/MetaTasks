@@ -1,0 +1,316 @@
+{% extends 'job_planning/base.html' %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex justify-between items-start">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">{{ project.name }}</h1>
+                <div class="flex items-center space-x-4 mt-2">
+                    <span class="status-{{ project.status }} text-sm px-3 py-1 rounded-full font-medium">
+                        {{ project.get_status_display }}
+                    </span>
+                    <span class="priority-{{ project.priority }} text-sm px-3 py-1 rounded-full font-medium">
+                        {{ project.get_priority_display }}
+                    </span>
+                    {% if project.end_date and project.is_overdue %}
+                    <span class="bg-red-100 text-red-800 text-sm px-3 py-1 rounded-full font-medium">
+                        Overdue
+                    </span>
+                    {% endif %}
+                </div>
+                <p class="text-gray-600 mt-2">{{ project.description|default:"No description" }}</p>
+            </div>
+            <div class="flex space-x-2">
+                <a href="{% url 'job_planning:project-edit' project.id %}"
+                   class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                    <i class="fas fa-edit mr-2"></i>
+                    Edit
+                </a>
+                <a href="{% url 'job_planning:project-delete' project.id %}"
+                   class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                   onclick="return confirm('Are you sure you want to delete this project?')">
+                    <i class="fas fa-trash mr-2"></i>
+                    Delete
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="p-2 bg-blue-100 rounded-lg">
+                    <i class="fas fa-tasks text-blue-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Total Tasks</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ total_tasks }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="p-2 bg-green-100 rounded-lg">
+                    <i class="fas fa-check-circle text-green-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Completed</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ completed_tasks }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="p-2 bg-red-100 rounded-lg">
+                    <i class="fas fa-exclamation-triangle text-red-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Overdue</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ overdue_tasks }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="p-2 bg-emerald-100 rounded-lg">
+                    <i class="fas fa-chart-line text-emerald-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Progress</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ completion_percentage|floatformat:0 }}%</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Details -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Main Content -->
+        <div class="lg:col-span-2 space-y-8">
+            <!-- Tasks -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                    <h2 class="text-lg font-semibold text-gray-900">Tasks</h2>
+                    <a href="{% url 'job_planning:task-create' project.id %}"
+                       class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded-md text-sm font-medium transition-colors">
+                        <i class="fas fa-plus mr-1"></i>
+                        Add Task
+                    </a>
+                </div>
+                <div class="divide-y divide-gray-200">
+                    {% for task in tasks %}
+                    <div class="p-6 hover:bg-gray-50 transition-colors">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <h3 class="text-lg font-medium text-gray-900">
+                                        <a href="{% url 'job_planning:task-detail' project.id task.id %}" class="hover:text-emerald-600">
+                                            {{ task.title }}
+                                        </a>
+                                    </h3>
+                                    <span class="task-{{ task.status }} text-xs px-2 py-1 rounded-full font-medium">
+                                        {{ task.get_status_display }}
+                                    </span>
+                                    {% if task.is_overdue %}
+                                    <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full font-medium">
+                                        Overdue
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-gray-600 text-sm mb-3">{{ task.description|truncatechars:150|default:"No description" }}</p>
+                                <div class="flex items-center space-x-4 text-sm text-gray-500">
+                                    {% if task.assigned_to %}
+                                    <span><i class="fas fa-user mr-1"></i>{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</span>
+                                    {% endif %}
+                                    {% if task.due_date %}
+                                    <span><i class="fas fa-calendar mr-1"></i>{{ task.due_date|date:"M j, Y" }}</span>
+                                    {% endif %}
+                                    {% if task.estimated_hours %}
+                                    <span><i class="fas fa-clock mr-1"></i>{{ task.estimated_hours }}h estimated</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="flex space-x-2 ml-4">
+                                <a href="{% url 'job_planning:task-edit' project.id task.id %}"
+                                   class="text-gray-600 hover:text-gray-800">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'job_planning:task-delete' project.id task.id %}"
+                                   class="text-red-600 hover:text-red-800"
+                                   onclick="return confirm('Are you sure you want to delete this task?')">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="p-12 text-center">
+                        <i class="fas fa-clipboard-list text-gray-400 text-4xl mb-4"></i>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">No tasks yet</h3>
+                        <p class="text-gray-600 mb-6">Get started by creating your first task for this project.</p>
+                        <a href="{% url 'job_planning:task-create' project.id %}"
+                           class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                            <i class="fas fa-plus mr-2"></i>
+                            Add Task
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Comments -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Comments</h2>
+                </div>
+                <div class="p-6">
+                    {% for comment in comments %}
+                    <div class="mb-4 pb-4 border-b border-gray-100 last:border-b-0 last:pb-0 last:mb-0">
+                        <div class="flex items-start space-x-3">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                                    <span class="text-sm font-medium text-gray-700">
+                                        {{ comment.author.first_name|first|default:comment.author.username|first|upper }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-2 mb-1">
+                                    <span class="font-medium text-gray-900">{{ comment.author.get_full_name|default:comment.author.username }}</span>
+                                    <span class="text-sm text-gray-500">{{ comment.created_at|date:"M j, Y g:i A" }}</span>
+                                </div>
+                                <p class="text-gray-700">{{ comment.content }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-600">No comments yet.</p>
+                    {% endfor %}
+
+                    <form method="post" action="{% url 'job_planning:project-add-comment' project.id %}" class="mt-6">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <label for="id_content" class="block text-sm font-medium text-gray-700 mb-2">Add a comment</label>
+                            <textarea id="id_content" name="content" rows="3"
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                      placeholder="Share your thoughts..."></textarea>
+                        </div>
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md font-medium transition-colors">
+                            <i class="fas fa-paper-plane mr-2"></i>
+                            Post Comment
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Project Info -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Project Information</h3>
+                <dl class="space-y-3">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Manager</dt>
+                        <dd class="text-sm text-gray-900">
+                            {% if project.manager %}
+                                {{ project.manager.get_full_name|default:project.manager.username }}
+                            {% else %}
+                                Not assigned
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Start Date</dt>
+                        <dd class="text-sm text-gray-900">
+                            {% if project.start_date %}
+                                {{ project.start_date|date:"M j, Y" }}
+                            {% else %}
+                                Not set
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">End Date</dt>
+                        <dd class="text-sm text-gray-900">
+                            {% if project.end_date %}
+                                {{ project.end_date|date:"M j, Y" }}
+                            {% else %}
+                                Not set
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Budget</dt>
+                        <dd class="text-sm text-gray-900">
+                            {% if project.budget %}
+                                ${{ project.budget|floatformat:2 }}
+                            {% else %}
+                                Not set
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Created</dt>
+                        <dd class="text-sm text-gray-900">{{ project.created_at|date:"M j, Y" }}</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- Milestones -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-gray-900">Milestones</h3>
+                    <a href="{% url 'job_planning:milestone-create' project.id %}"
+                       class="text-emerald-600 hover:text-emerald-700 text-sm font-medium">
+                        <i class="fas fa-plus mr-1"></i>
+                        Add
+                    </a>
+                </div>
+                <div class="p-6">
+                    {% for milestone in milestones %}
+                    <div class="mb-4 last:mb-0">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <h4 class="font-medium text-gray-900">{{ milestone.title }}</h4>
+                                <p class="text-sm text-gray-600 mt-1">{{ milestone.description|truncatechars:100|default:"No description" }}</p>
+                                <div class="flex items-center mt-2 text-sm">
+                                    <i class="fas fa-calendar text-gray-400 mr-1"></i>
+                                    <span class="{% if milestone.is_completed %}text-green-600{% elif milestone.is_overdue %}text-red-600{% else %}text-gray-600{% endif %}">
+                                        {{ milestone.due_date|date:"M j, Y" }}
+                                        {% if milestone.is_completed %}
+                                            (Completed {{ milestone.completed_at|date:"M j" }})
+                                        {% elif milestone.is_overdue %}
+                                            (Overdue)
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex space-x-2 ml-4">
+                                <a href="{% url 'job_planning:milestone-edit' project.id milestone.id %}"
+                                   class="text-gray-600 hover:text-gray-800">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'job_planning:milestone-delete' project.id milestone.id %}"
+                                   class="text-red-600 hover:text-red-800"
+                                   onclick="return confirm('Are you sure you want to delete this milestone?')">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-600 text-sm">No milestones defined yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

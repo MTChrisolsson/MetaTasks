@@ -1,0 +1,68 @@
+{% extends 'job_planning/base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div class="flex justify-between items-start">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">{{ task.title }}</h1>
+                <div class="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-500">
+                    <span class="task-{{ task.status }} rounded-full px-2 py-1 font-medium">{{ task.get_status_display }}</span>
+                    <span class="priority-{{ task.priority }} rounded-full px-2 py-1 font-medium">{{ task.get_priority_display }}</span>
+                    {% if task.due_date %}
+                    <span><i class="fas fa-calendar mr-1"></i>{{ task.due_date|date:'M j, Y' }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="{% url 'job_planning:task-edit' project.id task.id %}" class="text-gray-600 hover:text-gray-900">Edit</a>
+                <a href="{% url 'job_planning:task-delete' project.id task.id %}" class="text-red-600 hover:text-red-800">Delete</a>
+            </div>
+        </div>
+
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Description</h2>
+                <p class="mt-3 text-gray-700">{{ task.description|default:'No description provided.' }}</p>
+            </div>
+            <div>
+                <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Details</h2>
+                <dl class="mt-3 space-y-3 text-sm text-gray-600">
+                    <div class="flex justify-between">
+                        <dt>Assigned To</dt>
+                        <dd>{% if task.assigned_to %}{% if task.assigned_to.get_full_name %}{{ task.assigned_to.get_full_name }}{% else %}{{ task.assigned_to.username }}{% endif %}{% else %}Unassigned{% endif %}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt>Estimated Hours</dt>
+                        <dd>{{ task.estimated_hours|default:'-' }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt>Actual Hours</dt>
+                        <dd>{{ task.actual_hours|default:'-' }}</dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-semibold text-gray-900">Comments</h2>
+            <a href="{% url 'job_planning:task-add-comment' project.id task.id %}" class="text-emerald-600 hover:text-emerald-700 text-sm">Add Comment</a>
+        </div>
+        <div class="space-y-4">
+            {% for comment in comments %}
+            <div class="rounded-lg bg-gray-50 p-4">
+                <div class="flex items-center justify-between text-sm text-gray-500 mb-2">
+                    <span>{{ comment.author.get_full_name|default:comment.author.username }}</span>
+                    <span>{{ comment.created_at|date:'M j, Y g:i A' }}</span>
+                </div>
+                <p class="text-gray-700">{{ comment.content }}</p>
+            </div>
+            {% empty %}
+            <p class="text-gray-600">No comments yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

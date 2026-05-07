@@ -278,10 +278,12 @@ def workflow_detail(request, workflow_id):
         'steps_count': steps.count(),
     }
     
-    # Recent work items
-    recent_items = workflow.work_items.select_related(
-        'current_step', 'current_assignee__user', 'created_by__user'
-    ).order_by('-updated_at')[:10]
+    # Workflow work items and recent items
+    workflow_items = workflow.work_items.select_related(
+        'current_step', 'current_assignee__user'
+    ).prefetch_related('custom_field_values__custom_field').order_by('-updated_at')
+
+    recent_items = workflow_items[:10]
     
     context = {
         'profile': profile,
@@ -289,6 +291,7 @@ def workflow_detail(request, workflow_id):
         'steps': steps,
         'stats': stats,
         'recent_items': recent_items,
+        'workflow_items': workflow_items,
     }
     
     return render(request, 'cflows/workflow_detail.html', context)
@@ -419,7 +422,7 @@ def work_items_list(request):
         workflow__organization=profile.organization
     ).select_related(
         'workflow', 'current_step', 'current_assignee__user', 'created_by__user'
-    ).prefetch_related('attachments', 'comments')
+    ).prefetch_related('attachments', 'comments', 'custom_field_values__custom_field')
     
     # Filtering
     workflow_id = request.GET.get('workflow')
@@ -447,8 +450,9 @@ def work_items_list(request):
         work_items = work_items.filter(
             Q(title__icontains=search) | 
             Q(description__icontains=search) |
-            Q(tags__contains=[search])
-        )
+            Q(tags__contains=[search]) |
+            Q(custom_field_values__value__icontains=search)
+        ).distinct()
     
     # Sorting
     sort = request.GET.get('sort', '-updated_at')
@@ -466,9 +470,7 @@ def work_items_list(request):
         for item in page_obj.object_list:
             work_items_data.append({
                 'id': item.id,
-                'title': item.title,
-                'workflow': item.workflow.name,
-                'priority': item.priority,
+            'title': item.display_title,
                 'current_step': item.current_step.name if item.current_step else 'Unknown',
                 'assigned_to': item.current_assignee.user.get_full_name() if item.current_assignee and item.current_assignee.user else None,
                 'due_date': item.due_date.isoformat() if item.due_date else None,

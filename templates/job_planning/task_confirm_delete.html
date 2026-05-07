@@ -1,0 +1,18 @@
+{% extends 'job_planning/base.html' %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-8">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+        <h1 class="text-2xl font-bold text-gray-900 mb-4">Delete Task</h1>
+        <p class="text-gray-600 mb-6">Are you sure you want to delete <strong>{{ task.title }}</strong>? This cannot be undone.</p>
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <div class="flex justify-center gap-4">
+                <a href="{% url 'job_planning:task-detail' project.id task.id %}"
+                   class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md">Cancel</a>
+                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md">Delete Task</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
