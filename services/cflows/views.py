@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.core.paginator import Paginator
 from django.db.models import Q, Count, Prefetch, Case, When, IntegerField
 from django.utils import timezone
@@ -78,6 +78,36 @@ def get_user_profile(request):
         return None
 
 
+def get_user_team_hierarchy(profile):
+    """Return all direct and ancestor team ids for the user's teams."""
+    team_ids = set()
+    for team in profile.teams.all():
+        current_team = team
+        while current_team:
+            team_ids.add(current_team.id)
+            current_team = current_team.parent_team
+    return team_ids
+
+
+def get_accessible_workflows(profile, active_only=True):
+    """Return workflows the user is allowed to view."""
+    workflows = Workflow.objects.filter(organization=profile.organization)
+    if active_only:
+        workflows = workflows.filter(is_active=True)
+    if profile.is_organization_admin:
+        return workflows
+
+    team_ids = get_user_team_hierarchy(profile)
+    if not team_ids:
+        return workflows.filter(owner_team__members=profile).distinct()
+
+    return workflows.filter(
+        Q(owner_team__members=profile) |
+        Q(allowed_view_teams__id__in=team_ids) |
+        Q(allowed_edit_teams__id__in=team_ids)
+    ).distinct()
+
+
 @login_required
 @require_organization_access
 def index(request):
@@ -133,6 +163,8 @@ def index(request):
 
 
 @login_required
+@require_organization_access
+@require_permission('workflow.view')
 def workflows_list(request):
     """List workflows for the user's organization"""
     profile = get_user_profile(request)
@@ -140,10 +172,7 @@ def workflows_list(request):
     if not profile:
         return render(request, 'cflows/no_profile.html')
     
-    workflows = Workflow.objects.filter(
-        organization=profile.organization,
-        is_active=True
-    ).select_related('created_by__user').annotate(
+    workflows = get_accessible_workflows(profile).select_related('created_by__user').annotate(
         step_count=Count('steps'),
         work_item_count=Count('work_items')
     ).order_by('name')
@@ -263,6 +292,9 @@ def workflow_detail(request, workflow_id):
         id=workflow_id,
         organization=profile.organization
     )
+
+    if not workflow.can_user_view(profile):
+        raise Http404('Workflow not found')
     
     # Get workflow steps with transitions
     steps = workflow.steps.prefetch_related(
@@ -408,6 +440,7 @@ def workflow_field_config(request, workflow_id):
 
 @login_required
 @require_organization_access
+@require_permission('workitem.view')
 def work_items_list(request):
     """Enhanced work items list with filtering and search"""
     profile = get_user_profile(request)
@@ -417,8 +450,11 @@ def work_items_list(request):
     # Check if this is an API request
     is_api = request.GET.get('api') == 'true'
     
+    accessible_workflows = get_accessible_workflows(profile, active_only=False)
+
     # Base queryset
     work_items = WorkItem.objects.filter(
+        workflow__in=accessible_workflows,
         workflow__organization=profile.organization
     ).select_related(
         'workflow', 'current_step', 'current_assignee__user', 'created_by__user'
@@ -486,9 +522,7 @@ def work_items_list(request):
         })
     
     # Get filter options
-    workflows = Workflow.objects.filter(
-        organization=profile.organization, is_active=True
-    ).order_by('name')
+    workflows = accessible_workflows.filter(is_active=True).order_by('name')
     
     assignees = UserProfile.objects.filter(
         organization=profile.organization, user__is_active=True
@@ -527,6 +561,7 @@ def work_items_list(request):
 
 @login_required
 @require_organization_access
+@require_permission('workitem.view')
 @require_POST
 def save_filter_view(request):
     """Save current work item filters as a named view"""
@@ -562,6 +597,7 @@ def save_filter_view(request):
 
 @login_required
 @require_organization_access
+@require_permission('workitem.view')
 @require_POST
 def delete_filter_view(request, filter_view_id):
     """Delete a saved filter view"""
@@ -582,6 +618,7 @@ def delete_filter_view(request, filter_view_id):
 
 @login_required
 @require_organization_access
+@require_permission('workitem.view')
 def apply_filter_view(request, filter_view_id):
     """Apply a saved filter view and redirect to work items list"""
     profile = get_user_profile(request)
@@ -619,6 +656,7 @@ def apply_filter_view(request, filter_view_id):
 
 @login_required
 @require_organization_access
+@require_permission('workitem.view')
 @require_POST
 def update_filter_view(request, filter_view_id):
     """Update a saved filter view"""
@@ -675,6 +713,10 @@ def create_work_item(request, workflow_id):
         organization=profile.organization,
         is_active=True
     )
+
+    if not workflow.can_user_edit(profile):
+        messages.error(request, "You don't have permission to add work items to this workflow.")
+        return redirect('cflows:workflow_detail', workflow_id=workflow.id)
     
     # Get the first step of the workflow
     first_step = workflow.steps.order_by('order').first()
@@ -759,6 +801,7 @@ def create_work_item(request, workflow_id):
 
 @login_required
 @require_organization_access
+@require_permission('workitem.create')
 def create_work_item_select_workflow(request):
     """Select workflow step for creating a new work item"""
     profile = get_user_profile(request)
@@ -772,11 +815,8 @@ def create_work_item_select_workflow(request):
         else:
             messages.error(request, 'Please select a workflow.')
     
-    # Get active workflows for the organization
-    workflows = Workflow.objects.filter(
-        organization=profile.organization,
-        is_active=True
-    ).order_by('name')
+    # Get active workflows the user is allowed to select
+    workflows = get_accessible_workflows(profile).order_by('name')
     
     if not workflows.exists():
         messages.error(request, 'No active workflows found. Create a workflow first.')
@@ -797,12 +837,14 @@ def create_work_item_select_workflow(request):
 
 @login_required
 @require_organization_access
+@require_permission('workitem.view')
 def work_item_detail(request, work_item_id):
     """Detailed view of a work item with comments, attachments, and history"""
     profile = get_user_profile(request)
     if not profile:
         return render(request, 'cflows/no_profile.html')
     
+    accessible_workflows = get_accessible_workflows(profile, active_only=False)
     work_item = get_object_or_404(
         WorkItem.objects.select_related(
             'workflow', 'current_step', 'current_assignee__user', 'created_by__user'
@@ -817,7 +859,7 @@ def work_item_detail(request, work_item_id):
             'watchers__user'
         ),
         id=work_item_id,
-        workflow__organization=profile.organization
+        workflow__in=accessible_workflows
     )
     
     # Available transitions from current step
@@ -1791,11 +1833,8 @@ def select_workflow_for_transitions(request):
         else:
             messages.error(request, 'Please select a workflow.')
     
-    # Get active workflows for the organization
-    workflows = Workflow.objects.filter(
-        organization=profile.organization,
-        is_active=True
-    ).annotate(
+    # Get active workflows the user is allowed to select
+    workflows = get_accessible_workflows(profile).annotate(
         steps_count=Count('steps'),
         transitions_count=Count('steps__outgoing_transitions', distinct=True)
     ).order_by('name')
@@ -1827,7 +1866,7 @@ def select_workflow_for_bulk_transitions(request):
     if not profile:
         return redirect('accounts:create_profile')
     
-    workflows = Workflow.objects.filter(organization=profile.organization)
+    workflows = get_accessible_workflows(profile)
     
     context = {
         'workflows': workflows,
@@ -2259,9 +2298,7 @@ def transfer_work_item(request, uuid):
     
     # Filter workflows user has access to
     if not profile.is_organization_admin:
-        available_workflows = available_workflows.filter(
-            owner_team__in=profile.teams.all()
-        )
+        available_workflows = get_accessible_workflows(profile).exclude(id=work_item.workflow.id)
     
     if request.method == 'POST':
         destination_workflow_id = request.POST.get('destination_workflow')
@@ -2342,7 +2379,7 @@ def get_workflow_steps_api(request, workflow_id):
         )
         
         # Check if user has access to this workflow
-        if not profile.is_organization_admin and workflow.owner_team not in profile.teams.all():
+        if not workflow.can_user_view(profile):
             return JsonResponse({'error': 'No access to this workflow'}, status=403)
         
         steps = workflow.steps.order_by('order').values(

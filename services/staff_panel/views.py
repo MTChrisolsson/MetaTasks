@@ -10,7 +10,8 @@ from django.urls import reverse
 from django.core.paginator import Paginator
 from django.db.models import Count, Q, Avg
 from django.utils import timezone
-from django.contrib.auth.models import User
+# from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from core.models import Organization, UserProfile, Team, AuditLog, SystemConfiguration
 from core.permissions import Role, Permission, UserRoleAssignment, RolePermission
 from core.views import require_organization_access
@@ -22,6 +23,7 @@ from datetime import timedelta, datetime
 import csv
 import json
 
+User = get_user_model()
 
 def get_user_profile(request):
     """Get user profile for the current user"""

@@ -15,6 +15,7 @@ from django.db import transaction
 from django.urls import reverse
 from core.models import Organization, UserProfile, Team
 from core.views import require_organization_access
+from core.decorators import require_permission
 from .models import (
     Workflow, WorkflowStep, WorkflowTransition, 
     WorkItem, WorkItemHistory, WorkItemComment, 
@@ -37,6 +38,7 @@ def get_user_profile(request):
 
 @login_required
 @require_organization_access
+@require_permission('workitem.transition')
 @require_POST
 def transition_work_item(request, work_item_id, transition_id):
     """Move a work item to the next step via a specific transition"""
@@ -179,6 +181,7 @@ def transition_work_item(request, work_item_id, transition_id):
 
 @login_required
 @require_organization_access
+@require_permission('workitem.transition')
 def transition_form(request, work_item_id, transition_id):
     """Show transition confirmation form"""
     profile = get_user_profile(request)
@@ -209,6 +212,7 @@ def transition_form(request, work_item_id, transition_id):
 
 @login_required
 @require_organization_access
+@require_permission('workitem.assign')
 @require_POST
 def assign_work_item(request, work_item_id):
     """Assign work item to a user"""
@@ -313,6 +317,7 @@ def assign_work_item(request, work_item_id):
 
 @login_required
 @require_organization_access
+@require_permission('workitem.edit')
 @require_POST
 def update_work_item_priority(request, work_item_id):
     """Update work item priority"""
@@ -371,6 +376,7 @@ def update_work_item_priority(request, work_item_id):
 
 @login_required
 @require_organization_access
+@require_permission('workitem.transition')
 def get_available_transitions(request, work_item_id):
     """Get available transitions for a work item (AJAX endpoint)"""
     profile = get_user_profile(request)
@@ -404,6 +410,7 @@ def get_available_transitions(request, work_item_id):
 
 @login_required
 @require_organization_access
+@require_permission('workitem.transition')
 def backward_transition_form(request, work_item_id, step_id):
     """Show form for moving work item backward to a previous step"""
     profile = get_user_profile(request)
@@ -516,6 +523,7 @@ def backward_transition_form(request, work_item_id, step_id):
 
 @login_required
 @require_organization_access
+@require_permission('workitem.transition')
 @require_POST
 def move_work_item_back(request, work_item_id, step_id):
     """Move a work item back to a previous step"""

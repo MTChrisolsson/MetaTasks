@@ -6,6 +6,7 @@ from django.views.decorators.http import require_POST, require_http_methods
 from django.db import transaction, models
 from django.urls import reverse
 from core.views import require_organization_access
+from core.decorators import require_permission
 from core.models import Team, UserProfile
 from .models import (
     Workflow, WorkflowStep, WorkflowTransition, WorkflowTemplate, CustomField
@@ -26,6 +27,7 @@ def get_user_profile(request):
 
 @login_required
 @require_organization_access
+@require_permission('workflow.create')
 def workflow_builder(request):
     """Enhanced workflow builder with templates and custom creation"""
     profile = get_user_profile(request)
@@ -64,6 +66,7 @@ def workflow_builder(request):
 
 @login_required
 @require_organization_access
+@require_permission('workflow.create')
 @require_POST
 def create_workflow_from_template(request, template_id):
     """Create a workflow from a template with optional customization"""
@@ -131,6 +134,7 @@ def create_workflow_from_template(request, template_id):
 
 @login_required
 @require_organization_access
+@require_permission('workflow.create')
 @require_POST
 def create_custom_workflow(request):
     """Create a completely custom workflow"""
@@ -273,6 +277,7 @@ def create_custom_workflow(request):
 
 @login_required
 @require_organization_access
+@require_permission('workflow.create')
 def get_template_preview(request, template_id):
     """Get template preview data for customization"""
     profile = get_user_profile(request)
@@ -336,6 +341,7 @@ def apply_workflow_template(workflow):
 
 @login_required
 @require_organization_access
+@require_permission('workflow.create')
 @require_POST
 def customize_template_workflow(request, template_id):
     """Create workflow from template with custom modifications"""
