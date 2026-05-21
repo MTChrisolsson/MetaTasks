@@ -32,7 +32,7 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='', cast=lambda v: [s.strip() for s in v.split(',') if s.strip()])
 if not ALLOWED_HOSTS:
-    ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver', 'www.metatask.net', 'metatask.net']
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver', 'www.metatask.net', 'metatask.net', 'httpbin.org']
 
 # Add GitHub Codespaces host
 codespace_name = os.environ.get('CODESPACE_NAME')

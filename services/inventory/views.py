@@ -14,6 +14,7 @@ from django.urls import reverse
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
+from django.views.decorators.http import require_POST
 
 from core.services.permission_service import PermissionService
 from core.views import require_organization_access
@@ -260,7 +261,19 @@ def item_create(request):
             item.save()
             form.save_custom_fields(item)
             messages.success(request, f'Item "{item.name}" created successfully.')
-            return redirect('inventory:item-detail', item_id=item.id)
+            if 'save_add_new' in request.POST:
+                # Save and continue to create a new item to the same location if location was selected
+                url = reverse('inventory:item-create')
+                if selected_location:
+                    url += f'?location={selected_location.id}'
+                return redirect(url)
+            elif 'go_to_locations' in request.POST:
+                # Redirect to location where item was created if location was selected, otherwise go to location list
+                if selected_location:
+                    return redirect('inventory:location-detail', location_id=selected_location.id)
+                return redirect('inventory:locations-list')
+            else:
+                return redirect('inventory:item-detail', item_id=item.id)
     else:
         initial = {}
         if selected_location:
@@ -425,7 +438,7 @@ def location_detail(request, location_id):
 
         row_values = [default_data[col] for col in selected_default_columns]
         row_values.extend(custom_data[field.key] for field in ordered_custom_fields)
-        table_rows.append({'values': row_values})
+        table_rows.append({'values': row_values, 'item': stock.item})
 
     if search_query:
         search_lower = search_query.lower()
@@ -845,6 +858,52 @@ def export_movements_csv(request):
         ])
 
     return response
+
+
+# Favourite Locations - Allow users to mark certain locations as favourites for quick access when creating/editing items and movements. This could be implemented as a many-to-many relationship between the user profile and inventory locations, with a simple toggle in the UI to mark/unmark favourites.
+
+# def favourite_locations(request):
+#     profile = request.inventory_profile
+#     if request.method == 'POST':
+#         location_id = request.POST.get('location_id')
+#         action = request.POST.get('action')
+#         location = get_object_or_404(InventoryLocation, id=location_id, organization=profile.organization)
+#         if action == 'add':
+#             profile.favourite_locations.add(location)
+#             messages.success(request, f'Location "{location.name}" added to favourites.')
+#         elif action == 'remove':
+#             profile.favourite_locations.remove(location)
+#             messages.success(request, f'Location "{location.name}" removed from favourites.')
+#         else:
+#             messages.error(request, 'Invalid action.')
+#         return redirect(request.META.get('HTTP_REFERER', 'inventory:locations-list'))
+#     return redirect('inventory:locations-list')
+
+@inventory_page_access_required('inventory.manage_config')
+@require_POST
+def remove_item_from_location(request, location_id, item_id):
+    profile = request.inventory_profile
+    location = get_object_or_404(InventoryLocation, id=location_id, organization=profile.organization)
+    item = get_object_or_404(InventoryItem, id=item_id, organization=profile.organization)
+
+    stock = ItemStock.objects.filter(location=location, item=item).first()
+    if stock:
+        inventory_service = InventoryService(profile.organization)
+        inventory_service.record_movement(
+            item=item,
+            movement_type='adjust',
+            quantity=-stock.quantity,
+            user=request.user,
+            source_location=location,
+            reason=None,
+            notes='Removed from location via item removal',
+        )
+        messages.success(request, f'Item "{item.name}" removed from location "{location.name}".')
+    else:
+        messages.error(request, f'Item "{item.name}" is not stocked at location "{location.name}".')
+
+    return redirect('inventory:location-detail', location_id=location.id)
+
 
 
 class InventoryScopedViewSet(viewsets.ModelViewSet):

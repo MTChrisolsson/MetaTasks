@@ -108,6 +108,17 @@
             </div>
 
             <div class="mt-8 border-t border-amber-100 pt-5">
+                <h3 class="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Favourites</h3>
+                <div class="space-y-1 text-sm">
+                    <!-- List favourites locations -->
+                    {% for location in favourite_locations %}
+                    <a href="{% url 'inventory:location-detail' location.id %}" class="{% if request.resolver_match.url_name == 'location-detail' and request.resolver_match.kwargs.id == location.id|stringformat:"s" %}bg-amber-50 text-amber-800 border-r-2 border-amber-500{% else %}text-slate-700 hover:bg-amber-50 hover:text-amber-800{% endif %} flex items-center rounded-lg px-3 py-2 font-medium transition-colors">
+                        <i class="fas fa-warehouse mr-3 text-slate-500"></i>{{ location.name }}
+                    </a {% endfor %}>
+                </div>
+            </div>
+
+            <div class="mt-8 border-t border-amber-100 pt-5">
                 <h3 class="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Quick Create</h3>
                 <div class="space-y-1 text-sm">
                     <a href="{% url 'inventory:item-create' %}" class="{% if request.resolver_match.url_name == 'item-create' %}bg-amber-50 text-amber-800 border-r-2 border-amber-500{% else %}text-slate-700 hover:bg-amber-50 hover:text-amber-800{% endif %} flex items-center rounded-lg px-3 py-2 font-medium transition-colors">

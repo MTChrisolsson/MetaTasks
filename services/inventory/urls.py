@@ -26,6 +26,7 @@ urlpatterns = [
     path('locations/<int:location_id>/', views.location_detail, name='location-detail'),
     path('locations/<int:location_id>/edit/', views.location_edit, name='location-edit'),
     path('locations/<int:location_id>/view-settings/', views.location_view_settings, name='location-view-settings'),
+    path('locations/<int:location_id>/remove-item/<int:item_id>/', views.remove_item_from_location, name='remove-item-from-location'),
 
     # Movements and alerts
     path('movements/', views.movements_list, name='movements-list'),

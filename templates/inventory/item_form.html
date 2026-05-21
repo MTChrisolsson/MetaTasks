@@ -70,7 +70,9 @@
             {% for error in form.is_active.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
 
             <div class="flex flex-wrap gap-2 pt-2">
-                <button type="submit" class="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700">{{ submit_label }}</button>
+                <button type="submit" name="save" class="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700">{{ submit_label }}</button>
+                <button type="submit" name="save_add_new" class="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700">{{ submit_label }} and Continue Editing</button>
+                <button type="submit" name="go_to_locations" class="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700">{{ submit_label }} and go to locations</button>
                 <a href="{% url 'inventory:items-list' %}" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</a>
             </div>
         </form>
